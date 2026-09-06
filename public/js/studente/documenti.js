@@ -143,6 +143,20 @@
         return new Blob([u], { type: tipo });
     }
     function apriFile(vaultPath, relPath, nome) {
+        /* sull'iPad il file si carica dal suo URL vero (`capacitor://…` via convertFileSrc):
+           l'HTML della sintesi apre così anche l'audio che sta accanto (percorsi relativi),
+           cosa che un blob: non può fare; ed è la stessa strada che la WKWebView usa per i PDF */
+        var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
+        var Fs = FSP ? FSP('Filesystem') : null, C = window.Capacitor;
+        if (Fs && C && C.convertFileSrc) {
+            var vp = vaultPath.replace(/^Documents\/?/, '');
+            return Fs.getUri({ path: (vp ? vp + '/' : '') + relPath, directory: 'DOCUMENTS' }).then(function (u) {
+                apri({ titolo: nome, iframe: C.convertFileSrc(u.uri) });
+            }).catch(function () { return apriBlob(vaultPath, relPath, nome); });
+        }
+        return apriBlob(vaultPath, relPath, nome);
+    }
+    function apriBlob(vaultPath, relPath, nome) {
         return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
             if (!r || !r.ok) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (r && r.error ? ' ' + r.error : ''), 'error'); return; }
             var url = URL.createObjectURL(b64ToBlob(r.base64, mime(nome)));
