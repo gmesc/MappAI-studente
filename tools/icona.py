@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tools/icona.py — l'icona dell'app: quella di MappAI con una piccola «S» in basso a destra
+"""tools/icona.py — l'icona dell'app: quella di MappAI con una «S» nel pallino arancione
 
 `ios/` non è nel repo: la sorgente è `resources/icona-1024.png` (generata qui da
 `MappAI re/public/MappAI_icon.png`) e questo script la copia nell'appiconset di
@@ -16,17 +16,17 @@ OUT = os.path.join(QUI, 'resources', 'icona-1024.png')
 DEST = os.path.join(QUI, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png')
 
 def badge(img):
-    """un cerchio viola in basso a destra con una S bianca — abbastanza grande da leggersi a 60 px"""
+    """la S bianca DENTRO il pallino arancione del logo (Giacomo, 7/9): niente pallino in più.
+    Il pallino arancione è misurato sull'icona 1024: centro (709, 795), raggio 94 — se il logo
+    cambia si rimisura (pixel con r>230, 100<g<170, b<60)."""
     w, h = img.size
-    r = int(w * 0.135)
-    cx, cy = w - r - int(w * 0.05), h - r - int(w * 0.05)
+    k = w / 1024.0
+    cx, cy, r = 709 * k, 795 * k, 94 * k
     d = ImageDraw.Draw(img)
-    d.ellipse([cx - r - 12, cy - r - 12, cx + r + 12, cy + r + 12], fill=(255, 255, 255, 255))   # bordo bianco: stacca dal fondo
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(79, 70, 229, 255))                           # #4f46e5
     font = None
     for path in ['/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', '/System/Library/Fonts/Helvetica.ttc']:
         if os.path.exists(path):
-            try: font = ImageFont.truetype(path, int(r * 1.4)); break
+            try: font = ImageFont.truetype(path, int(r * 1.45)); break
             except Exception: pass
     font = font or ImageFont.load_default()
     bb = d.textbbox((0, 0), 'S', font=font)

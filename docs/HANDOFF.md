@@ -23,7 +23,7 @@ in MappAI re (`48fcb7b`, spenta per default, resincronizzata, `?v=st2`). (5) **S
 `studente.css` (console piena, dock, menu flottante; `env()` vale 0 nel browser). (6) Sull'iPad
 `jsPDF.API.save` è sostituito nell'adapter: le quattro «Stampa dalla mappa» scrivono in
 `Studio Attivo/Stampe/<nome>.pdf` e aprono il foglio di condivisione (`doc.save` è un no-op
-nella WKWebView) — **da misurare sull'iPad**. (7) **L'icona** con la S: `tools/icona.py`
+nella WKWebView) — **da misurare sull'iPad**. (7) **L'icona** con la S dentro il pallino arancione del logo: `tools/icona.py`
 (PIL) → `resources/icona-1024.png` → `ios/.../AppIcon-512@2x.png`; si rilancia dopo un
 `cap add ios`. Verificato nel browser: Cabina, guida, briciole nei due posti, «Torna»,
 prova su misura senza passo ①. `npx cap sync ios` fatto: in Xcode basta Run.
