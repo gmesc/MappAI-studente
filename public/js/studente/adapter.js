@@ -30,9 +30,17 @@
 
     var ROOT = 'Documents';
     /* due globali che dichiarava storageAdapter.js e che i moduli copiati leggono come identificatori nudi */
-    window.isCapacitor = !!(window.Capacitor && window.Capacitor.Plugins);
+    window.isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
     window.isElectron = false;
-    var cap = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) ? window.Capacitor.Plugins.Filesystem : null;
+    /* il plugin nativo: `Capacitor.Plugins.Filesystem` se il runtime lo espone, altrimenti
+       `registerPlugin` (senza bundler non c'è l'import di @capacitor/filesystem) */
+    function plugin(nome) {
+        var C = window.Capacitor; if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
+        try { if (C.Plugins && C.Plugins[nome]) return C.Plugins[nome]; } catch (e) { }
+        try { if (C.registerPlugin) return C.registerPlugin(nome); } catch (e) { }
+        return null;
+    }
+    var cap = plugin('Filesystem');
 
     /* ── utilità ─────────────────────────────────────────────────────────── */
     function nfc(s) { try { return String(s == null ? '' : s).normalize('NFC'); } catch (e) { return String(s == null ? '' : s); } }
@@ -461,6 +469,6 @@
 
     window.electronAPI = API;
     /* per i moduli dello studente: leggere un testo, scrivere, elencare */
-    window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, leggiTesto: leggiTesto, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd };
+    window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, plugin: plugin, leggiTesto: leggiTesto, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd };
     console.log('[MappAI studente] adapter pronto (' + FS.nome + ')');
 }());

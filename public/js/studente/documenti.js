@@ -210,11 +210,12 @@
         if (m[1] === 'cartella') {
             var pdf = s.pdf || s.html; if (!pdf) return;
             var rel = base + pdf;
-            var cap = window.Capacitor && window.Capacitor.Plugins;
-            if (cap && cap.Share && cap.Filesystem) {
+            var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
+            var Fs = FSP ? FSP('Filesystem') : null, Sh = FSP ? FSP('Share') : null;
+            if (Fs && Sh) {
                 var p = rel; var vp = vaultPath.replace(/^Documents\/?/, '');
-                cap.Filesystem.getUri({ path: (vp ? vp + '/' : '') + p, directory: 'DOCUMENTS' })
-                    .then(function (u) { return cap.Share.share({ title: s.nome || pdf, url: u.uri }); })
+                Fs.getUri({ path: (vp ? vp + '/' : '') + p, directory: 'DOCUMENTS' })
+                    .then(function (u) { return Sh.share({ title: s.nome || pdf, url: u.uri }); })
                     .catch(function (e) { toast(t('st_share_ko', 'Condivisione non riuscita: ') + (e && e.message), 'error'); });
                 return;
             }
