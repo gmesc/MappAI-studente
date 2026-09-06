@@ -162,8 +162,12 @@
        impacchettato da tools/vault-json.js; l'elenco aspetta l'importazione */
     var pronto = Promise.resolve();
     try {
-        var qv = !PROV_CAP && new URLSearchParams(location.search).get('vault');
-        if (qv) pronto = fetch(qv).then(function (r) { return r.json(); }).then(function (lista) { return PROV_IDB.importa(lista); })
+        var qs = new URLSearchParams(location.search);
+        var qv = !PROV_CAP && qs.get('vault');
+        /* `&pulisci=1`: si svuota IndexedDB prima di importare — senza, i file di
+           un pacchetto precedente (per esempio i fogli finti) restano accanto ai nuovi */
+        var pulisci = !PROV_CAP && qs.get('pulisci') ? tx('readwrite', function (st) { st.clear(); }) : Promise.resolve();
+        if (qv) pronto = pulisci.then(function () { return fetch(qv); }).then(function (r) { return r.json(); }).then(function (lista) { return PROV_IDB.importa(lista); })
             .then(function () { console.log('[MappAI studente] vault importato da', qv); })
             .catch(function (e) { console.warn('[MappAI studente] import fallito', e); });
     } catch (e) { }
