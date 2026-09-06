@@ -17,7 +17,11 @@ in `capacitor.config.json`, più `overscroll-behavior: contain` sul corpo del do
 di CREA) è sostituito da **Sintesi**: apre il `Sintesi-voce*.html` del vault, o `Sintesi*.html`,
 o il PDF; se il vault non ne ha (Germania ed Elettricità non ne hanno: il docente non l'ha
 pubblicata) lo dice nel sottotitolo e con un avviso. Le righe dei file `Sintesi*` restano
-anche nell'elenco.
+anche nell'elenco. (d) Dallo screenshot: la barra dei comandi passava SOTTO il dock — ora
+`misura()`/`chiudi()` pubblicano l'ingombro del dock come `--sd-w`/`--sd-h` sull'<html> e la
+barra si ferma al suo bordo (`right`/`bottom` in calc; `transition:none` perché il
+`transition-all` di Tailwind nel pannello nascosto non avanza mai — ore perse a misurare
+12px). Misurato: dock a 792, barra fino a 780; chiuso il dock torna piena.
 
 **⟵ 7/9 notte: terzo giro iPad — 1-5 del giro precedente funzionano (stampe non provate).**
 Due cose: (a) **la barra dei comandi** della mappa: in MappAI è assoluta con `left:50%`, e da

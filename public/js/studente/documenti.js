@@ -43,7 +43,15 @@
         dock.classList.toggle('sd--basso', basso); dock.classList.toggle('sd--destra', !basso);
         if (basso) { dock.style.width = ''; dock.style.height = v + 'px'; }
         else { dock.style.height = ''; dock.style.width = v + 'px'; }
+        ingombro(basso ? 0 : v, basso ? v : 0);
         return v;
+    }
+    /* quanto il dock toglie al canvas, come variabili CSS sull'<html>: la barra dei comandi
+       della mappa (`#map-control-card`, in studente.css) si ferma al suo bordo invece di
+       passarci sotto (screenshot iPad del 7/9) */
+    function ingombro(w, h) {
+        var r = document.documentElement.style;
+        r.setProperty('--sd-w', (w || 0) + 'px'); r.setProperty('--sd-h', (h || 0) + 'px');
     }
     function ricorda(px) { try { localStorage.setItem(orientamento() === 'portrait' ? KEY_H : KEY_W, String(px)); } catch (e) { } }
     function memoria() {
@@ -102,7 +110,7 @@
         window.dispatchEvent(new Event('resize'));
         return corpo;
     }
-    function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); window.dispatchEvent(new Event('resize')); }
+    function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); ingombro(0, 0); window.dispatchEvent(new Event('resize')); }
     /* chiudere a prova in corso è lavoro da perdere: si chiede */
     function chiudiChiedendo() {
         if (!chiediChiusura) return chiudi();

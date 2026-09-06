@@ -85,10 +85,11 @@ html.studente, html.studente body { height: 100%; overflow: hidden; overscroll-b
    stavano. Qui la barra prende la larghezza del canvas (meno i margini), si
    centra con i margini automatici e il cursore si allarga o stringe. */
 html.studente #map-control-card {
-  left: 12px !important; right: 12px !important; transform: none !important;
+  left: 12px !important; right: calc(12px + var(--sd-w, 0px)) !important; transform: none !important;
   width: auto; min-width: 0 !important; max-width: 720px; margin: 0 auto;
   flex-wrap: nowrap !important; justify-content: space-between !important; gap: 8px !important;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--sd-h, 0px)) !important;
+  transition: none !important;   /* `transition-all` di Tailwind: la barra deve seguire il dock subito */
 }
 html.studente #map-control-card > button { flex: 0 0 auto; }
 html.studente #map-control-card #level-filter-control,
