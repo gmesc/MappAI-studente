@@ -189,6 +189,10 @@
             while (stack.length > 1 && stack[stack.length - 1].ind >= ind) stack.pop();
             var padre = stack[stack.length - 1].obj;
             if (v === '') { padre[k] = {}; stack.push({ ind: ind, obj: padre[k] }); return; }
+            /* `customColors: {}` in riga (forma flow): è un oggetto, non la stringa
+               «{}» — letto come stringa, `customColors[0]` dava «{» e la radice
+               usciva NERA (misurato su «La Germania e il Nazismo») */
+            if (/^[\[{]/.test(v)) { try { padre[k] = JSON.parse(v); } catch (e) { padre[k] = v.charAt(0) === '[' ? [] : {}; } return; }
             if (/^".*"$/.test(v) || /^'.*'$/.test(v)) v = v.slice(1, -1);
             else if (v === 'true') v = true;
             else if (v === 'false') v = false;
