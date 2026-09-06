@@ -90,7 +90,7 @@
                     /* «Mappa» CONCLUDE: la console si chiude e l'esito arriva al .then() (inv. 10) */
                     { id: 'mappa', etichetta: t('st_mappa', 'Mappa'), icona: 'map', ruolo: 'primario' },
                     { id: 'flashcard', etichetta: t('st_flashcard', 'Flashcard'), icona: 'copy' },   /* conclude: il player si apre sulla mappa */
-                    { id: 'prova', etichetta: t('st_prova', 'Prova'), icona: 'help-circle', chiude: false }
+                    { id: 'prova', etichetta: t('st_prova', 'Prova'), icona: 'help-circle' }   /* conclude: il launcher sulla mappa */
                 ]
             });
             s.tabelle = [{

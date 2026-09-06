@@ -3,17 +3,29 @@
 > L'unico documento di stato di questo repo. Il *come si costruisce* è in `RIUSO.md` (le
 > copie) e nel piano `docs/PIANO-reader.md` (v2, con i bivi sciolti). Il repo madre è
 > `~/Claude/MappAI re`: la sua guida (`GUIDA-ARCHITETTO.md`) vale anche qui.
-> Ultimo allineamento: **6 settembre 2026, sera** — **fase 1 (il guscio) in piedi nel browser**.
+> Ultimo allineamento: **6 settembre 2026, notte** — **guscio + autotest in piedi nel browser**.
 > Progetto: Giacomo Meschini — giacomo@insegnai.ch
 
 ## 0. Dove si riprende
 
-**⟵ FASE 2 — «Prova».** Il guscio c'è e gira nel browser con un vault vero: console STUDIA →
-Mappa (canvas con la Vista studio del docente) · Flashcard (player) · Materiali nel dock
-(la sintesi con la voce accanto alla mappa, i PDF) · Torna a STUDIA. Manca la **prova**
-(setup, `MappAISceltaView` nella tela con le opzioni della fase 0, report MC, PDF jsPDF
-delle risposte, tabella delle sessioni con stampante/cartella): è la fase 2 del piano,
-§«Che cosa si fa» → 2.1-2.4. `Prova` oggi risponde con un avviso.
+**⟵ FASE 2, seconda metà.** L'AUTOTEST c'è (6/9 notte): «Prova» in console e «Studio
+attivo» sulla mappa aprono il launcher dello studente (`studente/autotest.js`, uno schema
+del motore al posto del modale a mano di `mappai-active-study.js`: Palazzo via, tre sezioni
+allineate): **Autotest** — un set pronto a scelta multipla (il player di MappAI) · un foglio
+pronto di domande aperte (si risponde a tutto) · **domande aperte su misura** (tutta la mappa
+o un ramo · tutti gli angoli o uno; con «tutti» la sessione metacognitiva: righe «Domanda i»
+attraverso gli angoli, chip «Perché:» a tre colori, il verde prende, poi si risponde alle
+verdi con l'autovalutazione) — **Viste** (heat map, mappa lavoro) — **Strumenti** (cosa
+studiare ora, progressi). Alla consegna i record vanno sul bus (`MappAIStudyBus`): la
+padronanza per nodo L1 del ramo (MC 1/0; aperte = autovalutazione 1 · 0,5 · 0) e la
+sessione in `Studio Attivo/sessioni.jsonl` — da lì leggono le viste e gli strumenti
+(provato: heat map accesa, «Cosa studiare ora» mostra il ramo padroneggiato). Logica in
+`studente/prova-core.js` (puro, 6 test). I fogli vengono da `Materiale Studio/Sorgenti/*.html`
+(i gemelli della fase 0): nel browser si sintetizzano con `node tools/fogli-finti.js` dopo
+`vault-json.js`.
+**Manca**: il PDF delle risposte da mandare al docente (jsPDF, senza soluzioni), il report
+MC archiviato, la cartella `Studio Attivo/Prove/<sessione>/` con `sessione.json` e la tabella
+in console con stampante/cartella (piano 2.3-2.4). Oggi la tabella resta vuota.
 
 **Da provare sull'iPad (mai fatto: il guscio è stato provato SOLO nel browser).** Il
 progetto Xcode È generato (`ios/`, fuori dal repo) con Capacitor 8 (SPM, niente CocoaPods) e
@@ -61,6 +73,7 @@ nascosti, stampa visibile · «Lavagna QR» nascosto.
 | gli stub del nocciolo duro | `public/js/studente/boot.js` | `tutorState` con la forma vera (d3-render legge `.nodes[id]`), `setTutorState`, `systemPromptsConfig`, la veste (`manifesto`, `mn-bento-app`, `studente`), `mappai_domande_scelta='0'` |
 | la potatura | `public/js/studente/pota.js` + `css/studente.css` | `appState.studentMode`, menu contestuale in allowlist via MutationObserver, `refreshGeminiModels`/`initializeAIProvider` spenti, CSS per selettore sui bottoni del docente; bersagli ≥ 44px |
 | la console STUDIA | `studente/studia-core.js` (puro, testato) + `studente/console.js` | nav per materia (`materiaDichiarata → discDir → Senza materia`), area con Mappa (conclude) · Flashcard (conclude) · Prova (fase 2), tabella `Studio Attivo/Prove/*/sessione.json`, briciole statiche, ESC non esce, «Apri una cartella» |
+| l'autotest | `studente/prova-core.js` (puro, testato) + `studente/autotest.js` + `tools/fogli-finti.js` | sostituisce `ActiveStudy.openLauncher` da fuori; pool MC dai set, aperte dai gemelli `Sorgenti/`; setup su misura coi campi del motore (radio + scelta); la view «a scelta» in una sezione nuda con `mostraAngolo/chip/chipPrende/raggruppa`; consegna → bus |
 | il dock e i materiali | `studente/documenti.js` | `#studente-dock` in `#main-content`, maniglia (clamp 360px–60%), iframe da blob; elenco per prefisso + 4 stampe dalla mappa; `azione()` per stampante/cartella = fase 2 |
 | Capacitor | `package.json`, `capacitor.config.json`, `tools/plist-ipad.py` | `@capacitor/core|ios|filesystem|share` 8; `ios/` generato il 6/9 (Node 22), in `.gitignore`, si rigenera con `npm run ios` |
 

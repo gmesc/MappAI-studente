@@ -115,7 +115,6 @@
                 });
                 return;
             }
-            if (a === 'prova') { toast(t('st_prova_dopo', 'La prova arriva con la fase 2: per ora mappa e flashcard.'), 'info'); return; }
             if (a === 'nessuno') { toast(t('st_nessun_vault_toast', 'Apri una cartella con il bottone in basso.'), 'info'); return; }
             if (/^(stampa|cartella|apri):/.test(a) && window.MappAIStudenteDocumenti) { window.MappAIStudenteDocumenti.azione(a, st.sel, st.sessioni); return; }
         };
@@ -126,6 +125,8 @@
             var a = r && r.azione;
             if (a === 'mappa' && scelto) return apriMappa(scelto);
             if (a === 'flashcard' && scelto) return apriFlashcard(scelto);
+            /* «Prova»: la mappa sotto, poi il launcher dello studente (autotest, viste, strumenti) */
+            if (a === 'prova' && scelto) return apriMappa(scelto).then(function (ok) { if (ok && window.ActiveStudy) window.ActiveStudy.openLauncher(); });
             /* chiusa dal pallino: se sotto c'è una mappa la si mostra, altrimenti si riapre */
             var ss = S();
             if (ss && ss.db && ss.db.nodes && ss.db.nodes.length && window.switchToMapLayout) { window.switchToMapLayout(); return; }
