@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mappai-re-public",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8766", "-d", "/Users/giacomomeschini/Claude/MappAI reader/public"],
+      "port": 8766
+    }
+  ]
+}

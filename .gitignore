@@ -1,0 +1,7 @@
+node_modules/
+# il progetto Xcode si rigenera con `npx cap add ios` (+ le tre chiavi del plist, vedi docs/HANDOFF.md)
+ios/
+# banchi e dati di prova (public/dev/vault.json è un vault vero impacchettato: 30 MB, non è dell'app)
+public/dev/
+.DS_Store
+.claude/settings.local.json

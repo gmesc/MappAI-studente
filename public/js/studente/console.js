@@ -1,0 +1,163 @@
+/*
+ * studente/console.js — la console STUDIA, la casa dello studente
+ * ---------------------------------------------------------------------------
+ * Una console del motore dei modali (`layout:'console'`, `piena:true`), sopra
+ * il canvas: navigazione = i vault per materia, area = Mappa · Flashcard ·
+ * Prova + la tabella delle prove. Lo SCHEMA lo decide `MappAIStudiaCore`
+ * (puro, testato); qui si monta, si legge il disco, si reagisce.
+ *
+ * Regole del motore che mordono (guida, inv. 10-11): «Mappa» e «Flashcard»
+ * CONCLUDONO — la console si chiude e l'esito arriva nel `.then()` di `open`;
+ * le voci di nav e le celle-azione hanno `chiude:false`; ESC dentro la home
+ * non esce (si risponde `false`); il piano lo dà il motore.
+ */
+(function () {
+    'use strict';
+    if (window.MappAIStudente) return;
+
+    function t(k, f) { try { return (window.t ? window.t(k, f) : f) || f; } catch (e) { return f; } }
+    function toast(m, k) { if (window.showToast) window.showToast(m, k || 'info'); }
+    function S() { try { return (typeof appState !== 'undefined') ? appState : window.appState; } catch (e) { return window.appState; } }
+    var C = function () { return window.MappAIStudiaCore; };
+
+    var st = { vaults: [], sel: '', chiusi: {}, sessioni: [], aperta: false };
+    try { st.sel = localStorage.getItem('mappai_studente_sel') || ''; } catch (e) { }
+
+    function leggi() {
+        return window.electronAPI.getAllVaults().then(function (v) {
+            st.vaults = v || [];
+            if (st.sel && !st.vaults.some(function (x) { return x.fullPath === st.sel; })) st.sel = '';
+            return st.vaults;
+        }).catch(function () { st.vaults = []; return []; });
+    }
+    /* le prove: Studio Attivo/Prove/<cartella>/sessione.json (le scrive la fase 2) */
+    function leggiSessioni(fullPath) {
+        var FS = window.MappAIStudenteFS;
+        if (!fullPath || !FS) return Promise.resolve([]);
+        var dir = fullPath + '/Studio Attivo/Prove';
+        return FS.lista(dir).then(function (figli) {
+            return Promise.all(figli.filter(function (f) { return f.isDir; }).map(function (f) {
+                return FS.leggiTesto(dir + '/' + f.name + '/sessione.json').then(function (tx) {
+                    try { var j = JSON.parse(tx || 'null'); return j ? Object.assign({ id: f.name, nome: f.name }, j) : null; } catch (e) { return null; }
+                });
+            }));
+        }).then(function (l) { return l.filter(Boolean).sort(function (a, b) { return String(b.data || '').localeCompare(String(a.data || '')); }); })
+          .catch(function () { return []; });
+    }
+    function schema() {
+        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, chiusi: st.chiusi, t: window.t });
+    }
+    function briciole() {
+        var CM = window.MappAIConsoleManifesto;
+        if (!CM || !CM.briciole) return;
+        try { CM.briciole(C().briciole({ vaults: st.vaults, sel: st.sel, t: window.t })); } catch (e) { }
+    }
+    function scegli(fullPath, ridisegna) {
+        st.sel = fullPath;
+        try { localStorage.setItem('mappai_studente_sel', fullPath); } catch (e) { }
+        st.sessioni = [];
+        ridisegna(schema()); briciole();
+        leggiSessioni(fullPath).then(function (s) { if (st.sel === fullPath) { st.sessioni = s; ridisegna(schema()); briciole(); } });
+    }
+
+    /* ── la mappa ──────────────────────────────────────────────────────────
+       Se il vault scelto è già a schermo (rientro da «Torna a STUDIA») si
+       mostra e basta; altrimenti si carica come fa INSEGNA (`directLoadVault`:
+       adotta l'identità, applica vista.json, monta il canvas). */
+    function apriMappa(fullPath) {
+        var s = S();
+        if (s && s.activeVaultPath === fullPath && s.db && s.db.nodes && s.db.nodes.length) {
+            if (window.switchToMapLayout) window.switchToMapLayout();
+            return Promise.resolve(true);
+        }
+        if (!window.directLoadVault) return Promise.resolve(false);
+        return Promise.resolve(window.directLoadVault(fullPath)).then(function () {
+            return !!(S() && S().activeVaultPath === fullPath);
+        });
+    }
+
+    /* ── le flashcard: un mazzo solo parte diretto, più mazzi si scelgono ── */
+    function apriFlashcard(fullPath) {
+        return apriMappa(fullPath).then(function (ok) {
+            if (!ok) return;
+            var sets = ((S().db || {}).studySets || []).filter(function (x) { return x && x.mode === 'flashcard' && x.items && x.items.length; });
+            if (!sets.length) { toast(t('st_no_flash', 'Questa mappa non porta mazzi di flashcard.'), 'warning'); return; }
+            if (sets.length === 1) { window.loadStudySet(sets[0].id); return; }
+            return window.MappAIModal.open({
+                titolo: t('st_quale_mazzo', 'Quale mazzo?'), icona: 'copy', taglia: 'm',
+                sezioni: [{ voci: sets.map(function (x) { return { id: x.id, etichetta: x.title || 'Flashcard', sotto: x.items.length + ' ' + t('st_carte', 'carte'), icona: 'copy' }; }) }],
+                azioni: [{ id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' }]
+            }).then(function (r) {
+                if (r && r.azione && r.azione !== 'annulla' && sets.some(function (x) { return x.id === r.azione; })) window.loadStudySet(r.azione);
+            });
+        });
+    }
+
+    function apri() {
+        if (st.aperta || !window.MappAIModal) return;
+        st.aperta = true;
+        var s = schema();
+        s.suApertura = function (box, ridisegna) {
+            leggi().then(function () {
+                ridisegna(schema()); briciole();
+                if (st.sel) leggiSessioni(st.sel).then(function (x) { st.sessioni = x; ridisegna(schema()); briciole(); });
+            });
+        };
+        s.suAzione = function (ev, box, ridisegna) {
+            var a = ev && ev.azione || '';
+            if (a === '__gruppo') { st.chiusi[String(ev.voce || '').replace(/^g:/, '')] = !!ev.chiuso; return; }
+            if (a === '__nav') { if (/^v:/.test(ev.voce || '')) scegli(String(ev.voce).slice(2), ridisegna); return; }
+            if (a === '__esc') return false;                     /* la home non si chiude con ESC */
+            if (a === 'apri-cartella') {
+                window.electronAPI.pickFolder().then(function (r) {
+                    if (!r || r.canceled) return;
+                    leggi().then(function () { scegli(r.folderPath, ridisegna); });
+                });
+                return;
+            }
+            if (a === 'prova') { toast(t('st_prova_dopo', 'La prova arriva con la fase 2: per ora mappa e flashcard.'), 'info'); return; }
+            if (a === 'nessuno') { toast(t('st_nessun_vault_toast', 'Apri una cartella con il bottone in basso.'), 'info'); return; }
+            if (/^(stampa|cartella|apri):/.test(a) && window.MappAIStudenteDocumenti) { window.MappAIStudenteDocumenti.azione(a, st.sel, st.sessioni); return; }
+        };
+        var scelto = st.sel;
+        window.MappAIModal.open(s).then(function (r) {
+            st.aperta = false;
+            scelto = st.sel || scelto;
+            var a = r && r.azione;
+            if (a === 'mappa' && scelto) return apriMappa(scelto);
+            if (a === 'flashcard' && scelto) return apriFlashcard(scelto);
+            /* chiusa dal pallino: se sotto c'è una mappa la si mostra, altrimenti si riapre */
+            var ss = S();
+            if (ss && ss.db && ss.db.nodes && ss.db.nodes.length && window.switchToMapLayout) { window.switchToMapLayout(); return; }
+            setTimeout(apri, 50);
+        });
+    }
+
+    /* «Torna a STUDIA» dal menu della mappa: vista.json e poi la console —
+       niente `location.reload()` (è la strada di `backToLanding`, che qui
+       riaprirebbe la mappa da sola e farebbe perdere la scelta) */
+    function torna() {
+        var s = S();
+        var salva = Promise.resolve();
+        if (s && s.activeVaultPath && window.buildVaultMapData && window.electronAPI.saveVault) {
+            try {
+                if (window.MappAIStudioView && s.layoutMode === 'studio') { window.MappAIStudioView.exit(); s.layoutMode = 'default'; }
+                if (typeof StorageManager !== 'undefined' && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
+                salva = Promise.race([
+                    window.electronAPI.saveVault({ folderPath: s.activeVaultPath, mapData: window.buildVaultMapData() }),
+                    new Promise(function (r) { setTimeout(r, 3000); })
+                ]);
+            } catch (e) { }
+        }
+        if (window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.chiudi();
+        salva.then(apri, apri);
+    }
+
+    function avvio() {
+        /* la landing di MappAI è vuota qui: la console è il primo disegno */
+        setTimeout(apri, 30);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', avvio); else avvio();
+
+    window.MappAIStudente = { apri: apri, torna: torna, apriMappa: apriMappa, apriFlashcard: apriFlashcard, stato: st };
+}());

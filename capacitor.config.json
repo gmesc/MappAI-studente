@@ -1,0 +1,8 @@
+{
+  "appId": "com.insegnai.mappai.studente",
+  "appName": "MappAI Studente",
+  "webDir": "public",
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
