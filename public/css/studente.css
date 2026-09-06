@@ -31,7 +31,7 @@
 #studente-dock .sd-titolo { font-size: 13px; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #studente-dock .sd-sp { flex: 1; }
 #studente-dock .sd-chiudi { width: 44px; height: 44px; border: 0; border-radius: 10px; background: #f1f4f8; color: #404040; font-size: 22px; line-height: 1; cursor: pointer; }
-#studente-dock .sd-corpo { flex: 1; min-height: 0; overflow: auto; padding: 0; }
+#studente-dock .sd-corpo { flex: 1; min-height: 0; overflow: auto; padding: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 #studente-dock .sd-iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 #studente-dock .sd-vuoto { padding: 18px 16px; color: #475569; font-size: 13px; }
 #studente-dock .sd-h { margin: 18px 16px 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #64748b; }
@@ -73,7 +73,10 @@ html.studente .mm-box--piena.mm-box--console > .mm-foot { padding-bottom: calc(1
 html.studente #studente-dock.sd--destra .sd-testa { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
 html.studente #studente-dock.sd--basso .sd-corpo { padding-bottom: env(safe-area-inset-bottom, 0px); }
 html.studente #floating-actions-container { margin-bottom: env(safe-area-inset-bottom, 0px); }
-html.studente body { overscroll-behavior: none; }
+/* la pagina non scorre mai: scorrono solo i pannelli (dock, console). Sull'iPad la scroll view
+   della WKWebView è spenta in capacitor.config.json (`ios.scrollEnabled:false`): era lei a
+   trascinare tutta la finestra verso l'alto in fondo all'elenco dei materiali (7/9). */
+html.studente, html.studente body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 
 /* ── la barra dei comandi della mappa (7/9, iPad) ─────────────────────────
    In MappAI è `absolute; left:50%; translateX(-50%)` con `min-w-max`: da

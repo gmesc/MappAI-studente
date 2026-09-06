@@ -3,6 +3,7 @@
   "appName": "MappAI Studente",
   "webDir": "public",
   "ios": {
-    "contentInset": "automatic"
+    "contentInset": "automatic",
+    "scrollEnabled": false
   }
 }

@@ -8,6 +8,17 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 notte, quarto giro: tre rilievi di Giacomo sul dock.** (a) «Materiali» a prova in
+corso copriva le domande: ora `materiali()` rifiuta con un avviso finché il dock ha una prova
+(`chiediChiusura` non nullo). (b) In fondo all'elenco lo scorrimento trascinava tutta la
+finestra verso l'alto: era la scroll view della WKWebView — spenta con `ios.scrollEnabled:false`
+in `capacitor.config.json`, più `overscroll-behavior: contain` sul corpo del dock e
+`overflow:hidden` su html/body (**da provare sull'iPad**). (c) Il bottone **Dossier** (un comando
+di CREA) è sostituito da **Sintesi**: apre il `Sintesi-voce*.html` del vault, o `Sintesi*.html`,
+o il PDF; se il vault non ne ha (Germania ed Elettricità non ne hanno: il docente non l'ha
+pubblicata) lo dice nel sottotitolo e con un avviso. Le righe dei file `Sintesi*` restano
+anche nell'elenco.
+
 **⟵ 7/9 notte: terzo giro iPad — 1-5 del giro precedente funzionano (stampe non provate).**
 Due cose: (a) **la barra dei comandi** della mappa: in MappAI è assoluta con `left:50%`, e da
 assoluta le spetta metà canvas — con la sidebar aperta in portrait bottoni e cursore non ci

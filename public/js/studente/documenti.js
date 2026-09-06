@@ -147,10 +147,18 @@
         var s = S();
         if (!s || !s.activeVaultPath) { toast(t('st_no_vault', 'Apri prima una mappa.'), 'warning'); return; }
         var vp = s.activeVaultPath;
+        /* una prova nel dock (ha `chiediChiusura`): i materiali non la coprono — prima si
+           consegna o si chiude la prova (Giacomo, 7/9: l'elenco compariva sopra le domande) */
+        if (chiediChiusura) { toast(t('st_prova_in_corso', 'C\'è una prova in corso: consegnala o chiudila prima di aprire i materiali.'), 'warning'); return; }
         apri({ titolo: t('st_materiali', 'Materiali'), monta: function (host) { host.innerHTML = '<p class="sd-vuoto">' + esc(t('st_carico', 'Leggo la cartella…')) + '</p>'; } });
         window.electronAPI.vaultMaterialsList({ vaultPath: vp }).then(function (r) {
             var files = ((r && r.files) || []).filter(function (f) { return !/\.json$/i.test(f.name) && f.name.charAt(0) !== '.'; });
             var html = '';
+            /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta (il Dossier del
+               docente è stato tolto da qui il 7/9: era un comando di CREA) */
+            var sintesi = files.filter(function (f) { return /^Sintesi-voce/i.test(f.name) && /\.html?$/i.test(f.name); })[0]
+                || files.filter(function (f) { return /^Sintesi/i.test(f.name) && /\.html?$/i.test(f.name); })[0]
+                || files.filter(function (f) { return /^Sintesi/i.test(f.name) && /\.pdf$/i.test(f.name); })[0] || null;
             if (!files.length) html += '<p class="sd-vuoto">' + esc(t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.')) + '</p>';
             files.forEach(function (f) {
                 var g = genere(f.name) || { et: t('st_file', 'File'), icona: 'file' };
@@ -160,12 +168,16 @@
             html += '<h4 class="sd-h">' + esc(t('st_stampa_mappa', 'Stampa dalla mappa')) + '</h4>' +
                 '<button type="button" class="sd-riga" data-fn="exportPDF"><i data-lucide="file-down"></i><span class="sd-riga__t"><b>' + esc(t('st_pdf_mappa', 'PDF della mappa')) + '</b></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="openNodeLabelsPrintModal"><i data-lucide="scissors"></i><span class="sd-riga__t"><b>' + esc(t('st_foglio_nodi', 'Foglio dei nodi')) + '</b></span></button>' +
-                '<button type="button" class="sd-riga" data-fn="openDossierPrintModal"><i data-lucide="book-open"></i><span class="sd-riga__t"><b>' + esc(t('st_dossier', 'Dossier')) + '</b></span></button>' +
+                '<button type="button" class="sd-riga" data-fn="sintesi"><i data-lucide="sparkles"></i><span class="sd-riga__t"><b>' + esc(t('st_sintesi', 'Sintesi')) + '</b><small>' + esc(sintesi ? sintesi.name : t('st_sintesi_manca', 'questa mappa non ha una sintesi')) + '</small></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="catena"><i data-lucide="git-branch"></i><span class="sd-riga__t"><b>' + esc(t('st_catena', 'Catena dei perché')) + '</b></span></button>';
             corpo.innerHTML = html;
             corpo.onclick = function (e) {
                 var b = e.target.closest && e.target.closest('.sd-riga'); if (!b) return;
                 var fn = b.getAttribute('data-fn');
+                if (fn === 'sintesi') {
+                    if (!sintesi) { toast(t('st_sintesi_manca_toast', 'Questa mappa non porta una sintesi: il docente non l\'ha pubblicata.'), 'info'); return; }
+                    apriFile(vp, sintesi.relPath, sintesi.name); return;
+                }
                 if (fn === 'catena') { if (window.MappAICausal && window.MappAICausal.openDoc) window.MappAICausal.openDoc(); return; }
                 if (fn) { if (typeof window[fn] === 'function') window[fn](); return; }
                 apriFile(vp, b.getAttribute('data-rel'), b.getAttribute('data-nome'));
