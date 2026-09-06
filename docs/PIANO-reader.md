@@ -268,7 +268,7 @@ bottoni AI, launcher senza le card «a scelta».
   elenco alla `materials.html` (20 righe) e visore alla `file.html` (iframe su blob da
   `readVaultFile`): 153 righe copiate quasi verbatim, senza barra di salvataggio.
 
-### Fase 2 — «Prova» ✅ prima metà il 6/9 notte: l'autotest vive nel launcher «Studio attivo» (richiesta di Giacomo), non in una tela della console — tre autotest, viste e strumenti, record sul bus. Resta la seconda metà (2.3-2.4: PDF, report, cartella e tabella delle sessioni).
+### Fase 2 — «Prova» ✅ FATTA il 6/9 notte: l'autotest vive nel launcher «Studio attivo» (richiesta di Giacomo), non in una tela della console — tre autotest, viste e strumenti, record sul bus, sessione su disco (json → html → pdf jsPDF), report MC, tabella con stampante/cartella. Stato e misure in `docs/HANDOFF.md`.
 
 **2.1 `public/js/studente/prova-core.js`** — UMD puro, testato in Node (inv. 4):
 `poolMC(studySets)` (`mode:'quiz'`, `options.length>2`, `angle` dal set, `ramo` se c'è) ·

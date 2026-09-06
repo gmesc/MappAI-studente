@@ -69,3 +69,37 @@ test('voci: una per risposta scritta, col nodo L1 del ramo e il chip', () => {
     assert.strictEqual(P.nodoDelRamo(NODES, 'oceani'), 'L1_1', 'senza maiuscole');
     assert.strictEqual(P.nodoDelRamo(NODES, 'Venti'), null);
 });
+
+test('nomeSessione: da FilesCore, col progressivo sulle cartelle già presenti', () => {
+    const n0 = P.nomeSessione({ data: '2026-09-06T10:00:00Z', tipo: 'domande', mappa: 'Elettricità', ambito: 'Atmosfera' }, []);
+    assert.strictEqual(n0, '2026-09-06 · Domande · Elettricità — Atmosfera · 00');
+    const n1 = P.nomeSessione({ data: '2026-09-06T10:00:00Z', tipo: 'domande', mappa: 'Elettricità', ambito: 'Atmosfera' }, [n0, 'altro']);
+    assert.strictEqual(n1, '2026-09-06 · Domande · Elettricità — Atmosfera · 01');
+    assert.strictEqual(P.fmtData('2026-09-06T10:00:00Z').slice(3), '09/2026', 'GG/MM/AAAA');
+});
+
+test('foglioCompilato: le domande prese con «Perché:» e risposta; senza prese, tutte', () => {
+    const pool = P.poolAperte(FOGLI);
+    const st = { risposte: {}, letture: {} };
+    st.risposte[pool[0].id] = { testo: 'La mia risposta' }; st.letture[pool[0].id] = { chip: 'capito' };
+    st.risposte[pool[1].id] = {};
+    const r = P.foglioCompilato(pool, st, P.CHIP_PERCHE, a => a.toUpperCase());
+    assert.strictEqual(r.length, 2);
+    assert.deepStrictEqual([r[0].ramo, r[0].angolo, r[0].perche, r[0].risposta], ['Atmosfera', 'DEFINIZIONE', 'ho capito cosa rispondere', 'La mia risposta']);
+    assert.strictEqual(r[1].risposta, '');
+    assert.strictEqual(P.foglioCompilato(pool, {}, P.CHIP_PERCHE).length, pool.length, 'niente prese: tutte');
+    const it = P.itemsHtml(r);
+    assert.ok(/^Perché: ho capito/.test(it[0].risposta) && it[0].risposta.indexOf('La mia risposta') > 0);
+    assert.strictEqual(it[1].risposta, '');
+});
+
+test('reportMC: dal player di MappAI alla forma del report QR', () => {
+    const items = [{ q: 'A?', correct: 'a', explanation: 'perché a' }, { q: 'B?', correct: 'b' }];
+    const res = { correct: 1, total: 2, mistakes: [{ q: 'B?', userAnswer: 'x', correctAnswer: 'b', explanation: '' }] };
+    const r = P.reportMC(items, res, { mappa: 'M', titolo: 'Quiz — Set', data: '06/09/2026' });
+    assert.strictEqual(r.pct, 50);
+    assert.deepStrictEqual(r.results.perStudent[0].items.map(x => x.outcome), ['right', 'wrong']);
+    assert.strictEqual(r.results.perStudent[0].items[1].yourText, 'x');
+    assert.strictEqual(r.results.perStudent[0].items[0].yourText, 'a', 'la risposta giusta data');
+    assert.strictEqual(r.meta.mapTitle, 'M');
+});

@@ -116,7 +116,7 @@
         return scegli.then(function (f) {
             if (!f) return;
             var pool = PC().poolAperte([f]);
-            prova({ titolo: f.titolo, pool: pool, dueTempi: false, tipo: 'foglio' });
+            prova({ titolo: f.titolo, pool: pool, dueTempi: false, tipo: 'foglio', ambito: '', angoliEt: f.angle ? SV().etAngolo(window.t, f.angle) : '' });
         });
     }
 
@@ -150,7 +150,8 @@
             if (!c.pool.length) { toast(t('st_pool_vuoto', 'Con queste scelte non resta nessuna domanda.'), 'warning'); return; }
             var titolo = t('st_su_misura', 'Domande aperte su misura') + ' — ' + (v['amb-ramo'] && o.rami ? v.ramo : t('st_tutta', 'Tutta la mappa')) +
                 ' · ' + (v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli'));
-            prova({ titolo: titolo, pool: c.pool, dueTempi: c.dueTempi, tipo: 'su-misura' });
+            prova({ titolo: titolo, pool: c.pool, dueTempi: c.dueTempi, tipo: 'su-misura',
+                    ambito: (v['amb-ramo'] && o.rami) ? v.ramo : '', angoliEt: v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli') });
         });
     }
 
@@ -195,10 +196,87 @@
             consegnato = true;
             var voci = PC().voci(o.pool, st, S().db.nodes);
             registra(o, voci);
-            if (ridisegna) ridisegna(Object.assign({}, schema, { sporco: false, suApertura: null, sezioni: [{ testo: t('st_consegnato', 'Risposte registrate: {n}.').replace('{n}', voci.length) + ' ' + t('st_consegnato_sotto', 'Le trovi nella heat map, in «Cosa studiare ora» e nei progressi.') }], azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'primario' }] }));
-            toast(t('st_consegnato', 'Risposte registrate: {n}.').replace('{n}', voci.length), 'success');
+            var frase = t('st_consegnato', 'Risposte registrate: {n}.').replace('{n}', voci.length) + ' ' + t('st_consegnato_sotto', 'Le trovi nella heat map, in «Cosa studiare ora» e nei progressi.');
+            var fine = function (extra) {
+                if (ridisegna) ridisegna(Object.assign({}, schema, { sporco: false, suApertura: null, sezioni: [{ testo: frase + (extra ? ' ' + extra : '') }], azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'primario' }] }));
+            };
+            fine(t('st_scrivo', 'Scrivo il foglio…'));
+            /* il DOCUMENTO: sorgente prima della resa (inv. 18) — sessione.json, poi
+               l'HTML compilato e il PDF; una resa che fallisce lo dice e non toglie la sorgente */
+            scriviSessione(o, st).then(function (r) {
+                fine(r.ok ? t('st_foglio_ok', 'Il foglio delle risposte è in «Le tue prove» (Studio Attivo/Prove).') : t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ') + (r.error || ''));
+                toast(r.ok ? t('st_foglio_ok_toast', 'Foglio delle risposte salvato') : t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ') + (r.error || ''), r.ok ? 'success' : 'error');
+            });
         }
     }
+    /* ── LA SESSIONE SU DISCO ────────────────────────────────────────────────
+       Studio Attivo/Prove/<nome>/ — `sessione.json` (la sorgente: che cosa, quando,
+       stato), poi le rese: `risposte.html` (il foglio compilato, si stampa con
+       window.print) e `risposte.pdf` (jsPDF: il file da mandare al docente).
+       Niente soluzioni, niente report per le domande aperte (richiesta di Giacomo). */
+    function cartellaSessione(o) {
+        var s = S(), FS = window.MappAIStudenteFS;
+        var dir = s.activeVaultPath + '/Studio Attivo/Prove';
+        return FS.lista(dir).then(function (figli) {
+            var esistenti = figli.filter(function (f) { return f.isDir; }).map(function (f) { return f.name; });
+            var nome = PC().nomeSessione({ data: new Date(), tipo: o.tipo === 'quiz' ? 'quiz' : 'domande', mappa: s.rootNodeLabel || 'Mappa', ambito: o.ambito || '' }, esistenti);
+            return { rel: 'Studio Attivo/Prove/' + nome, nome: nome };
+        });
+    }
+    function scrivi(rel, o) {
+        return window.electronAPI.saveVaultFile(Object.assign({ vaultPath: S().activeVaultPath, relPath: rel }, o)).then(function (r) {
+            if (!r || !r.ok) throw new Error((r && r.error) || 'scrittura fallita: ' + rel);
+            return r;
+        });
+    }
+    function scriviSessione(o, st) {
+        var s = S(), QP = window.MappAIQuizPrint;
+        if (!s || !s.activeVaultPath) return Promise.resolve({ ok: false, error: 'nessun vault' });
+        var righe = PC().foglioCompilato(o.pool, st, PC().CHIP_PERCHE, function (a) { return a ? SV().etAngolo(window.t, a) : ''; });
+        var data = new Date();
+        var meta = { tipo: 'Domande aperte', titolo: o.titolo, mappa: s.rootNodeLabel || '', data: data.toISOString(), ambito: o.ambito || '', angoli: o.angoliEt || '', dueTempi: !!o.dueTempi };
+        var cart = null;
+        return cartellaSessione(o).then(function (c) {
+            cart = c;
+            var sessione = Object.assign({ nome: c.nome, html: 'risposte.html', pdf: 'risposte.pdf', ids: o.pool.map(function (v) { return v.id; }), stato: st, righe: righe }, meta);
+            return scrivi(c.rel + '/sessione.json', { text: JSON.stringify(sessione, null, 2) });
+        }).then(function () {
+            var html = QP.buildOpenQuestionsHtml({ id: 'prova', title: o.titolo, type: 'Domande aperte', items: PC().itemsHtml(righe) },
+                { mapName: s.rootNodeLabel || '', includeBar: false, includeAnswers: false, now: PC().fmtData(data) });
+            return scrivi(cart.rel + '/risposte.html', { text: html });
+        }).then(function () {
+            return window.MappAIStudentePdf.risposte({ titolo: o.titolo, mappa: s.rootNodeLabel || '', data: PC().fmtData(data), ambito: meta.ambito, angoli: meta.angoli, righe: righe })
+                .then(function (b64) { return scrivi(cart.rel + '/risposte.pdf', { base64: b64 }); });
+        }).then(function () { return { ok: true, rel: cart.rel }; })
+          .catch(function (e) { console.warn('[autotest] sessione', e); return { ok: false, error: e && e.message }; });
+    }
+    /* Il set a scelta multipla gira nel player di MappAI: alla fine (`showStudySummary`)
+       si archivia il REPORT come dopo l'attività QR — l'HTML `lr-*` di
+       `buildStudentsReportHtml`, con `results.json` e `sessione.json` accanto. */
+    function scriviReportMC() {
+        var s = S(), R = window.MappAILiveReports, res = window.studyResults, items = window.activeStudySessionItems;
+        if (!s || !s.activeVaultPath || !R || !res || res.mode !== 'quiz' || !items || !items.length) return Promise.resolve({ ok: false });
+        var data = new Date(), titolo = 'Quiz — ' + (window.activeStudySetTitle || 'set');
+        var mm = Math.floor((window.studySeconds || 0) / 60), ss = (window.studySeconds || 0) % 60;
+        var rep = PC().reportMC(items, res, { mappa: s.rootNodeLabel || '', titolo: titolo, data: PC().fmtData(data), durata: String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), chi: t('st_io', 'Io') });
+        var cart = null;
+        return cartellaSessione({ tipo: 'quiz', ambito: '' }).then(function (c) {
+            cart = c;
+            return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: 'Scelta multipla', titolo: titolo, mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct }, null, 2) });
+        }).then(function () {
+            return scrivi(cart.rel + '/results.json', { text: JSON.stringify({ items: items, results: res }, null, 2) });
+        }).then(function () {
+            return scrivi(cart.rel + '/report.html', { text: R.buildStudentsReportHtml(rep.meta, rep.results) });
+        }).then(function () { toast(t('st_report_ok', 'Report della prova salvato in «Le tue prove»'), 'success'); return { ok: true }; })
+          .catch(function (e) { console.warn('[autotest] report', e); toast(t('st_report_ko', 'Report non salvato: ') + (e && e.message), 'error'); return { ok: false }; });
+    }
+    function agganciaPlayer() {
+        var orig = window.showStudySummary;
+        if (typeof orig !== 'function' || orig.__studente) return;
+        window.showStudySummary = function () { var r = orig.apply(this, arguments); try { scriviReportMC(); } catch (e) { } return r; };
+        window.showStudySummary.__studente = true;
+    }
+
     /* il bus: come `registra` di mappai-scelta.js — la padronanza per nodo dove il
        nodo esiste (MC: 1/0; aperte: nessuna misura, ma la sessione si scrive) */
     function registra(o, voci) {
@@ -218,9 +296,10 @@
     function installa() {
         if (!window.ActiveStudy) window.ActiveStudy = {};
         window.ActiveStudy.openLauncher = openLauncher;
+        agganciaPlayer();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installa); else installa();
     installa();
 
-    window.MappAIStudenteAutotest = { openLauncher: openLauncher, fogli: fogli, prova: prova, suMisura: suMisura };
+    window.MappAIStudenteAutotest = { openLauncher: openLauncher, fogli: fogli, prova: prova, suMisura: suMisura, scriviReportMC: scriviReportMC };
 }());

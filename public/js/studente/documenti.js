@@ -134,9 +134,57 @@
         });
     }
 
-    /* le celle della tabella delle prove (fase 2): stampante e cartella */
+    /* ── le celle della tabella delle prove ─────────────────────────────────
+       `apri:<id>` la riga → il documento nel dock · `stampa:<id>` → l'HTML in una
+       finestra e `window.print()` (su iPad è il menu di stampa) · `cartella:<id>`
+       → il PDF al foglio di condivisione di iOS (`@capacitor/share`: «Salva su
+       File», «Apri in…», Mail); nel browser si scarica. L'app File non si apre su
+       un percorso: la cartella dell'app è già lì (LEGGIMI-studente). */
+    function leggiB64(vaultPath, rel) {
+        return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: rel }).then(function (r) {
+            if (!r || !r.ok) throw new Error((r && r.error) || 'file non trovato');
+            return r.base64;
+        });
+    }
     function azione(a, vaultPath, sessioni) {
-        toast(t('st_prova_dopo', 'La prova arriva con la fase 2: per ora mappa e flashcard.'), 'info');
+        var m = /^(apri|stampa|cartella):(.+)$/.exec(a || ''); if (!m || !vaultPath) return;
+        var s = (sessioni || []).filter(function (x) { return x.id === m[2]; })[0];
+        if (!s) { toast(t('st_sessione_ko', 'Prova non trovata.'), 'error'); return; }
+        var base = 'Studio Attivo/Prove/' + s.id + '/';
+        if (m[1] === 'apri') {
+            if (window.MappAIStudente && window.MappAIStudente.apriMappa) {
+                window.MappAIStudente.apriMappa(vaultPath).then(function () { apriFile(vaultPath, base + (s.html || 'risposte.html'), s.nome || s.id); });
+            }
+            return;
+        }
+        if (m[1] === 'stampa') {
+            leggiB64(vaultPath, base + (s.html || 'risposte.html')).then(function (b64) {
+                var html = decodeURIComponent(escape(atob(b64)));
+                var w = window.MappAIStudyExport && window.MappAIStudyExport.openPrintable
+                    ? window.MappAIStudyExport.openPrintable(html, { autoPrint: true })
+                    : (function () { var x = window.open('', '_blank'); if (x) { x.document.write(html); x.document.close(); setTimeout(function () { x.print(); }, 800); } return x; })();
+                if (!w) toast(t('st_popup', 'Il browser ha bloccato la finestra di stampa.'), 'warning');
+            }).catch(function (e) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + ' ' + (e && e.message), 'error'); });
+            return;
+        }
+        if (m[1] === 'cartella') {
+            var pdf = s.pdf || s.html; if (!pdf) return;
+            var rel = base + pdf;
+            var cap = window.Capacitor && window.Capacitor.Plugins;
+            if (cap && cap.Share && cap.Filesystem) {
+                var p = rel; var vp = vaultPath.replace(/^Documents\/?/, '');
+                cap.Filesystem.getUri({ path: (vp ? vp + '/' : '') + p, directory: 'DOCUMENTS' })
+                    .then(function (u) { return cap.Share.share({ title: s.nome || pdf, url: u.uri }); })
+                    .catch(function (e) { toast(t('st_share_ko', 'Condivisione non riuscita: ') + (e && e.message), 'error'); });
+                return;
+            }
+            leggiB64(vaultPath, rel).then(function (b64) {
+                var url = URL.createObjectURL(b64ToBlob(b64, mime(pdf)));
+                var link = document.createElement('a'); link.href = url; link.download = pdf; document.body.appendChild(link); link.click(); link.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+                toast(t('st_scaricato', 'Nel browser il PDF si scarica; sull\'iPad si apre il foglio di condivisione.'), 'info');
+            }).catch(function (e) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + ' ' + (e && e.message), 'error'); });
+        }
     }
 
     window.MappAIStudenteDocumenti = { apri: apri, chiudi: chiudi, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere };

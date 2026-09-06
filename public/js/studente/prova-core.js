@@ -11,9 +11,10 @@
  */
 (function (root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory(
-        (typeof require === 'function') ? require('../mappai-scelta-core.js') : null);
-    else root.MappAIProvaCore = factory(root.MappAIScelta);
-}(typeof self !== 'undefined' ? self : this, function (SC0) {
+        (typeof require === 'function') ? require('../mappai-scelta-core.js') : null,
+        (typeof require === 'function') ? require('../mappai-files-core.js') : null);
+    else root.MappAIProvaCore = factory(root.MappAIScelta, root.MappAIFilesCore);
+}(typeof self !== 'undefined' ? self : this, function (SC0, FC0) {
     'use strict';
     function SC() { return SC0 || (typeof window !== 'undefined' ? window.MappAIScelta : null); }
     function _s(x) { return String(x == null ? '' : x); }
@@ -101,5 +102,65 @@
         return out;
     }
 
-    return { CHIP_PERCHE: CHIP_PERCHE, setMC: setMC, foglioDaHtml: foglioDaHtml, poolAperte: poolAperte, opzioni: opzioni, componi: componi, statoIniziale: statoIniziale, nodoDelRamo: nodoDelRamo, voci: voci };
+    /* ── LA SESSIONE SU DISCO ──────────────────────────────────────────────
+       Il nome viene da FilesCore (un compositore di nomi solo, inv. 6):
+       «2026-09-06 · Domande · Elettricità — Atmosfera · 00». `esistenti` = le
+       cartelle già in Studio Attivo/Prove, per il progressivo. */
+    function FC() { return FC0 || (typeof window !== 'undefined' ? window.MappAIFilesCore : null); }
+    function nomeSessione(o, esistenti) {
+        var F = FC();
+        var base = F.sessionFolderName({ date: o.data, activity: o.tipo || 'domande', map: o.mappa, scope: o.ambito || '' });
+        var seq = F.sessionSeq(esistenti || [], base, ' · ');
+        return base + ' · ' + seq.next;
+    }
+    function fmtData(d) {
+        var x = d ? new Date(d) : new Date(); if (isNaN(x.getTime())) x = new Date();
+        var p = function (n) { return String(n).padStart(2, '0'); };
+        return p(x.getDate()) + '/' + p(x.getMonth() + 1) + '/' + x.getFullYear();
+    }
+    /* Il foglio COMPILATO: le domande PRESE (con la risposta scritta o vuota) e,
+       se non ne è stata presa nessuna, tutte. Ogni riga porta ramo, angolo, il
+       chip «Perché:» e la risposta: è la stessa lista per il PDF (jsPDF) e per
+       l'HTML (`buildOpenQuestionsHtml` con `item.risposta`). */
+    function foglioCompilato(pool, stato, chips, etAngolo) {
+        var R = (stato && stato.risposte) || {}, L = (stato && stato.letture) || {};
+        var prese = (pool || []).filter(function (v) { return v.id in R; });
+        var lista = prese.length ? prese : (pool || []);
+        var etChip = function (k) { var c = (chips || []).filter(function (x) { return x.k === k; })[0]; return c ? c.et : k; };
+        return lista.map(function (v) {
+            var r = R[v.id] || {}, l = L[v.id] || {};
+            return {
+                ramo: v.ramo || '', angolo: etAngolo ? etAngolo(v.angle) : (v.angle || ''),
+                domanda: v.testo, perche: l.chip ? etChip(l.chip) : '', risposta: _s(r.testo).trim(), id: v.id
+            };
+        });
+    }
+    /* gli item per `buildOpenQuestionsHtml`: `risposta` al posto delle righe,
+       il «Perché:» in testa alla risposta (il foglio non ha un campo suo) */
+    function itemsHtml(righe) {
+        return (righe || []).map(function (r) {
+            return { question: r.domanda, areas: r.ramo ? [r.ramo] : [], l1: r.ramo, lines: 4,
+                     risposta: (r.perche ? 'Perché: ' + r.perche + '\n' : '') + (r.risposta || '') };
+        });
+    }
+    /* il report di un set a scelta multipla dal player di MappAI: `items` =
+       activeStudySessionItems, `res` = studyResults {correct, total, mistakes[{q, userAnswer, correctAnswer, explanation}]}
+       → i due argomenti di `MappAILiveReports.buildStudentsReportHtml` */
+    function reportMC(items, res, meta) {
+        var errori = {};
+        ((res && res.mistakes) || []).forEach(function (m) { errori[_s(m.q)] = m; });
+        var lista = (items || []).map(function (it) {
+            var m = errori[_s(it.q)];
+            return { outcome: m ? 'wrong' : 'right', text: it.q, yourText: m ? m.userAnswer : it.correct, correctText: it.correct, explanation: it.explanation || '' };
+        });
+        var giuste = lista.filter(function (x) { return x.outcome === 'right'; }).length;
+        var pct = lista.length ? Math.round(100 * giuste / lista.length) : 0;
+        return {
+            meta: { mapTitle: meta.mappa || '', activity: meta.titolo || 'Quiz', className: meta.classe || '', dateStr: meta.data || '', durationStr: meta.durata || '' },
+            results: { joined: 1, questionCount: lista.length, perStudent: [{ displayName: meta.chi || 'Io', emoji: '', num: '', answered: lista.length, blankCount: 0, manualCount: 0, accuracyPct: pct, items: lista, strengths: [], weaknesses: [] }] },
+            giuste: giuste, totale: lista.length, pct: pct
+        };
+    }
+
+    return { CHIP_PERCHE: CHIP_PERCHE, nomeSessione: nomeSessione, fmtData: fmtData, foglioCompilato: foglioCompilato, itemsHtml: itemsHtml, reportMC: reportMC, setMC: setMC, foglioDaHtml: foglioDaHtml, poolAperte: poolAperte, opzioni: opzioni, componi: componi, statoIniziale: statoIniziale, nodoDelRamo: nodoDelRamo, voci: voci };
 }));
