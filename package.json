@@ -13,7 +13,7 @@
     "verifica": "node tools/sincronizza.js --verifica",
     "vault-json": "node tools/vault-json.js",
     "serve": "python3 -m http.server 8766 -d public",
-    "ios": "npx cap sync ios && npx cap open ios"
+    "ios": "npx cap add ios; python3 tools/plist-ipad.py && npx cap sync ios && npx cap open ios"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.0",

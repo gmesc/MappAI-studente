@@ -16,10 +16,12 @@ delle risposte, tabella delle sessioni con stampante/cartella): è la fase 2 del
 §«Che cosa si fa» → 2.1-2.4. `Prova` oggi risponde con un avviso.
 
 **Da provare sull'iPad (mai fatto: il guscio è stato provato SOLO nel browser).** Il
-progetto Xcode non è ancora generato: `npx cap add ios`, poi in `ios/App/App/Info.plist`
-**rimettere a mano** `UIFileSharingEnabled` = true, `LSSupportsOpeningDocumentsInPlace` =
-true, `UIDeviceFamily` = [2] (la prova che funzionavano è nel plist compilato di «MappAI
-Studente» in `MappAI re/ios/DerivedData`). Poi `npx cap sync ios`, Xcode, firma, iPad.
+progetto Xcode È generato (`ios/`, fuori dal repo) con Capacitor 8 (SPM, niente CocoaPods) e
+le tre chiavi del plist messe da `tools/plist-ipad.py` (`UIFileSharingEnabled`,
+`LSSupportsOpeningDocumentsInPlace`, `UIDeviceFamily=[2]` — la prova che funzionavano è nel
+plist compilato di «MappAI Studente» in `MappAI re/ios/DerivedData`). ⚠️ Il CLI di
+Capacitor vuole **Node ≥ 22**: `nvm use 22` (sul Mac c'è la 22.22.3), poi `npm run ios`
+(rigenera se manca, plist, sync, apre Xcode). Poi firma e iPad: tocca a Giacomo.
 Gesti: File › Sul mio iPad › MappAI Studente → trascinare `Elettricità - MM` → l'app la
 elenca sotto «Scienze» → Mappa (pinch/pan) → Flashcard → Materiali (sintesi con voce, un
 PDF in iframe: **da misurare**, WKWebView potrebbe rifiutare il blob PDF) → Torna a STUDIA →
@@ -60,7 +62,7 @@ nascosti, stampa visibile · «Lavagna QR» nascosto.
 | la potatura | `public/js/studente/pota.js` + `css/studente.css` | `appState.studentMode`, menu contestuale in allowlist via MutationObserver, `refreshGeminiModels`/`initializeAIProvider` spenti, CSS per selettore sui bottoni del docente; bersagli ≥ 44px |
 | la console STUDIA | `studente/studia-core.js` (puro, testato) + `studente/console.js` | nav per materia (`materiaDichiarata → discDir → Senza materia`), area con Mappa (conclude) · Flashcard (conclude) · Prova (fase 2), tabella `Studio Attivo/Prove/*/sessione.json`, briciole statiche, ESC non esce, «Apri una cartella» |
 | il dock e i materiali | `studente/documenti.js` | `#studente-dock` in `#main-content`, maniglia (clamp 360px–60%), iframe da blob; elenco per prefisso + 4 stampe dalla mappa; `azione()` per stampante/cartella = fase 2 |
-| Capacitor | `package.json`, `capacitor.config.json` | `@capacitor/core|ios|filesystem|share` 8; `ios/` non generato, in `.gitignore` |
+| Capacitor | `package.json`, `capacitor.config.json`, `tools/plist-ipad.py` | `@capacitor/core|ios|filesystem|share` 8; `ios/` generato il 6/9 (Node 22), in `.gitignore`, si rigenera con `npm run ios` |
 
 ## 3. Le decisioni prese qui (oltre a quelle del piano)
 
