@@ -74,3 +74,19 @@ html.studente #studente-dock.sd--destra .sd-testa { padding-top: calc(10px + env
 html.studente #studente-dock.sd--basso .sd-corpo { padding-bottom: env(safe-area-inset-bottom, 0px); }
 html.studente #floating-actions-container { margin-bottom: env(safe-area-inset-bottom, 0px); }
 html.studente body { overscroll-behavior: none; }
+
+/* ── la barra dei comandi della mappa (7/9, iPad) ─────────────────────────
+   In MappAI è `absolute; left:50%; translateX(-50%)` con `min-w-max`: da
+   assoluta con left al 50% lo spazio che le spetta è METÀ del canvas, e sotto
+   la sidebar aperta in portrait i bottoni e il cursore dei livelli non ci
+   stavano. Qui la barra prende la larghezza del canvas (meno i margini), si
+   centra con i margini automatici e il cursore si allarga o stringe. */
+html.studente #map-control-card {
+  left: 12px !important; right: 12px !important; transform: none !important;
+  width: auto; min-width: 0 !important; max-width: 720px; margin: 0 auto;
+  flex-wrap: nowrap !important; justify-content: space-between !important; gap: 8px !important;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+}
+html.studente #map-control-card > button { flex: 0 0 auto; }
+html.studente #map-control-card #level-filter-control,
+html.studente #map-control-card #min-link-control { flex: 1 1 8rem; width: auto !important; min-width: 6rem; }

@@ -35,34 +35,45 @@
         });
     }
 
-    /* ── LONG PRESS sui nodi (iPad) ───────────────────────────────────────
-       MappAI apre il menu contestuale col tasto destro; il tocco lungo ce l'ha
-       per sfondo e archi (`handleTouchStart`, privato in mappai-context-menu.js)
-       ma NON per i nodi. Stesso schema: 500 ms fermi → `showContextMenu` con un
-       evento sintetico; 15 px di movimento annullano; il click che segue il
-       tocco lungo si inghiotte, o aprirebbe la scheda del nodo. */
+    /* ── LONG PRESS sui nodi e sulle card (iPad) ─────────────────────────
+       MappAI apre i menu col tasto destro. Sul canvas D3 il tocco lungo esiste
+       (dentro il drag di mappai-d3-render.js) ma d3-drag ferma la propagazione
+       del `touchstart`: un ascoltatore sul contenitore in fase di bolla non lo
+       vede mai (è il perché del primo tentativo fallito, 7/9). Nelle viste di
+       studio (Albero, Fasci, DAG, Focus) le card hanno un menu proprio —
+       Descrizione, Focus vicini/parentela — legato SOLO a `contextmenu`.
+       Qui: fase di CATTURA sul contenitore, 500 ms fermi → si sintetizza un
+       `contextmenu` sul bersaglio (nodo D3 o card) e ci pensano i loro
+       ascoltatori; 15 px di movimento annullano; il click che segue si
+       inghiotte, o aprirebbe la scheda del nodo. Se il drag ha già aperto il
+       menu del canvas, non si apre due volte. */
+    var BERSAGLI = 'g.node-group, svg g[data-op]';
     function longPressNodi(cont) {
         var timer = null, pos = null, inghiotti = 0;
+        function stop() { if (timer) { clearTimeout(timer); timer = null; } }
         cont.addEventListener('touchstart', function (e) {
             if (e.touches.length !== 1) return;
-            var g = e.target.closest && e.target.closest('g.node-group');
-            if (!g || !g.__data__) return;
+            var el = e.target.closest && e.target.closest(BERSAGLI);
+            if (!el) return;
             var t0 = e.touches[0]; pos = { x: t0.clientX, y: t0.clientY };
-            if (timer) clearTimeout(timer);
+            stop();
             timer = setTimeout(function () {
-                timer = null; inghiotti = Date.now();
+                timer = null; inghiotti = Date.now(); window.ignoreNextNodeClick = true;
+                var menu = document.getElementById('context-menu');
+                if (menu && !menu.classList.contains('hidden')) return;      /* il drag l'ha già aperto */
                 try {
-                    window.showContextMenu({ preventDefault: function () { }, stopPropagation: function () { }, clientX: pos.x, clientY: pos.y }, 'node', g.__data__);
+                    el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: pos.x, clientY: pos.y, button: 2 }));
                 } catch (err) { }
-            }, 500);
-        }, { passive: true });
+            }, 450);   /* prima dei 500 ms del drag e del gesto lungo di iOS */
+        }, { passive: true, capture: true });
         cont.addEventListener('touchmove', function (e) {
             if (!timer || !pos) return;
             var t0 = e.touches[0], dx = t0.clientX - pos.x, dy = t0.clientY - pos.y;
-            if (dx * dx + dy * dy > 225) { clearTimeout(timer); timer = null; }
-        }, { passive: true });
-        cont.addEventListener('touchend', function () { if (timer) { clearTimeout(timer); timer = null; } }, { passive: true });
-        cont.addEventListener('touchcancel', function () { if (timer) { clearTimeout(timer); timer = null; } }, { passive: true });
+            if (dx * dx + dy * dy > 225) stop();
+        }, { passive: true, capture: true });
+        cont.addEventListener('touchend', stop, { passive: true, capture: true });
+        /* niente stop su `touchcancel`: iOS può annullare il tocco proprio alla soglia del
+           suo gesto lungo (il dito è ancora giù) — il menu deve aprirsi lo stesso */
         cont.addEventListener('click', function (e) {
             if (inghiotti && Date.now() - inghiotti < 700) { e.stopPropagation(); e.preventDefault(); inghiotti = 0; }
         }, true);

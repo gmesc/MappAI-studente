@@ -8,6 +8,20 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 notte: terzo giro iPad — 1-5 del giro precedente funzionano (stampe non provate).**
+Due cose: (a) **la barra dei comandi** della mappa: in MappAI è assoluta con `left:50%`, e da
+assoluta le spetta metà canvas — con la sidebar aperta in portrait bottoni e cursore non ci
+stavano. In `studente.css` prende la larghezza del canvas (left/right 12 px, max 720, margini
+auto), il cursore dei livelli flette (misurato: 464 px su un canvas di 488). (b) **Il tocco
+lungo**: d3-drag ferma la propagazione del `touchstart` sui nodi, quindi il primo ascoltatore
+(in bolla sul contenitore) non lo vedeva mai; e le card delle viste di studio (Albero, Fasci,
+DAG, Focus) hanno un menu proprio — Descrizione, Focus vicini/parentela, Anelli, Copia — legato
+SOLO a `contextmenu`. Ora `pota.js` ascolta in fase di CATTURA e a 450 ms sintetizza un
+`contextmenu` sul bersaglio (`g.node-group` o `svg g[data-op]`): ci pensano gli ascoltatori
+loro. Verificato nel browser con TouchEvent sintetici sulle card (menu con le cinque voci);
+sul canvas D3 il test sintetico non vale (d3-drag non registra il tocco senza `maxTouchPoints`)
+— **da provare sull'iPad**: tocco lungo su un nodo della Mappa e su una card dell'Albero.
+
 **⟵ 7/9 sera: il secondo giro sull'iPad (`992f16e` + questo).** Dai sette screenshot di
 Giacomo: (1) **Cabina dello studente** (`studente/cabina.js`, `window.openCabina` che il
 pallino del manifesto chiama): il carattere (i quattro di `MappAIFont`, stessa chiave
