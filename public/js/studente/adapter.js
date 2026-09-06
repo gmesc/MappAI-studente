@@ -468,6 +468,23 @@
     window.addEventListener('pagehide', function () { try { if (cbUscita) cbUscita(); } catch (e) { } });
 
     window.electronAPI = API;
+    /* sull'iPad `doc.save()` di jsPDF (le quattro «Stampa dalla mappa») è un no-op nella
+       WKWebView: il PDF si scrive in `Studio Attivo/Stampe/<nome>` e si apre il foglio di
+       condivisione — stessa strada della cella «cartella» delle prove */
+    if (PROV_CAP && window.jspdf && window.jspdf.jsPDF) {
+        window.jspdf.jsPDF.API.save = function (nome) {
+            var vp = window.appState && window.appState.activeVaultPath; if (!vp) return this;
+            var n = String(nome || 'stampa.pdf').replace(/[\\/:*?"<>|]+/g, '-'); if (!/\.pdf$/i.test(n)) n += '.pdf';
+            var b64 = this.output('datauristring').split(',')[1];
+            saveVaultFile({ vaultPath: vp, relPath: 'Studio Attivo/Stampe/' + n, base64: b64 }).then(function (r) {
+                if (!r || !r.ok) { if (window.showToast) window.showToast('PDF non salvato: ' + (r && r.error), 'error'); return; }
+                var Fs = plugin('Filesystem'), Sh = plugin('Share'); if (!Fs || !Sh) return;
+                var rel = vp.replace(/^Documents\/?/, ''); rel = (rel ? rel + '/' : '') + 'Studio Attivo/Stampe/' + n;
+                return Fs.getUri({ path: rel, directory: 'DOCUMENTS' }).then(function (u) { return Sh.share({ title: n, url: u.uri }); });
+            }).catch(function (e) { if (window.showToast) window.showToast('PDF: ' + (e && e.message), 'error'); });
+            return this;
+        };
+    }
     /* per i moduli dello studente: leggere un testo, scrivere, elencare */
     window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, plugin: plugin, leggiTesto: leggiTesto, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd };
     console.log('[MappAI studente] adapter pronto (' + FS.nome + ')');

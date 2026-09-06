@@ -98,7 +98,17 @@
         if (st.aperta || !window.MappAIModal) return;
         st.aperta = true;
         var s = schema();
+        var rid = null;
+        /* le briciole (`mappai-briciola`): «Studia» e la materia riportano alla pagina senza
+           progetto scelto — non c'è una pagina della materia, la lista è già lì a sinistra */
+        function suBriciola() {
+            st.sel = ''; st.sessioni = [];
+            try { localStorage.removeItem('mappai_studente_sel'); } catch (e) { }
+            if (rid) { rid(schema()); briciole(); }
+        }
+        document.addEventListener('mappai-briciola', suBriciola);
         s.suApertura = function (box, ridisegna) {
+            rid = ridisegna;
             leggi().then(function () {
                 ridisegna(schema()); briciole();
                 if (st.sel) leggiSessioni(st.sel).then(function (x) { st.sessioni = x; ridisegna(schema()); briciole(); });
@@ -121,6 +131,7 @@
         };
         var scelto = st.sel;
         window.MappAIModal.open(s).then(function (r) {
+            document.removeEventListener('mappai-briciola', suBriciola);
             st.aperta = false;
             scelto = st.sel || scelto;
             var a = r && r.azione;

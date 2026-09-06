@@ -15,7 +15,7 @@ test('nessuna selezione: console piena, sette voci che NON concludono, invito ne
     const voci = L.schema(BASE).nav.filter(v => !v.gruppo);
     assert.strictEqual(voci.length, 7);
     assert.ok(voci.every(v => v.chiude === false), 'una voce che conclude chiuderebbe la finestra');
-    assert.strictEqual(L.schema(BASE).azioni.length, 0, 'niente da avviare');
+    assert.deepStrictEqual(L.schema(BASE).azioni.map(a => a.id), ['torna'], 'niente da avviare, ma la strada indietro c\'è sempre');
 });
 
 test('set-mc: i set sono voci che non concludono, Avvia solo con un set scelto, la spunta split', () => {
@@ -23,11 +23,11 @@ test('set-mc: i set sono voci che non concludono, Avvia solo con un set scelto, 
     ok(s, 'set-mc');
     assert.strictEqual(s.sezioni[0].voci.length, 2);
     assert.ok(s.sezioni[0].voci.every(v => v.chiude === false));
-    assert.strictEqual(s.azioni.length, 0);
+    assert.deepStrictEqual(s.azioni.map(a => a.id), ['torna']);
     s = L.schema(Object.assign({}, BASE, { sel: 'set-mc', set: 'b', split: true }));
     ok(s, 'set-mc scelto');
-    assert.strictEqual(s.azioni[0].id, 'avvia');
-    assert.ok(s.azioni[0].chiude !== false, 'Avvia conclude');
+    assert.deepStrictEqual(s.azioni.map(a => a.id), ['torna', 'avvia']);
+    assert.ok(s.azioni[1].chiude !== false, 'Avvia conclude');
     assert.strictEqual(s.sezioni[1].campi[0].id, 'split');
     assert.strictEqual(s.sezioni[1].campi[0].valore, true);
 });
@@ -37,7 +37,7 @@ test('su-misura: i campi di ambito e angoli, ramo solo se c\'è, split in coda, 
     ok(s, 'su-misura');
     const ids = s.sezioni[0].campi.map(c => c.id);
     assert.deepStrictEqual(ids, ['amb-tutto', 'amb-ramo', 'ramo', 'ang-tutti', 'ang-uno', 'angolo', 'split']);
-    assert.strictEqual(s.azioni[0].id, 'avvia');
+    assert.strictEqual(s.azioni[1].id, 'avvia');
     const senzaRami = L.schema(Object.assign({}, BASE, { sel: 'su-misura', opzioni: { rami: null, angoli: [] } }));
     ok(senzaRami, 'senza rami');
     assert.ok(senzaRami.sezioni[0].campi.every(c => c.id !== 'ramo' && c.id !== 'angolo'), 'senza rami e senza angoli: niente tendine vuote');
@@ -46,7 +46,7 @@ test('su-misura: i campi di ambito e angoli, ramo solo se c\'è, split in coda, 
 test('senza materiali le viste restano, e set-mc senza set mostra il motivo', () => {
     const s = L.schema({ sel: 'set-mc', nMC: 0, nAp: 0 });
     ok(s, 'niente');
-    assert.strictEqual(s.azioni.length, 0);
+    assert.deepStrictEqual(s.azioni.map(a => a.id), ['torna']);
     assert.ok(/nessun set/.test(s.sezioni[0].testo));
     ok(L.schema({ sel: 'heatmap', mv: true }), 'heatmap');
 });

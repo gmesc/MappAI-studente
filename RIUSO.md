@@ -30,7 +30,7 @@ sul disco il test si salta (un rosso per un file assente addestrerebbe a ignorar
 ## Come si aggiorna
 
 ```bash
-node tools/sincronizza.js            # copia ciò che è cambiato, dice cosa
+node tools/sincronizza.js            # copia ciò che è cambiato, dice cosa (poi bump del `?v=` di quel file in index.html)
 npm test                             # riuso-divergenza verde, studia-core verde
 python3 tools/estrai-index.py --confronta   # i blocchi di index.html: uguale / DIVERSO
 ```

@@ -62,3 +62,15 @@ html.studente #total-cost-display, html.studente #total-tokens-display, html.stu
 @media (max-width: 900px) {
   html.studente #floating-actions-container { bottom: 104px !important; }
 }
+
+/* ── iPad: la barra di stato e la home bar (7/9) ──────────────────────────
+   Con `viewport-fit=cover` la webview arriva fin sotto la barra di stato: le
+   superfici che toccano il bordo alto scendono di quel tanto, quelle in basso
+   lasciano spazio alla home bar. env() vale 0 nel browser: innocuo. La testata
+   della console ha altezza fissa (--mnc-testata): lo spazio va sul riquadro. */
+html.studente .mm-box--piena.mm-box--console { padding-top: env(safe-area-inset-top, 0px); }
+html.studente .mm-box--piena.mm-box--console > .mm-foot { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+html.studente #studente-dock.sd--destra .sd-testa { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+html.studente #studente-dock.sd--basso .sd-corpo { padding-bottom: env(safe-area-inset-bottom, 0px); }
+html.studente #floating-actions-container { margin-bottom: env(safe-area-inset-bottom, 0px); }
+html.studente body { overscroll-behavior: none; }

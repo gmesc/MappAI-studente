@@ -8,6 +8,26 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 sera: il secondo giro sull'iPad (`992f16e` + questo).** Dai sette screenshot di
+Giacomo: (1) **Cabina dello studente** (`studente/cabina.js`, `window.openCabina` che il
+pallino del manifesto chiama): il carattere (i quattro di `MappAIFont`, stessa chiave
+`mappai_font_app`) e la **guida** (`public/guida/index.html`, per un ragazzo di 11-12 anni,
+otto sezioni, in un modale xl con iframe; le foto si fanno sull'iPad vero, dopo). (2) **Le
+briciole vivono**: il manifesto emette `mappai-briciola` e nessuno ascoltava — ora la console
+STUDIA (Studia/materia → nessun progetto scelto) e il launcher (Studia › mappa › Studio attivo ›
+attività: «Studia» chiude e riapre la console con `MappAIStudente.torna()`, «mappa» chiude e
+basta, «Studio attivo» torna alla prima pagina) ascoltano finché sono aperti. (3) Nel launcher
+c'è sempre **«‹ Torna a STUDIA»** in fondo (`launcher-core` → azione `torna`, 4 test aggiornati).
+(4) **La prova su misura non mostra più «Cambia argomenti»**: opzione `senzaAree` della view
+in MappAI re (`48fcb7b`, spenta per default, resincronizzata, `?v=st2`). (5) **Safe area** in
+`studente.css` (console piena, dock, menu flottante; `env()` vale 0 nel browser). (6) Sull'iPad
+`jsPDF.API.save` è sostituito nell'adapter: le quattro «Stampa dalla mappa» scrivono in
+`Studio Attivo/Stampe/<nome>.pdf` e aprono il foglio di condivisione (`doc.save` è un no-op
+nella WKWebView) — **da misurare sull'iPad**. (7) **L'icona** con la S: `tools/icona.py`
+(PIL) → `resources/icona-1024.png` → `ios/.../AppIcon-512@2x.png`; si rilancia dopo un
+`cap add ios`. Verificato nel browser: Cabina, guida, briciole nei due posti, «Torna»,
+prova su misura senza passo ①. `npx cap sync ios` fatto: in Xcode basta Run.
+
 **⟵ 7/9: launcher a schermo intero e prova a schermo diviso (piano `docs/PIANO-prova-split.md`,
 fatto).** «Studio attivo» è una CONSOLE (`studente/launcher-core.js`, puro, validaSchema in
 Node — ha trovato la tendina degli angoli che nasceva vuota sui fogli vecchi): colonna con i tre
@@ -126,6 +146,10 @@ nascosti, stampa visibile · «Lavagna QR» nascosto.
   base64), non misurato.
 - 🟡 **Il PDF nell'iframe**: nel browser Chromium lo rende; WKWebView di solito anche, ma da
   un `blob:` non è certo. Ripiego previsto nel piano: foglio di condivisione (`@capacitor/share`).
+- 🟡 **`jsPDF.API.save` sostituito sull'iPad** (adapter): scrive e condivide, ma è misurato
+  solo per lettura del codice — le stampe dalla mappa vanno provate sull'iPad.
+- 🟡 **La guida non ha immagini**: il testo regge da solo; le foto delle superfici si fanno
+  sull'iPad vero e si mettono in `public/guida/`.
 - 🟡 **Il dock copre il canvas** (`position:absolute` a destra) invece di stringerlo: la
   mappa resta trascinabile sotto. Stringere `#d3-container` vuol dire toccare la cascata di
   `style.css` (713 `!important`): si fa se Giacomo lo chiede.

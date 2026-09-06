@@ -78,10 +78,26 @@
             function briciole() {
                 var CM = window.MappAIConsoleManifesto; if (!CM || !CM.briciole) return;
                 var v = LC().VOCI.filter(function (x) { return x.id === st.sel; })[0];
-                try { CM.briciole([{ id: 'studio', et: t('as_title', 'Studio attivo') }].concat(v ? [{ id: v.id, et: t('st_v_' + v.id, v.et) }] : [])); } catch (e) { }
+                var prog = ((window.MappAIStudente || {}).stato || {}).vaults || [];
+                prog = prog.filter(function (x) { return x.fullPath === s.activeVaultPath; })[0] || {};
+                try {
+                    CM.briciole([{ id: 'studia', et: t('st_titolo', 'Studia') }, { id: 'mappa', et: prog.rootNodeLabel || prog.folderName || t('st_mappa', 'Mappa') },
+                        { id: 'studio', et: t('as_title', 'Studio attivo') }].concat(v ? [{ id: v.id, et: t('st_v_' + v.id, v.et) }] : []));
+                } catch (e) { }
             }
+            /* le briciole cliccate (`mappai-briciola`, dal manifesto): «Studia» chiude e torna alla
+               console, «mappa» chiude e basta (la mappa è sotto), «Studio attivo» torna alla prima pagina */
+            var box = null, dove = '';
+            function suBriciola(ev) {
+                var id = ev && ev.detail && ev.detail.id;
+                if (id === 'studio') { st.sel = ''; st.set = ''; st.foglio = null; if (box && box.__ridisegna) { box.__ridisegna(LC().schema(dati())); briciole(); } return; }
+                if (id !== 'studia' && id !== 'mappa') return;
+                dove = id;
+                var x = box && box.querySelector('[data-azione="__chiudi"]'); if (x) x.click();
+            }
+            document.addEventListener('mappai-briciola', suBriciola);
             var schema = LC().schema(dati());
-            schema.suApertura = function (box, ridisegna) { briciole(); };
+            schema.suApertura = function (b, ridisegna) { box = b; box.__ridisegna = ridisegna; briciole(); };
             schema.suAzione = function (ev, box, ridisegna) {
                 var a = String(ev && ev.azione || '');
                 if (ev && ev.valori && typeof ev.valori.split === 'boolean') st.split = ev.valori.split;
@@ -100,6 +116,8 @@
                 /* `__campo` (la spunta split) è già letto sopra; `__esc` esce: non è la home */
             };
             return MM().open(schema).then(function (r) {
+                document.removeEventListener('mappai-briciola', suBriciola);
+                if (dove === 'studia' || (r && r.azione === 'torna')) { if (window.MappAIStudente) window.MappAIStudente.torna(); return; }
                 if (!r || r.azione !== 'avvia') return;
                 var v = r.valori || {};
                 st.split = !!v.split;
@@ -150,7 +168,7 @@
         function opzioniView() {
             return {
                 pool: o.pool, cfg: cfg, stato: stato, t: window.t, verdetti: verdetti,
-                mostraAngolo: o.dueTempi,
+                mostraAngolo: o.dueTempi, senzaAree: true,
                 chip: o.dueTempi ? PC().CHIP_PERCHE : [],
                 chipPrende: o.dueTempi ? 'capito' : '',
                 raggruppa: o.dueTempi ? 'domanda-per-angoli' : '',

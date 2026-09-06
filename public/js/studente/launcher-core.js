@@ -62,18 +62,21 @@
             nav: nav, sezioni: [], azioni: []
         };
         var avvia = { id: 'avvia', etichetta: t('st_avvia', 'Avvia'), icona: 'play', ruolo: 'primario' };   /* conclude */
+        /* la strada indietro (7/9, prova sull'iPad): il launcher è pieno e copre la mappa,
+           senza questo dal launcher non si tornava alla pagina del progetto */
+        s.azioni = [{ id: 'torna', etichetta: t('st_torna', '‹ Torna a STUDIA'), icona: 'arrow-left', ruolo: 'quieto' }];
         if (sel === 'set-mc' && o.nMC) {
             s.sezioni.push({ id: 'sets', titolo: t('st_quale_set', 'Quale set?'), voci: (o.sets || []).map(function (x) {
                 return { id: 'set:' + x.id, etichetta: x.title, sotto: x.n + ' ' + t('st_domande', 'domande'), icona: 'list-checks', attiva: o.set === x.id, chiude: false };
             }) });
             s.sezioni.push({ id: 'setup', campi: [campoSplit(t, o.split)] });
-            if (o.set) s.azioni = [avvia];
+            if (o.set) s.azioni.push(avvia);
         } else if (sel === 'set-aperte' && o.nAp) {
             s.sezioni.push({ id: 'fogli', titolo: t('st_quale_foglio', 'Quale foglio?'), voci: (o.fogli || []).map(function (f, i) {
                 return { id: 'foglio:' + i, etichetta: f.titolo, sotto: f.n + ' ' + t('st_domande', 'domande') + (f.angolo ? ' · ' + f.angolo : ''), icona: 'pen-line', attiva: o.foglio === i, chiude: false };
             }) });
             s.sezioni.push({ id: 'setup', campi: [campoSplit(t, o.split)] });
-            if (o.foglio != null && o.foglio >= 0) s.azioni = [avvia];
+            if (o.foglio != null && o.foglio >= 0) s.azioni.push(avvia);
         } else if (sel === 'su-misura' && o.nAp) {
             var op = o.opzioni || { rami: null, angoli: [] };
             var campi = [
@@ -91,7 +94,7 @@
             );
             campi.push(campoSplit(t, o.split));
             s.sezioni.push({ id: 'setup', titolo: t('st_su_misura', 'Domande aperte su misura'), campi: campi });
-            s.azioni = [avvia];
+            s.azioni.push(avvia);
         } else if (sel) {
             s.sezioni.push({ id: 'nota', testo: sotto[sel] || '' });
         } else {
