@@ -162,5 +162,47 @@
         };
     }
 
-    return { CHIP_PERCHE: CHIP_PERCHE, nomeSessione: nomeSessione, fmtData: fmtData, foglioCompilato: foglioCompilato, itemsHtml: itemsHtml, reportMC: reportMC, setMC: setMC, foglioDaHtml: foglioDaHtml, poolAperte: poolAperte, opzioni: opzioni, componi: componi, statoIniziale: statoIniziale, nodoDelRamo: nodoDelRamo, voci: voci };
+    /* ── LO SPLIT ──────────────────────────────────────────────────────────
+       iPad in piedi (portrait) → split ORIZZONTALE: mappa sopra, prova sotto;
+       sdraiato (landscape) → VERTICALE: mappa a sinistra, prova a destra. */
+    function orientamento(w, h) { return (Number(h) > Number(w)) ? 'portrait' : 'landscape'; }
+    /* la misura del dock lungo il suo asse: fra `min` e la quota massima dell'asse */
+    function clampSplit(px, asse, min, quotaMax) {
+        var max = Math.max(min, Math.floor(Number(asse) * (quotaMax || 0.7)));
+        var v = Number(px); if (!isFinite(v)) v = min;
+        return Math.max(min, Math.min(max, Math.round(v)));
+    }
+    /* un set a scelta multipla come «foglio» per poolDaFogli (il core sa già
+       leggere `options`/`correct` dei set veri) */
+    function foglioDaSet(set) {
+        if (!set || !Array.isArray(set.items) || !set.items.length) return null;
+        return { titolo: set.title || 'Quiz', angle: set.angle || '', tipo: 'mc', items: set.items };
+    }
+    /* il verdetto di una risposta a scelta multipla, nella forma che la view mostra */
+    function verdetto(v, r) {
+        var ok = SC().corretta(v, r);
+        if (ok == null) return null;
+        return { esito: ok ? 'right' : 'wrong', giusta: (v.opzioni || [])[v.giusta] || '', spiegazione: v.spiegazione || '' };
+    }
+    /* il report MC dallo STATO della view (la prova in split non passa dal player) */
+    function reportMCDaStato(pool, stato, meta) {
+        var R = (stato && stato.risposte) || {};
+        var lista = (pool || []).filter(function (v) { return v.tipo === 'mc'; }).map(function (v) {
+            var r = R[v.id] || {};
+            var data = r.scelta != null && r.scelta !== '';
+            var giusta = data && v.giusta >= 0 && r.scelta === v.giusta;
+            return { outcome: !data ? 'blank' : (giusta ? 'right' : 'wrong'), text: v.testo,
+                     yourText: data ? (v.opzioni || [])[r.scelta] : '', correctText: (v.opzioni || [])[v.giusta] || '', explanation: v.spiegazione || '' };
+        });
+        var giuste = lista.filter(function (x) { return x.outcome === 'right'; }).length;
+        var date = lista.filter(function (x) { return x.outcome !== 'blank'; }).length;
+        var pct = lista.length ? Math.round(100 * giuste / lista.length) : 0;
+        return {
+            meta: { mapTitle: meta.mappa || '', activity: meta.titolo || 'Quiz', className: meta.classe || '', dateStr: meta.data || '', durationStr: meta.durata || '' },
+            results: { joined: 1, questionCount: lista.length, perStudent: [{ displayName: meta.chi || 'Io', emoji: '', num: '', answered: date, blankCount: lista.length - date, manualCount: 0, accuracyPct: pct, items: lista, strengths: [], weaknesses: [] }] },
+            giuste: giuste, totale: lista.length, pct: pct
+        };
+    }
+
+    return { CHIP_PERCHE: CHIP_PERCHE, nomeSessione: nomeSessione, orientamento: orientamento, clampSplit: clampSplit, foglioDaSet: foglioDaSet, verdetto: verdetto, reportMCDaStato: reportMCDaStato, fmtData: fmtData, foglioCompilato: foglioCompilato, itemsHtml: itemsHtml, reportMC: reportMC, setMC: setMC, foglioDaHtml: foglioDaHtml, poolAperte: poolAperte, opzioni: opzioni, componi: componi, statoIniziale: statoIniziale, nodoDelRamo: nodoDelRamo, voci: voci };
 }));

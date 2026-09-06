@@ -3,12 +3,27 @@
 > L'unico documento di stato di questo repo. Il *come si costruisce* è in `RIUSO.md` (le
 > copie) e nel piano `docs/PIANO-reader.md` (v2, con i bivi sciolti). Il repo madre è
 > `~/Claude/MappAI re`: la sua guida (`GUIDA-ARCHITETTO.md`) vale anche qui.
-> Ultimo allineamento: **6 settembre 2026, notte** — **fase 1 e fase 2 in piedi nel browser; mai sull'iPad**.
+> Ultimo allineamento: **7 settembre 2026** — **guscio, autotest, launcher-console e split in piedi nel browser; mai sull'iPad**.
 > Progetto: Giacomo Meschini — giacomo@insegnai.ch
 
 ## 0. Dove si riprende
 
-**⟵ FASE 2 FATTA (6/9 notte). Prossimo: la prova sull'iPad.** L'autotest vive nel launcher
+**⟵ 7/9: launcher a schermo intero e prova a schermo diviso (piano `docs/PIANO-prova-split.md`,
+fatto).** «Studio attivo» è una CONSOLE (`studente/launcher-core.js`, puro, validaSchema in
+Node — ha trovato la tendina degli angoli che nasceva vuota sui fogli vecchi): colonna con i tre
+gruppi, area col setup dell'attività scelta, «Avvia» che conclude, ESC torna alla mappa. In
+ogni setup la spunta **«Rispondi con la mappa accanto»** (spenta per default, ricordata in
+`mappai_studente_split`): la prova si monta nel DOCK invece che in un modale — iPad sdraiato
+→ dock a destra (maniglia a sinistra, larghezza), iPad in piedi → dock in basso (maniglia in
+alto, altezza); `matchMedia('(orientation: portrait)')`, due clamp (360/240 px – 70 %), due
+memorie; girare l'iPad cambia solo il CSS, la view resta lo stesso nodo. In split la scelta
+multipla usa la view «a scelta» col verdetto immediato (`MappAIProvaCore.verdetto`) e il
+report esce dallo stato (`reportMCDaStato`); senza split resta il player. Chiudere il dock a
+prova in corso chiede. Misurato nel browser a 1024×768 e 768×1024: box `mm-box--piena`
+1018×768; dock 430 → 488 px col drag; in portrait dock in basso 716 px (tetto), stessa view;
+MC in split «Giusto — corretta: …», report scritto. **Prossimo: la prova sull'iPad.**
+
+**Prima (6/9 notte): FASE 2 FATTA.** L'autotest vive nel launcher
 «Studio attivo» (`studente/autotest.js`, uno schema del motore al posto del modale a mano di
 `mappai-active-study.js`: Palazzo via, tre sezioni allineate): **Autotest** — un set pronto a
 scelta multipla (il player di MappAI) · un foglio pronto di domande aperte · **domande aperte su
@@ -83,6 +98,7 @@ nascosti, stampa visibile · «Lavagna QR» nascosto.
 | la potatura | `public/js/studente/pota.js` + `css/studente.css` | `appState.studentMode`, menu contestuale in allowlist via MutationObserver, `refreshGeminiModels`/`initializeAIProvider` spenti, CSS per selettore sui bottoni del docente; bersagli ≥ 44px |
 | la console STUDIA | `studente/studia-core.js` (puro, testato) + `studente/console.js` | nav per materia (`materiaDichiarata → discDir → Senza materia`), area con Mappa (conclude) · Flashcard (conclude) · Prova (fase 2), tabella `Studio Attivo/Prove/*/sessione.json`, briciole statiche, ESC non esce, «Apri una cartella» |
 | l'autotest | `studente/prova-core.js` (puro, testato) + `studente/autotest.js` + `tools/fogli-finti.js` | sostituisce `ActiveStudy.openLauncher` da fuori; pool MC dai set, aperte dai gemelli `Sorgenti/`; setup su misura coi campi del motore (radio + scelta); la view «a scelta» in una sezione nuda con `mostraAngolo/chip/chipPrende/raggruppa`; consegna → bus |
+| il launcher-console e lo split | `studente/launcher-core.js` (puro, 4 test) + `autotest.js` (`openLauncher`, `avvia`, `prova` con `o.split`/`o.mc`) + `documenti.js` (dock `sd--destra`/`sd--basso`, `chiudiChiedendo`) + `prova-core.js` (`orientamento`, `clampSplit`, `foglioDaSet`, `verdetto`, `reportMCDaStato`) | il modale storico del launcher non c'è più; «Avvia» è l'unica azione che conclude |
 | la sessione su disco | `studente/prova-core.js` (`nomeSessione`, `foglioCompilato`, `itemsHtml`, `reportMC`) + `studente/prova-pdf.js` + `autotest.js` (`scriviSessione`, `scriviReportMC`) + `documenti.js` (`azione`) | `Studio Attivo/Prove/<nome>/`: sorgente prima della resa (inv. 18); il PDF è jsPDF (l'unico percorso su iPad); stampante = `openPrintable` + `window.print`; cartella = share sheet / download |
 | il dock e i materiali | `studente/documenti.js` | `#studente-dock` in `#main-content`, maniglia (clamp 360px–60%), iframe da blob; elenco per prefisso + 4 stampe dalla mappa; `azione()` per stampante/cartella = fase 2 |
 | Capacitor | `package.json`, `capacitor.config.json`, `tools/plist-ipad.py` | `@capacitor/core|ios|filesystem|share` 8; `ios/` generato il 6/9 (Node 22), in `.gitignore`, si rigenera con `npm run ios` |

@@ -103,3 +103,29 @@ test('reportMC: dal player di MappAI alla forma del report QR', () => {
     assert.strictEqual(r.results.perStudent[0].items[0].yourText, 'a', 'la risposta giusta data');
     assert.strictEqual(r.meta.mapTitle, 'M');
 });
+
+test('split: orientamento e clamp', () => {
+    assert.strictEqual(P.orientamento(768, 1024), 'portrait');
+    assert.strictEqual(P.orientamento(1024, 768), 'landscape');
+    assert.strictEqual(P.clampSplit(100, 1000, 360, 0.7), 360, 'sotto il minimo');
+    assert.strictEqual(P.clampSplit(900, 1000, 360, 0.7), 700, 'sopra la quota');
+    assert.strictEqual(P.clampSplit(500.4, 1000, 360, 0.7), 500);
+    assert.strictEqual(P.clampSplit('x', 1000, 360, 0.7), 360, 'valore sporco');
+});
+
+test('MC in split: dal set al pool, il verdetto, il report dallo stato', () => {
+    const set = { title: 'Quiz X', angle: 'causa', items: [{ q: 'A?', options: ['1', '2', '3'], correct: '2', explanation: 'e' }, { q: 'B?', options: ['x', 'y', 'z'], correct: 'z' }] };
+    const pool = P.poolAperte([P.foglioDaSet(set)]);
+    assert.strictEqual(pool.length, 2);
+    assert.strictEqual(pool[0].tipo, 'mc');
+    assert.strictEqual(pool[0].giusta, 1);
+    assert.deepStrictEqual(P.verdetto(pool[0], { scelta: 1 }), { esito: 'right', giusta: '2', spiegazione: 'e' });
+    assert.strictEqual(P.verdetto(pool[0], { scelta: 0 }).esito, 'wrong');
+    assert.strictEqual(P.verdetto(pool[0], {}), null, 'senza scelta non c\'è verdetto');
+    const st = { risposte: {} }; st.risposte[pool[0].id] = { scelta: 1 };
+    const r = P.reportMCDaStato(pool, st, { mappa: 'M', titolo: 'Quiz X' });
+    assert.deepStrictEqual(r.results.perStudent[0].items.map(x => x.outcome), ['right', 'blank']);
+    assert.strictEqual(r.results.perStudent[0].items[0].yourText, '2');
+    assert.strictEqual(r.pct, 50);
+    assert.strictEqual(r.results.perStudent[0].blankCount, 1);
+});

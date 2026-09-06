@@ -21,6 +21,7 @@
 
     function t(k, f) { try { return (window.t ? window.t(k, f) : f) || f; } catch (e) { return f; } }
     function toast(m, k) { if (window.showToast) window.showToast(m, k || 'info'); }
+    function esc(x) { var d = document.createElement('div'); d.textContent = x == null ? '' : String(x); return d.innerHTML; }
     function S() { try { return (typeof appState !== 'undefined') ? appState : window.appState; } catch (e) { return window.appState; } }
     function MM() { return window.MappAIModal; }
     function PC() { return window.MappAIProvaCore; }
@@ -51,160 +52,174 @@
         return leggiFogli().then(function (f) { _cache = { vault: vp, fogli: f }; return f; });
     }
 
-    /* ── IL LAUNCHER ─────────────────────────────────────────────────────── */
-    function openLauncher() {
+    /* ── IL LAUNCHER: una CONSOLE a schermo intero ─────────────────────────
+       La forma la decide `MappAIStudenteLauncherCore.schema` (pura, testata con
+       validaSchema). Qui: lo stato della scelta, la lettura dei materiali, le
+       viste che agiscono subito, e «Avvia» che conclude nel `.then()`. */
+    function LC() { return window.MappAIStudenteLauncherCore; }
+    function splitRicordato() { try { return localStorage.getItem('mappai_studente_split') === '1'; } catch (e) { return false; } }
+    function openLauncher(selIniziale) {
         var s = S();
         if (!s || !s.db || !s.db.nodes || !s.db.nodes.length) { toast(t('tst_as_open_map', 'Apri una mappa per usare lo studio attivo'), 'error'); return; }
-        var mv = !!(window.MappAIMasteryView && window.MappAIMasteryView.active);
-        var ev = !!(window.MappAIEffortView && window.MappAIEffortView.active);
         fogli().then(function (fg) {
-            var nMC = PC().setMC(s.db.studySets).length;
-            var nAp = fg.length;
-            var vista = function (on) { return on ? t('as_view_on', 'Vista ATTIVA — clicca per spegnere') : t('as_view_off', 'Vista spenta — clicca per accendere'); };
-            var schema = {
-                titolo: t('as_title', 'Studio attivo'), sottotitolo: t('as_pick_mode', 'scegli un\'attività'),
-                icona: 'puzzle', taglia: 'l', veloChiude: true,
-                sezioni: [
-                    { titolo: t('st_autotest', 'Autotest'), voci: [
-                        { id: 'set-mc', etichetta: t('st_set_mc', 'Un set pronto a scelta multipla'), icona: 'list-checks', sotto: nMC ? nMC + ' ' + t('st_set', 'set') + ' · ' + t('st_correzione', 'correzione immediata') : t('st_no_set', 'nessun set in questa mappa'), disabilitata: !nMC },
-                        { id: 'set-aperte', etichetta: t('st_set_ap', 'Un foglio pronto di domande aperte'), icona: 'pen-line', sotto: nAp ? nAp + ' ' + t('st_fogli', 'fogli') + ' · ' + t('st_rispondi_tutto', 'si risponde a tutto') : t('st_no_fogli', 'nessun foglio: chiedi al docente di salvare la mappa con MappAI'), disabilitata: !nAp },
-                        { id: 'su-misura', etichetta: t('st_su_misura', 'Domande aperte su misura'), icona: 'sliders-horizontal', sotto: nAp ? t('st_su_misura_sotto', 'un ramo o tutta la mappa · un angolo o tutti (leggi, scegli col «Perché:», rispondi)') : t('st_no_fogli', 'nessun foglio: chiedi al docente di salvare la mappa con MappAI'), disabilitata: !nAp }
-                    ] },
-                    { titolo: t('as_views_header', 'Viste ed esercizi rapidi'), voci: [
-                        { id: 'heatmap', etichetta: t('as_heatmap_title', 'Heat map padronanza'), icona: 'target', sotto: vista(mv) },
-                        { id: 'effort', etichetta: t('as_effort_title', 'Mappa lavoro'), icona: 'flame', sotto: vista(ev) }
-                    ] },
-                    { titolo: t('as_tools_header', 'Strumenti'), voci: [
-                        { id: 'studypath', etichetta: t('as_studypath_title', 'Cosa studiare ora'), icona: 'compass', sotto: t('as_studypath_hint', 'Percorso consigliato e ripasso programmato.') },
-                        { id: 'celeration', etichetta: t('as_celeration_title', 'I tuoi progressi nel tempo'), icona: 'trending-up', sotto: t('as_celeration_hint', 'Grafico di crescita delle tue sessioni (celeration).') }
-                    ] }
-                ],
-                azioni: [{ id: 'chiudi', etichetta: t('as_close', 'Chiudi'), ruolo: 'quieto' }]
+            var sets = PC().setMC(s.db.studySets);
+            var poolAp = PC().poolAperte(fg), op = PC().opzioni(poolAp);
+            var st = { sel: String(selIniziale || ''), set: '', foglio: null, split: splitRicordato() };
+            function dati() {
+                return {
+                    sel: st.sel, nMC: sets.length, nAp: fg.length, set: st.set, foglio: st.foglio, split: st.split, t: window.t,
+                    sets: sets.map(function (x) { return { id: x.id, title: x.title || 'Quiz', n: x.items.length }; }),
+                    fogli: fg.map(function (f) { return { titolo: f.titolo, n: f.items.length, angolo: f.angle ? SV().etAngolo(window.t, f.angle) : '' }; }),
+                    opzioni: { rami: op.rami, angoli: op.angoli.map(function (a) { return { k: a, et: SV().etAngolo(window.t, a) }; }) },
+                    mv: !!(window.MappAIMasteryView && window.MappAIMasteryView.active),
+                    ev: !!(window.MappAIEffortView && window.MappAIEffortView.active)
+                };
+            }
+            function briciole() {
+                var CM = window.MappAIConsoleManifesto; if (!CM || !CM.briciole) return;
+                var v = LC().VOCI.filter(function (x) { return x.id === st.sel; })[0];
+                try { CM.briciole([{ id: 'studio', et: t('as_title', 'Studio attivo') }].concat(v ? [{ id: v.id, et: t('st_v_' + v.id, v.et) }] : [])); } catch (e) { }
+            }
+            var schema = LC().schema(dati());
+            schema.suApertura = function (box, ridisegna) { briciole(); };
+            schema.suAzione = function (ev, box, ridisegna) {
+                var a = String(ev && ev.azione || '');
+                if (ev && ev.valori && typeof ev.valori.split === 'boolean') st.split = ev.valori.split;
+                if (a === '__nav') {
+                    var v = String(ev.voce || '');
+                    if (/^g:/.test(v)) return;
+                    if (v === 'heatmap' && window.MappAIMasteryView) { window.MappAIMasteryView.toggle(); ridisegna(LC().schema(dati())); briciole(); return; }
+                    if (v === 'effort' && window.MappAIEffortView) { window.MappAIEffortView.toggle(); ridisegna(LC().schema(dati())); briciole(); return; }
+                    if (v === 'studypath') { if (window.MappAIStudyPath) window.MappAIStudyPath.open(); return; }
+                    if (v === 'celeration') { if (window.MappAICeleration) window.MappAICeleration.open(); return; }
+                    st.sel = v; st.set = ''; st.foglio = null;
+                    ridisegna(LC().schema(dati())); briciole(); return;
+                }
+                if (/^set:/.test(a)) { st.set = a.slice(4); ridisegna(LC().schema(dati())); return; }
+                if (/^foglio:/.test(a)) { st.foglio = Number(a.slice(7)); ridisegna(LC().schema(dati())); return; }
+                /* `__campo` (la spunta split) è già letto sopra; `__esc` esce: non è la home */
             };
             return MM().open(schema).then(function (r) {
-                var a = r && r.azione;
-                if (a === 'heatmap') { if (window.MappAIMasteryView) window.MappAIMasteryView.toggle(); }
-                else if (a === 'effort') { if (window.MappAIEffortView) window.MappAIEffortView.toggle(); }
-                else if (a === 'studypath') { if (window.MappAIStudyPath) window.MappAIStudyPath.open(); }
-                else if (a === 'celeration') { if (window.MappAICeleration) window.MappAICeleration.open(); }
-                else if (a === 'set-mc') return setMC();
-                else if (a === 'set-aperte') return setAperte(fg);
-                else if (a === 'su-misura') return suMisura(fg);
+                if (!r || r.azione !== 'avvia') return;
+                var v = r.valori || {};
+                st.split = !!v.split;
+                try { localStorage.setItem('mappai_studente_split', st.split ? '1' : '0'); } catch (e) { }
+                return avvia(st, v, fg, sets, poolAp, op);
             });
         });
     }
 
-    /* ── un set pronto a scelta multipla: il player di MappAI (registra sul bus) ── */
-    function setMC() {
-        var sets = PC().setMC(S().db.studySets);
-        if (sets.length === 1) { window.loadStudySet(sets[0].id); return; }
-        return MM().open({
-            titolo: t('st_quale_set', 'Quale set?'), icona: 'list-checks', taglia: 'm',
-            sezioni: [{ voci: sets.map(function (x) { return { id: x.id, etichetta: x.title || 'Quiz', sotto: x.items.length + ' ' + t('st_domande', 'domande'), icona: 'list-checks' }; }) }],
-            azioni: [{ id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' }]
-        }).then(function (r) { if (r && sets.some(function (x) { return x.id === r.azione; })) window.loadStudySet(r.azione); });
-    }
-
-    /* ── un foglio pronto di domande aperte: si risponde a tutto ── */
-    function setAperte(fg) {
-        var scegli = (fg.length === 1) ? Promise.resolve(fg[0])
-            : MM().open({
-                titolo: t('st_quale_foglio', 'Quale foglio?'), icona: 'pen-line', taglia: 'm',
-                sezioni: [{ voci: fg.map(function (f, i) { return { id: 'f' + i, etichetta: f.titolo, sotto: f.items.length + ' ' + t('st_domande', 'domande') + (f.angle ? ' · ' + SV().etAngolo(window.t, f.angle) : ''), icona: 'pen-line' }; }) }],
-                azioni: [{ id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' }]
-            }).then(function (r) { var m = r && /^f(\d+)$/.exec(r.azione); return m ? fg[Number(m[1])] : null; });
-        return scegli.then(function (f) {
-            if (!f) return;
-            var pool = PC().poolAperte([f]);
-            prova({ titolo: f.titolo, pool: pool, dueTempi: false, tipo: 'foglio', ambito: '', angoliEt: f.angle ? SV().etAngolo(window.t, f.angle) : '' });
-        });
-    }
-
-    /* ── domande aperte su misura: il setup, poi la prova ── */
-    function suMisura(fg) {
-        var pool = PC().poolAperte(fg);
-        var o = PC().opzioni(pool);
-        var campi = [
-            { id: 'amb-tutto', tipo: 'radio', gruppo: 'ambito', etichetta: t('st_tutta', 'Tutta la mappa'), valore: true },
-            { id: 'amb-ramo', tipo: 'radio', gruppo: 'ambito', etichetta: t('st_un_ramo', 'Un ramo'), valore: false,
-              aiuto: o.rami ? '' : t('st_ramo_spento', 'non disponibile: questi fogli non dichiarano il ramo') }
-        ];
-        if (o.rami) campi.push({ id: 'ramo', tipo: 'scelta', etichetta: t('st_quale_ramo', 'Quale ramo'), opzioni: o.rami.map(function (r) { return { valore: r, etichetta: r }; }), valore: o.rami[0], larghezza: 'meta' });
-        campi.push(
-            { id: 'ang-tutti', tipo: 'radio', gruppo: 'angoli', etichetta: t('st_tutti_angoli', 'Tutti gli angoli'), valore: true,
-              aiuto: t('st_tutti_angoli_aiuto', 'la sessione metacognitiva: leggi la stessa domanda in tutti i tagli, dì per ognuna «Perché:», poi rispondi a quelle verdi') },
-            { id: 'ang-uno', tipo: 'radio', gruppo: 'angoli', etichetta: t('st_un_angolo', 'Un angolo solo'), valore: false },
-            { id: 'angolo', tipo: 'scelta', etichetta: t('st_quale_angolo', 'Quale angolo'), opzioni: o.angoli.map(function (a) { return { valore: a, etichetta: SV().etAngolo(window.t, a) }; }), valore: o.angoli[0] || '', larghezza: 'meta' }
-        );
-        return MM().open({
-            titolo: t('st_su_misura', 'Domande aperte su misura'), icona: 'sliders-horizontal', taglia: 'm', invio: true,
-            sezioni: [{ campi: campi }],
-            azioni: [{ id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' }, { id: 'avvia', etichetta: t('st_avvia', 'Avvia'), ruolo: 'primario' }]
-        }).then(function (r) {
-            if (!r || r.azione !== 'avvia') return;
-            var v = r.valori || {};
-            var c = PC().componi(pool, {
-                ambito: (v['amb-ramo'] && o.rami) ? 'ramo' : 'tutto', ramo: v.ramo,
+    /* ── AVVIA: dalla scelta alla prova ─────────────────────────────────── */
+    function avvia(st, v, fg, sets, poolAp, op) {
+        if (st.sel === 'set-mc') {
+            var set = sets.filter(function (x) { return x.id === st.set; })[0]; if (!set) return;
+            if (!st.split) { window.loadStudySet(set.id); return; }        /* il player storico di MappAI */
+            /* in split la scelta multipla usa la view «a scelta», col verdetto immediato (bivio 1) */
+            var poolMC = PC().poolAperte([PC().foglioDaSet(set)]);
+            return prova({ titolo: 'Quiz — ' + (set.title || 'set'), pool: poolMC, dueTempi: false, tipo: 'quiz', mc: true, split: true,
+                           ambito: '', angoliEt: set.angle ? SV().etAngolo(window.t, set.angle) : '' });
+        }
+        if (st.sel === 'set-aperte') {
+            var f = fg[st.foglio]; if (!f) return;
+            return prova({ titolo: f.titolo, pool: PC().poolAperte([f]), dueTempi: false, tipo: 'foglio', split: st.split,
+                           ambito: '', angoliEt: f.angle ? SV().etAngolo(window.t, f.angle) : '' });
+        }
+        if (st.sel === 'su-misura') {
+            var c = PC().componi(poolAp, {
+                ambito: (v['amb-ramo'] && op.rami) ? 'ramo' : 'tutto', ramo: v.ramo,
                 angoli: v['ang-uno'] ? 'uno' : 'tutti', angolo: v.angolo
             });
             if (!c.pool.length) { toast(t('st_pool_vuoto', 'Con queste scelte non resta nessuna domanda.'), 'warning'); return; }
-            var titolo = t('st_su_misura', 'Domande aperte su misura') + ' — ' + (v['amb-ramo'] && o.rami ? v.ramo : t('st_tutta', 'Tutta la mappa')) +
+            var titolo = t('st_su_misura', 'Domande aperte su misura') + ' — ' + (v['amb-ramo'] && op.rami ? v.ramo : t('st_tutta', 'Tutta la mappa')) +
                 ' · ' + (v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli'));
-            prova({ titolo: titolo, pool: c.pool, dueTempi: c.dueTempi, tipo: 'su-misura',
-                    ambito: (v['amb-ramo'] && o.rami) ? v.ramo : '', angoliEt: v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli') });
-        });
+            return prova({ titolo: titolo, pool: c.pool, dueTempi: c.dueTempi, tipo: 'su-misura', split: st.split,
+                           ambito: (v['amb-ramo'] && op.rami) ? v.ramo : '', angoliEt: v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli') });
+        }
     }
 
-    /* ── LA PROVA: la view «a scelta» dentro un modale, poi il bus ──────────
-       Stesso innesto di `apriInApp` (mappai-scelta.js): una sezione NUDA fa da
-       ospite (la `tela` è solo delle console), il velo non chiude, ESC chiede. */
+    /* ── LA PROVA: la view «a scelta» in un modale O nel dock (split), poi il bus ──
+       Modale: stesso innesto di `apriInApp` (una sezione NUDA fa da ospite; la `tela`
+       è solo delle console). Split: l'ospite è il corpo del dock, accanto alla mappa;
+       chiudere il dock a prova in corso chiede. MC (`o.mc`): il verdetto immediato lo
+       calcola qui (`MappAIProvaCore.verdetto`) e lo inietta nella view. */
     function prova(o) {
         var stato = PC().statoIniziale(o.pool, o.dueTempi);
-        /* autovalutazione ACCESA: è l'unica misura di una risposta aperta, e senza
-           misura la padronanza (heat map, cosa studiare ora) non vede la prova */
-        var cfg = SC().normalizzaCfg({ minimo: 1, minimoAree: 1, perRamo: true, autovalutazione: true });
-        var host = null, consegnato = false, ridisegna = null;
-        var schema = {
-            titolo: o.titolo, icona: 'pen-line', taglia: 'xl', sporco: true, veloChiude: false, invio: false,
-            sezioni: [{ id: 'prova', nuda: true }], azioni: [],
-            suApertura: function (box, rid) {
-                ridisegna = rid;
-                host = box.querySelector('[data-sez="prova"] .mm-sez__c');
-                if (!host) return;
-                host.style.height = '68vh'; host.style.padding = '0';
-                monta();
-            }
-        };
-        MM().open(schema);
-        function monta() {
-            SV().monta(host, {
-                pool: o.pool, cfg: cfg, stato: stato, t: window.t,
+        /* autovalutazione ACCESA per le aperte: è l'unica misura di una risposta aperta */
+        var cfg = SC().normalizzaCfg({ minimo: 1, minimoAree: 1, perRamo: true, autovalutazione: !o.mc });
+        var host = null, consegnato = false, ridisegna = null, api = null, verdetti = {};
+        function opzioniView() {
+            return {
+                pool: o.pool, cfg: cfg, stato: stato, t: window.t, verdetti: verdetti,
                 mostraAngolo: o.dueTempi,
                 chip: o.dueTempi ? PC().CHIP_PERCHE : [],
                 chipPrende: o.dueTempi ? 'capito' : '',
                 raggruppa: o.dueTempi ? 'domanda-per-angoli' : '',
                 hint: o.dueTempi ? t('st_hint_due_tempi', 'Leggi la stessa domanda in tutti i tagli. Per ognuna dì «Perché:» — le verdi le risponderai dopo, non per forza tutte.') : '',
-                /* rispondere a tutte le verdi NON è obbligatorio: alla consegna la
-                   view chiede, e qui si risponde sì senza fermare lo studente */
                 chiedi: function () { return Promise.resolve(true); },
-                onCambia: function (id, r, st) { stato = st; },
+                onCambia: function (id, r, st) {
+                    stato = st;
+                    if (o.mc && r && r.scelta != null && r.scelta !== '' && !verdetti[id] && api) {
+                        var v = o.pool.filter(function (x) { return x.id === id; })[0];
+                        var vd = v && PC().verdetto(v, r);
+                        if (vd) { verdetti[id] = vd; api.verdetto(id, vd); }
+                    }
+                },
                 onConsegna: function (st) { consegna(st); }
+            };
+        }
+        var schema = null;
+        if (o.split) {
+            var D = window.MappAIStudenteDocumenti;
+            host = D.apri({
+                titolo: o.titolo,
+                monta: function (h) { h.style.padding = '0'; api = SV().monta(h, opzioniView()); },
+                chiediChiusura: function () {
+                    if (consegnato) return Promise.resolve(true);
+                    var testo = t('st_lascia', 'Lasciare la prova? Le risposte scritte vanno perse.');
+                    return MM().conferma ? MM().conferma({ testo: testo }) : Promise.resolve(window.confirm(testo));
+                }
             });
+        } else {
+            schema = {
+                titolo: o.titolo, icona: o.mc ? 'list-checks' : 'pen-line', taglia: 'xl', sporco: true, veloChiude: false, invio: false,
+                sezioni: [{ id: 'prova', nuda: true }], azioni: [],
+                suApertura: function (box, rid) {
+                    ridisegna = rid;
+                    host = box.querySelector('[data-sez="prova"] .mm-sez__c');
+                    if (!host) return;
+                    host.style.height = '68vh'; host.style.padding = '0';
+                    api = SV().monta(host, opzioniView());
+                }
+            };
+            MM().open(schema);
+        }
+        function fine(testo) {
+            if (o.split) {
+                if (!host) return;
+                host.innerHTML = '<div class="sd-esito"><p>' + esc(testo) + '</p><button type="button" class="sd-esito__b">' + esc(t('mm_chiudi', 'Chiudi')) + '</button></div>';
+                host.querySelector('.sd-esito__b').onclick = function () { window.MappAIStudenteDocumenti.chiudi(); };
+            } else if (ridisegna) {
+                ridisegna(Object.assign({}, schema, { sporco: false, suApertura: null, sezioni: [{ testo: testo }], azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'primario' }] }));
+            }
         }
         function consegna(st) {
             if (consegnato) return;
             consegnato = true;
             var voci = PC().voci(o.pool, st, S().db.nodes);
             registra(o, voci);
+            if (o.mc) {
+                var rep = PC().reportMCDaStato(o.pool, st, { mappa: S().rootNodeLabel || '', titolo: o.titolo, data: PC().fmtData(new Date()), chi: t('st_io', 'Io') });
+                fine(t('st_mc_esito', 'Risposte giuste: {g} su {n}.').replace('{g}', rep.giuste).replace('{n}', rep.totale) + ' ' + t('st_scrivo', 'Scrivo il report…'));
+                scriviReport(rep, o.titolo).then(function (r) {
+                    fine(t('st_mc_esito', 'Risposte giuste: {g} su {n}.').replace('{g}', rep.giuste).replace('{n}', rep.totale) + ' ' +
+                        (r.ok ? t('st_report_ok', 'Report della prova salvato in «Le tue prove»') : t('st_report_ko', 'Report non salvato: ') + (r.error || '')));
+                });
+                return;
+            }
             var frase = t('st_consegnato', 'Risposte registrate: {n}.').replace('{n}', voci.length) + ' ' + t('st_consegnato_sotto', 'Le trovi nella heat map, in «Cosa studiare ora» e nei progressi.');
-            var fine = function (extra) {
-                if (ridisegna) ridisegna(Object.assign({}, schema, { sporco: false, suApertura: null, sezioni: [{ testo: frase + (extra ? ' ' + extra : '') }], azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'primario' }] }));
-            };
-            fine(t('st_scrivo', 'Scrivo il foglio…'));
-            /* il DOCUMENTO: sorgente prima della resa (inv. 18) — sessione.json, poi
-               l'HTML compilato e il PDF; una resa che fallisce lo dice e non toglie la sorgente */
+            fine(frase + ' ' + t('st_scrivo', 'Scrivo il foglio…'));
             scriviSessione(o, st).then(function (r) {
-                fine(r.ok ? t('st_foglio_ok', 'Il foglio delle risposte è in «Le tue prove» (Studio Attivo/Prove).') : t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ') + (r.error || ''));
+                fine(frase + ' ' + (r.ok ? t('st_foglio_ok', 'Il foglio delle risposte è in «Le tue prove» (Studio Attivo/Prove).') : t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ') + (r.error || '')));
                 toast(r.ok ? t('st_foglio_ok_toast', 'Foglio delle risposte salvato') : t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ') + (r.error || ''), r.ok ? 'success' : 'error');
             });
         }
@@ -253,22 +268,30 @@
     /* Il set a scelta multipla gira nel player di MappAI: alla fine (`showStudySummary`)
        si archivia il REPORT come dopo l'attività QR — l'HTML `lr-*` di
        `buildStudentsReportHtml`, con `results.json` e `sessione.json` accanto. */
-    function scriviReportMC() {
-        var s = S(), R = window.MappAILiveReports, res = window.studyResults, items = window.activeStudySessionItems;
-        if (!s || !s.activeVaultPath || !R || !res || res.mode !== 'quiz' || !items || !items.length) return Promise.resolve({ ok: false });
-        var data = new Date(), titolo = 'Quiz — ' + (window.activeStudySetTitle || 'set');
-        var mm = Math.floor((window.studySeconds || 0) / 60), ss = (window.studySeconds || 0) % 60;
-        var rep = PC().reportMC(items, res, { mappa: s.rootNodeLabel || '', titolo: titolo, data: PC().fmtData(data), durata: String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), chi: t('st_io', 'Io') });
-        var cart = null;
+    function scriviReport(rep, titolo) {
+        var s = S(), R = window.MappAILiveReports;
+        if (!s || !s.activeVaultPath || !R) return Promise.resolve({ ok: false, error: 'nessun vault' });
+        var data = new Date(), cart = null;
         return cartellaSessione({ tipo: 'quiz', ambito: '' }).then(function (c) {
             cart = c;
             return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: 'Scelta multipla', titolo: titolo, mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct }, null, 2) });
         }).then(function () {
-            return scrivi(cart.rel + '/results.json', { text: JSON.stringify({ items: items, results: res }, null, 2) });
+            return scrivi(cart.rel + '/results.json', { text: JSON.stringify(rep.results, null, 2) });
         }).then(function () {
             return scrivi(cart.rel + '/report.html', { text: R.buildStudentsReportHtml(rep.meta, rep.results) });
-        }).then(function () { toast(t('st_report_ok', 'Report della prova salvato in «Le tue prove»'), 'success'); return { ok: true }; })
-          .catch(function (e) { console.warn('[autotest] report', e); toast(t('st_report_ko', 'Report non salvato: ') + (e && e.message), 'error'); return { ok: false }; });
+        }).then(function () { return { ok: true, rel: cart.rel }; })
+          .catch(function (e) { console.warn('[autotest] report', e); return { ok: false, error: e && e.message }; });
+    }
+    function scriviReportMC() {
+        var s = S(), res = window.studyResults, items = window.activeStudySessionItems;
+        if (!s || !s.activeVaultPath || !res || res.mode !== 'quiz' || !items || !items.length) return Promise.resolve({ ok: false });
+        var data = new Date(), titolo = 'Quiz — ' + (window.activeStudySetTitle || 'set');
+        var mm = Math.floor((window.studySeconds || 0) / 60), ss = (window.studySeconds || 0) % 60;
+        var rep = PC().reportMC(items, res, { mappa: s.rootNodeLabel || '', titolo: titolo, data: PC().fmtData(data), durata: String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), chi: t('st_io', 'Io') });
+        return scriviReport(rep, titolo).then(function (r) {
+            toast(r.ok ? t('st_report_ok', 'Report della prova salvato in «Le tue prove»') : t('st_report_ko', 'Report non salvato: ') + (r.error || ''), r.ok ? 'success' : 'error');
+            return r;
+        });
     }
     function agganciaPlayer() {
         var orig = window.showStudySummary;
@@ -283,7 +306,7 @@
         var BUS = window.MappAIStudyBus;
         if (!BUS || !BUS.begin) return;
         try {
-            BUS.begin(o.tipo === 'su-misura' ? 'domande-su-misura' : 'domande', o.titolo);
+            BUS.begin(o.mc ? 'quiz-set' : (o.tipo === 'su-misura' ? 'domande-su-misura' : 'domande'), o.titolo);
             voci.forEach(function (v) {
                 if (v.score == null || !v.nodeId) { if (BUS._cur) BUS._cur.entries.push({ nodeId: v.nodeId, label: v.label, score: v.score }); return; }
                 BUS.record(v.nodeId, v.label, o.tipo, { score: v.score });
@@ -301,5 +324,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installa); else installa();
     installa();
 
-    window.MappAIStudenteAutotest = { openLauncher: openLauncher, fogli: fogli, prova: prova, suMisura: suMisura, scriviReportMC: scriviReportMC };
+    window.MappAIStudenteAutotest = { openLauncher: openLauncher, fogli: fogli, prova: prova, avvia: avvia, scriviReportMC: scriviReportMC };
 }());

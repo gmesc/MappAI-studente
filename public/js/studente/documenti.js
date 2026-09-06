@@ -21,9 +21,36 @@
     function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
     function S() { try { return (typeof appState !== 'undefined') ? appState : window.appState; } catch (e) { return window.appState; } }
 
-    var KEY = 'mappai_studente_dock_w', MIN = 360;
-    var dock = null, corpo = null, titolo = null, urlAperto = null;
-
+    /* ── IL DOCK A DUE ORIENTAMENTI ──────────────────────────────────────────
+       iPad sdraiato → a destra (maniglia a sinistra, si trascina la larghezza);
+       iPad in piedi → in basso (maniglia in alto, si trascina l'altezza). Al
+       cambio di orientamento cambia SOLO il CSS: il contenuto (la view della
+       prova, l'iframe) resta lo stesso nodo. Due clamp, due memorie. */
+    var KEY_W = 'mappai_studente_dock_w', KEY_H = 'mappai_studente_dock_h', MIN_W = 360, MIN_H = 240;
+    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null;
+    var mq = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+    function PC() { return window.MappAIProvaCore; }
+    function orientamento() {
+        if (mq) return mq.matches ? 'portrait' : 'landscape';
+        return PC() ? PC().orientamento(window.innerWidth, window.innerHeight) : 'landscape';
+    }
+    function misura(px) {
+        var basso = orientamento() === 'portrait';
+        var main = document.getElementById('main-content');
+        var asse = basso ? (main ? main.clientHeight : window.innerHeight) : (main ? main.clientWidth : window.innerWidth);
+        var min = basso ? MIN_H : MIN_W;
+        var v = PC() ? PC().clampSplit(px, asse, min, 0.7) : Math.max(min, Math.min(Math.floor(asse * 0.7), px));
+        dock.classList.toggle('sd--basso', basso); dock.classList.toggle('sd--destra', !basso);
+        if (basso) { dock.style.width = ''; dock.style.height = v + 'px'; }
+        else { dock.style.height = ''; dock.style.width = v + 'px'; }
+        return v;
+    }
+    function ricorda(px) { try { localStorage.setItem(orientamento() === 'portrait' ? KEY_H : KEY_W, String(px)); } catch (e) { } }
+    function memoria() {
+        var basso = orientamento() === 'portrait', v = 0;
+        try { v = parseInt(localStorage.getItem(basso ? KEY_H : KEY_W), 10) || 0; } catch (e) { }
+        return v || Math.round(basso ? window.innerHeight * 0.5 : window.innerWidth * 0.42);
+    }
     function monta() {
         if (dock) return dock;
         var main = document.getElementById('main-content');
@@ -31,34 +58,42 @@
         dock = document.createElement('aside');
         dock.id = 'studente-dock'; dock.hidden = true;
         dock.innerHTML =
-            '<div class="sd-man" role="separator" aria-orientation="vertical" aria-label="' + esc(t('st_dock_man', 'Ridimensiona')) + '"></div>' +
+            '<div class="sd-man" role="separator" aria-label="' + esc(t('st_dock_man', 'Ridimensiona')) + '"></div>' +
             '<div class="sd-testa"><span class="sd-titolo"></span><span class="sd-sp"></span>' +
             '<button type="button" class="sd-chiudi" aria-label="' + esc(t('mm_chiudi', 'Chiudi')) + '">&times;</button></div>' +
             '<div class="sd-corpo"></div>';
         main.appendChild(dock);
         corpo = dock.querySelector('.sd-corpo'); titolo = dock.querySelector('.sd-titolo');
-        dock.querySelector('.sd-chiudi').onclick = chiudi;
-        var w = 0; try { w = parseInt(localStorage.getItem(KEY), 10) || 0; } catch (e) { }
-        larghezza(w || Math.round(window.innerWidth * 0.42));
-        /* la maniglia: drag col dito o col mouse, clamp fra MIN e il 60% */
+        dock.querySelector('.sd-chiudi').onclick = function () { chiudiChiedendo(); };
+        misura(memoria());
         var man = dock.querySelector('.sd-man'), drag = null;
-        man.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, w: dock.offsetWidth }; man.setPointerCapture(e.pointerId); e.preventDefault(); });
-        man.addEventListener('pointermove', function (e) { if (drag) larghezza(drag.w + (drag.x - e.clientX)); });
-        man.addEventListener('pointerup', function () { if (drag) { try { localStorage.setItem(KEY, String(dock.offsetWidth)); } catch (e) { } } drag = null; });
-        window.addEventListener('resize', function () { if (!dock.hidden) larghezza(dock.offsetWidth); });
+        man.addEventListener('pointerdown', function (e) {
+            drag = { x: e.clientX, y: e.clientY, w: dock.offsetWidth, h: dock.offsetHeight, basso: orientamento() === 'portrait' };
+            man.setPointerCapture(e.pointerId); e.preventDefault();
+        });
+        man.addEventListener('pointermove', function (e) {
+            if (!drag) return;
+            misura(drag.basso ? drag.h + (drag.y - e.clientY) : drag.w + (drag.x - e.clientX));
+        });
+        man.addEventListener('pointerup', function () {
+            if (drag) { ricorda(drag.basso ? dock.offsetHeight : dock.offsetWidth); window.dispatchEvent(new Event('resize')); }
+            drag = null;
+        });
+        var risistema = function () { if (!dock.hidden) { misura(memoria()); window.dispatchEvent(new Event('resize')); } };
+        window.addEventListener('resize', function () { if (!dock.hidden) misura(orientamento() === 'portrait' ? dock.offsetHeight : dock.offsetWidth); });
+        if (mq && mq.addEventListener) mq.addEventListener('change', risistema);
         return dock;
     }
-    function larghezza(px) {
-        var max = Math.max(MIN, Math.floor(window.innerWidth * 0.6));
-        dock.style.width = Math.max(MIN, Math.min(max, px)) + 'px';
-    }
-    function libera() { if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; } corpo.innerHTML = ''; }
-    /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }) */
+    function libera() { if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; } corpo.innerHTML = ''; chiediChiusura = null; }
+    /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool> ) */
     function apri(o) {
         if (!monta()) return null;
         o = o || {};
+        if (chiediChiusura && o.monta !== undefined) { /* una prova in corso: si sostituisce solo con conferma */ }
         libera();
         titolo.textContent = o.titolo || '';
+        chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
+        misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe; corpo.appendChild(f);
         } else if (o.html) corpo.innerHTML = o.html;
@@ -68,6 +103,11 @@
         return corpo;
     }
     function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); window.dispatchEvent(new Event('resize')); }
+    /* chiudere a prova in corso è lavoro da perdere: si chiede */
+    function chiudiChiedendo() {
+        if (!chiediChiusura) return chiudi();
+        Promise.resolve(chiediChiusura()).then(function (si) { if (si) chiudi(); });
+    }
 
     /* ── i materiali del vault ──────────────────────────────────────────── */
     var GENERI = [
@@ -187,5 +227,5 @@
         }
     }
 
-    window.MappAIStudenteDocumenti = { apri: apri, chiudi: chiudi, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere };
+    window.MappAIStudenteDocumenti = { apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());
