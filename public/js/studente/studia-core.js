@@ -79,10 +79,13 @@
             area: 'una',
             nav: nav,
             sezioni: [],
-            azioni: [
+            /* sull'iPad non c'è un selettore di cartelle: le mappe si mettono in File
+               (Documenti dell'app); nel browser il bottone apre <input webkitdirectory> */
+            azioni: o.ipad ? [] : [
                 { id: 'apri-cartella', etichetta: t('st_apri_cartella', 'Apri una cartella'), icona: 'folder-open', chiude: false }
             ]
         };
+        if (o.ipad) s.nota = t('st_nota_ipad', 'Le mappe si mettono in File › Sul mio iPad › MappAI Studente: compaiono qui da sole.');
         if (prog) {
             s.sezioni.push({
                 id: 'cmd', nuda: true,
@@ -100,14 +103,14 @@
                     { etichetta: t('st_col_doc', 'Documento') },
                     { etichetta: t('st_col_tipo', 'Tipo'), larghezza: '150px' },
                     { etichetta: t('st_col_data', 'Data'), larghezza: '116px' },
-                    { etichetta: '', ordinabile: false, larghezza: '96px' }
+                    { etichetta: '', ordinabile: false, larghezza: '56px' }
                 ],
                 righe: (o.sessioni || []).map(function (x) {
                     return {
                         id: 'apri:' + x.id, chiude: false,
                         celle: [x.nome || x.id, x.tipo || '', fmtData(x.data), {
+                            /* solo la cartella: `window.print()` in WKWebView non apre niente (misurato sull'iPad, 7/9) */
                             azioni: [
-                                { id: 'stampa:' + x.id, icona: 'printer', soloIcona: true, ruolo: 'quieto', etichetta: t('st_stampa', 'Stampa') },
                                 { id: 'cartella:' + x.id, icona: 'folder-open', soloIcona: true, ruolo: 'quieto', etichetta: t('st_cartella', 'Apri nei File') }
                             ]
                         }]

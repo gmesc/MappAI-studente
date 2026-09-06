@@ -45,7 +45,8 @@
           .catch(function () { return []; });
     }
     function schema() {
-        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, chiusi: st.chiusi, t: window.t });
+        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, chiusi: st.chiusi, t: window.t,
+            ipad: !!(window.MappAIStudenteFS && window.MappAIStudenteFS.provider === 'ipad') });
     }
     function briciole() {
         var CM = window.MappAIConsoleManifesto;

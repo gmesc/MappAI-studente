@@ -32,6 +32,15 @@ test('schema: la console STUDIA passa validaSchema, con e senza un vault scelto'
     assert.strictEqual(s1.tabelle[0].righe[0].celle[2], '06/09/2026', 'date in GG/MM/AAAA (inv. 12)');
 });
 
+test('schema: sull\'iPad niente «Apri una cartella», ma la nota; una sola cella-azione (cartella)', () => {
+    const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', ipad: true, sessioni: [{ id: 'p1', nome: 'x', tipo: 'Domande aperte', data: '2026-09-06' }] });
+    const e = Core.validaSchema(s);
+    assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
+    assert.strictEqual(s.azioni.length, 0);
+    assert.ok(/File/.test(s.nota));
+    assert.deepStrictEqual(s.tabelle[0].righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['cartella']);
+});
+
 test('schema: senza vault la nav ha comunque una voce (il motore lo pretende)', () => {
     const s = C.schema({ vaults: [] });
     assert.ok(s.nav.length === 1 && s.nav[0].chiude === false);
