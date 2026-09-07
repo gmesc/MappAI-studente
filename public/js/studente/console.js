@@ -49,7 +49,13 @@
     /* i materiali del vault (Materiale Studio/*), per la console: null finché non li ha letti */
     function leggiMateriali(fullPath) {
         if (!fullPath) return Promise.resolve([]);
-        return window.electronAPI.vaultMaterialsList({ vaultPath: fullPath }).then(function (r) { return (r && r.files) || []; }).catch(function () { return []; });
+        var uno = function (dir) {
+            return window.electronAPI.vaultMaterialsList(dir ? { vaultPath: fullPath, dir: dir } : { vaultPath: fullPath })
+                .then(function (r) { return (r && r.files) || []; }).catch(function () { return []; });
+        };
+        /* «Allegati» è la scheda didattica del docente — l'unico PDF che viaggia (7/9):
+           senza questa seconda lettura resterebbe sul disco e invisibile nell'app */
+        return Promise.all([uno(''), uno('Allegati')]).then(function (r) { return r[0].concat(r[1]); });
     }
     function scambioOn() { try { return localStorage.getItem('mappai_studente_scambio') !== '0' && !!window.MappAIStudenteScambio; } catch (e) { return false; } }
     function schema() {

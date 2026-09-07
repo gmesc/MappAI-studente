@@ -52,17 +52,19 @@ test('schema: sull\'iPad niente «Apri una cartella», ma la nota; le celle Invi
 test('materiali: per tipologia, solo i gruppi pieni, niente json, la riga conclude con mat:<rel>', () => {
     const files = ['Sintesi-voce-Clima.html', 'Quiz-MC-Clima-causa.pdf', 'Quiz-VF-Clima.pdf', 'Domande-aperte-Clima-causa.pdf', 'Flashcard-Clima.pdf',
         'MM-Clima-4ª.pdf', 'Focus-Aria-parentela.pdf', 'set-set_1.json', '.DS_Store', 'Timeline-Clima.pdf']
-        .map(n => ({ name: n, relPath: 'Materiale Studio/' + n }));
+        .map(n => ({ name: n, relPath: 'Materiale Studio/' + n }))
+        .concat([{ name: 'Storia della CARTA.pdf', relPath: 'Allegati/Storia della CARTA.pdf' }]);
     const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', materiali: files, sessioni: [] });
     const e = Core.validaSchema(s);
     assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
-    /* i PDF di flashcard, quiz e domande aperte NON si mostrano allo studente (7/9):
-       restano al docente perché portano le soluzioni in coda */
-    assert.deepStrictEqual(s.tabelle.map(x => x.id), ['mat-sintesi', 'mat-mappa', 'mat-altri', 'sessioni']);
-    assert.strictEqual(s.tabelle[0].righe[0].id, 'mat:Materiale Studio/Sintesi-voce-Clima.html');
-    assert.strictEqual(s.tabelle[0].righe[0].celle[1], 'HTML');
-    assert.deepStrictEqual(s.tabelle[1].righe.map(r => r.celle[0]).sort(), ['Focus-Aria-parentela.pdf', 'MM-Clima-4ª.pdf']);
-    assert.ok(s.tabelle.every(x => x.righe.every(r => !/json|DS_Store|Flashcard|Quiz-|Domande-aperte/.test(r.id))));
+    /* da «Materiale Studio» nessun PDF arriva allo studente (7/9): l'unico che viaggia
+       è la scheda didattica originale, che sta in `Allegati/` e ha un elenco suo */
+    assert.deepStrictEqual(s.tabelle.map(x => x.id), ['mat-scheda', 'mat-sintesi', 'sessioni']);
+    assert.strictEqual(s.tabelle[0].righe[0].id, 'mat:Allegati/Storia della CARTA.pdf');
+    assert.strictEqual(s.tabelle[0].righe[0].icona, 'book-open');
+    assert.strictEqual(s.tabelle[1].righe[0].id, 'mat:Materiale Studio/Sintesi-voce-Clima.html');
+    assert.strictEqual(s.tabelle[1].righe[0].celle[1], 'HTML');
+    assert.ok(s.tabelle.every(x => x.righe.every(r => !/Materiale Studio\/.*\.pdf|json|DS_Store/.test(r.id))), 'nessun PDF da Materiale Studio');
     assert.strictEqual(C.trovaSintesi(files).name, 'Sintesi-voce-Clima.html', 'la voce vince sullo scritto');
     assert.strictEqual(C.trovaSintesi([{ name: 'Quiz-MC-x.pdf', relPath: 'a' }]), null);
     assert.strictEqual(C.genere('Sintesi -VERDE.html').et, 'Sintesi');

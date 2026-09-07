@@ -204,16 +204,18 @@
            consegna o si chiude la prova (Giacomo, 7/9: l'elenco compariva sopra le domande) */
         if (chiediChiusura) { toast(t('st_prova_in_corso', 'C\'è una prova in corso: consegnala o chiudila prima di aprire i materiali.'), 'warning'); return; }
         apri({ titolo: t('st_materiali', 'Materiali'), monta: function (host) { host.innerHTML = '<p class="sd-vuoto">' + esc(t('st_carico', 'Leggo la cartella…')) + '</p>'; } });
-        window.electronAPI.vaultMaterialsList({ vaultPath: vp }).then(function (r) {
-            /* i PDF di flashcard, fogli, quiz e domande aperte NON si mostrano allo
-               studente: l'ultima pagina porta le soluzioni, e le sue attività se le
-               compone dai set e dai gemelli in Sorgenti (`materialeSoloDocente` in
-               files-core, la stessa regola con cui il docente non li spedisce). */
-            var FCd = window.MappAIFilesCore;
-            var files = ((r && r.files) || []).filter(function (f) {
-                if (/\.json$/i.test(f.name) || f.name.charAt(0) === '.') return false;
-                return !(FCd && FCd.materialeSoloDocente && FCd.materialeSoloDocente(f.name));
-            });
+        var lista = function (dir) {
+            return window.electronAPI.vaultMaterialsList(dir ? { vaultPath: vp, dir: dir } : { vaultPath: vp })
+                .then(function (x) { return (x && x.files) || []; }).catch(function () { return []; });
+        };
+        Promise.all([lista(''), lista('Allegati')]).then(function (due) {
+            var r = { files: due[0].concat(due[1]) };
+            /* che cosa lo studente vede lo decide `studia-core.daMostrare`, uno solo per
+               la console e per il pannello: niente .json, niente nascosti, e da
+               «Materiale Studio» nessun PDF (le soluzioni in coda; la scheda del docente
+               sta in `Allegati/` ed è l'unico PDF che viaggia). */
+            var C1 = window.MappAIStudiaCore;
+            var files = (r.files || []).filter(function (f) { return C1 && C1.daMostrare ? C1.daMostrare(f) : true; });
             var html = '';
             /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta (il Dossier del
                docente è stato tolto da qui il 7/9: era un comando di CREA) */
@@ -221,7 +223,8 @@
             var sintesi = C0 && C0.trovaSintesi ? C0.trovaSintesi(files) : null;
             if (!files.length) html += '<p class="sd-vuoto">' + esc(t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.')) + '</p>';
             files.forEach(function (f) {
-                var g = genere(f.name) || { et: t('st_file', 'File'), icona: 'file' };
+                var g = (C1 && C1.inAllegati && C1.inAllegati(f)) ? { et: t('st_g_scheda', 'La scheda del docente'), icona: 'book-open' }
+                    : (genere(f.name) || { et: t('st_file', 'File'), icona: 'file' });
                 html += '<button type="button" class="sd-riga" data-rel="' + esc(f.relPath) + '" data-nome="' + esc(f.name) + '">' +
                     '<i data-lucide="' + g.icona + '"></i><span class="sd-riga__t"><b>' + esc(g.et) + '</b><small>' + esc(f.name) + '</small></span></button>';
             });

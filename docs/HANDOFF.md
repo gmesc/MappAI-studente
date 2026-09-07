@@ -24,7 +24,14 @@ domande aperte NON arrivano più allo studente** (`materialeSoloDocente` in file
 la stessa regola per chi espone e per chi elenca): l'ultima pagina porta le soluzioni, e
 le attività lo studente se le compone dai `set-*.json` e dai gemelli in
 `Materiale Studio/Sorgenti/` — verificato che «Prova» trova ancora 7 fogli e 8 set.
-Il vault dimostrativo è stato ripacchettato: 35 file, 2,9 MB. (5) **Quarto comando
+**Stretta la sera stessa, dalle parole di Giacomo: «l'unico PDF che viaggia dal docente
+all'allievo è quello della scheda didattica originale»** — da `Materiale Studio/` non passa
+nessun pdf (via anche mappa stampata, Focus, viste di studio, catena: nell'app lo studente
+se li genera), e `Allegati/` — che nessuno elencava — diventa il gruppo **«La scheda del
+docente»**, primo nella console e nel pannello (`console.leggiMateriali` e `documenti.materiali`
+fanno due letture, `daMostrare`/`inAllegati` in studia-core sono la regola sola per entrambi).
+Il vault dimostrativo ripacchettato: 34 file, 2,9 MB — la scheda in PDF, la sintesi, i sette
+gemelli in Sorgenti e gli otto set, cioè tutto ciò che serve a «Prova». (5) **Quarto comando
 «Sintesi»** nel bento (icona `file-text`, apre la mappa e il documento accanto;
 `trovaSintesi` è nel core) e **i cinque comandi mostrano icona E testo** — l'etichetta
 al passaggio del mouse su un iPad non si vede mai.

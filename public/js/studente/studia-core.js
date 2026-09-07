@@ -54,7 +54,12 @@
         for (var i = 0; i < GENERI.length; i++) if (GENERI[i][0].test(_s(nome))) return { et: GENERI[i][1], icona: GENERI[i][2] };
         return null;
     }
+    var SCHEDA = 'Scheda didattica';
     var GRUPPI = [
+        /* la fonte da cui tutto viene: sta in `Allegati/` ed è l'UNICO PDF che il
+           docente manda allo studente (7/9). Prima nell'elenco perché è il documento
+           che la lezione ha in mano. */
+        { id: 'scheda', chiave: 'st_g_scheda', testo: 'La scheda del docente', tipi: [SCHEDA] },
         { id: 'sintesi', chiave: 'st_g_sintesi', testo: 'Sintesi', tipi: ['Sintesi', 'Sintesi con voce'] },
         { id: 'mappa', chiave: 'st_g_mappa', testo: 'La mappa stampata', tipi: ['Mappa', 'Vista studio', 'Focus'] },
         { id: 'flashcard', chiave: 'st_g_flashcard', testo: 'Flashcard', tipi: ['Flashcard'] },
@@ -67,8 +72,12 @@
     function formato(nome) { var m = /\.([a-z0-9]+)$/i.exec(_s(nome)); return m ? m[1].toUpperCase() : ''; }
     /* i file che lo studente NON vede: i .json interni, i nascosti, e i PDF che
        restano al docente (soluzioni in coda — `materialeSoloDocente`) */
+    function inAllegati(f) { return /^Allegati\//.test(_s(f && f.relPath)); }
     function daMostrare(f) {
         if (!f || !f.name || f.name.charAt(0) === '.' || /\.json$/i.test(f.name)) return false;
+        /* la regola vale DENTRO «Materiale Studio»: la scheda in `Allegati/` è un PDF
+           e deve vedersi (è l'unico che il docente manda) */
+        if (inAllegati(f)) return true;
         return !(FC && FC.materialeSoloDocente && FC.materialeSoloDocente(f.name));
     }
     /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta, altrimenti il PDF */
@@ -83,7 +92,11 @@
         var noti = {};
         GRUPPI.forEach(function (g) { (g.tipi || []).forEach(function (x) { noti[x] = 1; }); });
         var lista = (files || []).filter(daMostrare)
-            .map(function (f) { var g = genere(f.name); return { name: f.name, relPath: f.relPath, tipo: g ? g.et : '', icona: g ? g.icona : 'file' }; });
+            .map(function (f) {
+                if (inAllegati(f)) return { name: f.name, relPath: f.relPath, tipo: SCHEDA, icona: 'book-open' };
+                var g = genere(f.name);
+                return { name: f.name, relPath: f.relPath, tipo: g ? g.et : '', icona: g ? g.icona : 'file' };
+            });
         return GRUPPI.map(function (g) {
             var righe = lista.filter(function (m) { return g.tipi ? g.tipi.indexOf(m.tipo) >= 0 : !noti[m.tipo]; });
             if (!righe.length) return null;
@@ -213,5 +226,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare };
+    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati };
 }));
