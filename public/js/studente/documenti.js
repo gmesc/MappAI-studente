@@ -103,12 +103,29 @@
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
         misura(memoria());
         if (o.iframe) {
-            var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe; corpo.appendChild(f);
+            var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
+            f.addEventListener('load', function () { vesti(f); });
+            corpo.appendChild(f);
         } else if (o.html) corpo.innerHTML = o.html;
         else if (typeof o.monta === 'function') o.monta(corpo);
         dock.hidden = false;
         window.dispatchEvent(new Event('resize'));
         return corpo;
+    }
+    /* la VESTE dei documenti HTML di MappAI nel dock (7/9): la sintesi nasce con la
+       testata cotta a scala 1,6 (`--ap-ui-k`, la leva di leggibilità del docente) e
+       in un pannello da 500-900 px si spezzava su tre righe. Il file è dello stesso
+       origine (capacitor:// sull'iPad, blob: nel browser): gli si aggiunge un foglio
+       in coda che riporta la testata alla scala 1 e toglie il marchio. Il corpo del
+       testo (`--ap-txt-k`) non si tocca: quello è la leggibilità. Un documento senza
+       `#ap-topbar` non si tocca. */
+    function vesti(f) {
+        try {
+            var d = f.contentDocument; if (!d || !d.head || !d.getElementById('ap-topbar')) return;
+            var st = d.createElement('style'); st.id = 'sd-veste';
+            st.textContent = ':root{--ap-ui-k:1.05 !important}#ap-doc-brand{display:none}#ap-topbar{padding:8px 12px}';
+            d.head.appendChild(st);
+        } catch (e) { }
     }
     function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); ingombro(0, 0); window.dispatchEvent(new Event('resize')); }
     /* chiudere a prova in corso è lavoro da perdere: si chiede */
