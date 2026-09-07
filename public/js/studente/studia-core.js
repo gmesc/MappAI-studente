@@ -141,6 +141,9 @@
                 { id: 'flashcard', et: t('st_flashcard', 'Flashcard'), forma: 'azione', icona: 'copy', aiuto: t('st_tip_flashcard', 'Le carte: leggi, pensa, gira.') },
                 { id: 'prova', et: t('st_prova', 'Prova'), forma: 'azione', icona: 'help-circle', aiuto: t('st_tip_prova', 'Un quiz o un foglio di domande aperte.') }
             ];
+            /* «Docente» (scambio, 7/9): NON conclude — apre il modale dello scambio sopra la
+               console (inv. 10/11). Via col kill-switch `mappai_studente_scambio`. */
+            if (o.scambio !== false) az.push({ id: 'docente', et: t('st_docente', 'Docente'), forma: 'azione', icona: 'qr-code', chiude: false, aiuto: t('st_tip_docente', 'Ricevi la mappa dal docente, consegna le tue prove.') });
             var tabMat = tabelleMateriali(o.materiali, t);
             s.bento = [
                 {
@@ -164,16 +167,18 @@
                     { etichetta: t('st_col_doc', 'Documento') },
                     { etichetta: t('st_col_tipo', 'Tipo'), larghezza: '150px' },
                     { etichetta: t('st_col_data', 'Data'), larghezza: '116px' },
-                    { etichetta: '', ordinabile: false, larghezza: '56px' }
+                    { etichetta: '', ordinabile: false, larghezza: o.scambio !== false ? '96px' : '56px' }
                 ],
                 righe: (o.sessioni || []).map(function (x) {
                     return {
                         id: 'apri:' + x.id, chiude: false,
                         celle: [x.nome || x.id, x.tipo || '', fmtData(x.data), {
                             /* solo la cartella: `window.print()` in WKWebView non apre niente (misurato sull'iPad, 7/9) */
-                            azioni: [
+                            azioni: (o.scambio !== false && (x.pdf || x.html) ? [
+                                { id: 'invia:' + x.id, icona: 'send', soloIcona: true, ruolo: 'quieto', etichetta: t('st_invia', 'Consegna al docente') }
+                            ] : []).concat([
                                 { id: 'cartella:' + x.id, icona: 'folder-open', soloIcona: true, ruolo: 'quieto', etichetta: t('st_cartella', 'Apri nei File') }
-                            ]
+                            ])
                         }]
                     };
                 })

@@ -21,6 +21,7 @@
     var C = function () { return window.MappAIStudiaCore; };
 
     var st = { vaults: [], sel: '', chiusi: {}, sessioni: [], materiali: null, aperta: false };
+    var rid = null;   /* il `ridisegna` della console aperta (per le briciole e per la ricezione) */
     try { st.sel = localStorage.getItem('mappai_studente_sel') || ''; } catch (e) { }
 
     function leggi() {
@@ -49,8 +50,9 @@
         if (!fullPath) return Promise.resolve([]);
         return window.electronAPI.vaultMaterialsList({ vaultPath: fullPath }).then(function (r) { return (r && r.files) || []; }).catch(function () { return []; });
     }
+    function scambioOn() { try { return localStorage.getItem('mappai_studente_scambio') !== '0' && !!window.MappAIStudenteScambio; } catch (e) { return false; } }
     function schema() {
-        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, chiusi: st.chiusi, t: window.t,
+        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, chiusi: st.chiusi, t: window.t, scambio: scambioOn(),
             ipad: !!(window.MappAIStudenteFS && window.MappAIStudenteFS.provider === 'ipad') });
     }
     function briciole() {
@@ -105,7 +107,7 @@
         if (st.aperta || !window.MappAIModal) return;
         st.aperta = true;
         var s = schema();
-        var rid = null;
+        rid = null;
         /* le briciole (`mappai-briciola`): «Studia» e la materia riportano alla pagina senza
            progetto scelto — non c'è una pagina della materia, la lista è già lì a sinistra */
         function suBriciola() {
@@ -134,6 +136,9 @@
                 return;
             }
             if (a === 'nessuno') { toast(t('st_nessun_vault_toast', 'Apri una cartella con il bottone in basso.'), 'info'); return; }
+            /* lo scambio col docente (7/9): il modale sopra la console; «invia» dalla riga della prova */
+            if (a === 'docente' && window.MappAIStudenteScambio) { window.MappAIStudenteScambio.apri(st.sel); return; }
+            if (/^invia:/.test(a) && window.MappAIStudenteScambio) { window.MappAIStudenteScambio.inviaProva(st.sel, a.slice(6)); return; }
             if (/^(stampa|cartella|apri):/.test(a) && window.MappAIStudenteDocumenti) { window.MappAIStudenteDocumenti.azione(a, st.sel, st.sessioni); return; }
         };
         var scelto = st.sel;
@@ -184,5 +189,14 @@
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', avvio); else avvio();
 
-    window.MappAIStudente = { apri: apri, torna: torna, apriMappa: apriMappa, apriFlashcard: apriFlashcard, stato: st };
+    /* dopo una ricezione: rilegge le cartelle e si mette sulla mappa arrivata (la console è aperta sotto il modale) */
+    function ricarica(fullPath) {
+        return leggi().then(function () {
+            if (!rid) return;
+            var c = (st.vaults || []).filter(function (v) { return v.fullPath === fullPath; })[0];
+            if (c) scegli(fullPath, rid); else { ridisegna_(); }
+        });
+    }
+    function ridisegna_() { if (rid) { rid(schema()); briciole(); } }
+    window.MappAIStudente = { apri: apri, torna: torna, apriMappa: apriMappa, apriFlashcard: apriFlashcard, ricarica: ricarica, stato: st };
 }());

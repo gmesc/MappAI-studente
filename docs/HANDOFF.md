@@ -8,6 +8,29 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 notte: LO SCAMBIO COL DOCENTE, fasi 1-2 (piano `docs/PIANO-scambio-qr.md`, fase 0 in
+MappAI re `d1ec90c`).** Nel bento della console la quarta voce **Docente** (`chiude:false`, modale
+sopra la console): «Chi sei» (numero personale + classe, `identitaStudente` di files-core — classe
+`[1-4][A-Z]`, maiuscolo forzato nell'input, ricordata in `mappai_studente_identita`); «Ricevi»
+(Inquadra il QR col plugin `@capacitor/barcode-scanner` 3.1.2 — solo se `Capacitor.Plugins.
+CapacitorBarcodeScanner` c'è — o Scrivi l'indirizzo: `daQr` legge sia l'URL del QR di INSEGNA sia
+«ip:porta codice»); «Consegna» (le prove con un file). Ricezione: `GET /api/vault` → piano filtrato
+con `relVaultStudente` (fiducia zero nel manifest) → un file alla volta da `/vault/<rel>` →
+`MappAIStudenteFS.scriviRicevuto` (seconda porta di scrittura dell'adapter, allowlist = la stessa
+regola del docente) → velo «Ricevo n/N» con Annulla → `MappAIStudente.ricarica(dest)`. Consegna:
+cella **Invia** in «Le tue prove» o dal modale → spunte report/jsonl → `POST /api/consegna` con
+numero, classe, vault (folderName), sessione, nome, base64; il docente ricordato 12 h in
+`mappai_studente_docente` (si riprova con `/api/materials`, 403 → QR di nuovo). Errori con rimedio
+(`erroreTesto`). Kill-switch `mappai_studente_scambio='0'`. Plist: `NSCameraUsageDescription`,
+`NSLocalNetworkUsageDescription`, `NSAppTransportSecurity` (LocalNetworking + ArbitraryLoads) da
+`tools/plist-ipad.py`. Logica pura in `studente/scambio-core.js` (7 test, schemi da validaSchema);
+UI in `studente/scambio.js`. **Provato nel browser contro il server Materiali VERO di MappAI re
+avviato da Node** (scratchpad `server-scambio.js`): 77 file ricevuti (8,4 MB, 43 nodi, 7 sorgenti,
+vista.json intatto), consegna con «1a» → cartella `Consegne/1A-4517/` sul lato docente con
+report.html + sessioni.jsonl, `onConsegna` chiamata. **Da provare sull'iPad**: lo scanner (permesso
+camera, UI nativa), il permesso «Rete locale», l'HTTP in chiaro verso l'IP del Mac, e su Electron
+la voce «Tutto il vault del progetto» + la tabella delle consegne in INSEGNA.
+
 **⟵ 7/9, quinto giro: la console di un progetto come in INSEGNA.** (1) I tre comandi
 (Mappa · Flashcard · Prova) sono un riquadro BENTO identico a `_consBentoMappa` di
 mappai-landing-teach.js: stessi `stile`/`bottoni` (#f1f4f8 / #404040 / hover #41e6aa), forma

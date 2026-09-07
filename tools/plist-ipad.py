@@ -18,7 +18,13 @@ prima = dict(d)
 d['UIFileSharingEnabled'] = True
 d['LSSupportsOpeningDocumentsInPlace'] = True
 d['UIDeviceFamily'] = [2]
+# lo scambio col docente (7/9): la fotocamera per il QR, la rete locale per il server del Mac,
+# e l'HTTP in chiaro verso quell'IP (ATS): NSAllowsLocalNetworking copre la LAN, ArbitraryLoads
+# è il ripiego per gli IP nudi — app firmata per sé, nessuno store
+d['NSCameraUsageDescription'] = 'Per inquadrare il codice QR sullo schermo del docente.'
+d['NSLocalNetworkUsageDescription'] = 'Per scambiare i file con il computer del docente sulla rete della classe.'
+d['NSAppTransportSecurity'] = {'NSAllowsLocalNetworking': True, 'NSAllowsArbitraryLoads': True}
 with open(P, 'wb') as f:
     plistlib.dump(d, f)
-cambiate = [k for k in ('UIFileSharingEnabled', 'LSSupportsOpeningDocumentsInPlace', 'UIDeviceFamily') if prima.get(k) != d[k]]
+cambiate = [k for k in ('UIFileSharingEnabled', 'LSSupportsOpeningDocumentsInPlace', 'UIDeviceFamily', 'NSCameraUsageDescription', 'NSLocalNetworkUsageDescription', 'NSAppTransportSecurity') if prima.get(k) != d[k]]
 print('plist ok · ' + (('scritte: ' + ', '.join(cambiate)) if cambiate else 'già a posto'))

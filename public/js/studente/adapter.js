@@ -486,6 +486,19 @@
         };
     }
     /* per i moduli dello studente: leggere un testo, scrivere, elencare */
-    window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, plugin: plugin, leggiTesto: leggiTesto, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd };
+    /* la RICEZIONE dal docente (scambio, 7/9): una seconda porta, dichiarata, accanto a
+       `saveVaultFile` (che resta la porta dei moduli copiati e scrive solo vista.json e
+       Studio Attivo/**). Ammette solo ciò che `relVaultStudente` di files-core ammette —
+       la stessa regola con cui il docente ESPONE: fiducia zero nel manifest. */
+    function scriviRicevuto(vaultPath, rel, base64) {
+        var FC = window.MappAIFilesCore;
+        var ok = FC && FC.relVaultStudente ? FC.relVaultStudente(rel) : null;
+        if (!ok) return Promise.reject(new Error('non ammesso: ' + rel));
+        var vp = String(vaultPath || '');
+        if (vp.indexOf(ROOT + '/') !== 0 || vp.indexOf('..') >= 0) return Promise.reject(new Error('cartella non valida'));
+        return FS.scrivi(vp + '/' + ok, String(base64 || ''));
+    }
+    function leggiB64(vaultPath, rel) { return FS.leggi(vaultPath + '/' + rel).then(function (r) { return r ? r.base64 : null; }); }
+    window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, plugin: plugin, leggiTesto: leggiTesto, leggiB64: leggiB64, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd, scriviRicevuto: scriviRicevuto };
     console.log('[MappAI studente] adapter pronto (' + FS.nome + ')');
 }());

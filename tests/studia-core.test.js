@@ -23,26 +23,30 @@ test('schema: la console STUDIA passa validaSchema, con e senza un vault scelto'
     const s0 = C.schema({ vaults: VAULTS });
     const e0 = Core.validaSchema(s0);
     assert.deepStrictEqual(e0.errori || e0, e0.errori ? [] : e0, 'senza selezione: ' + JSON.stringify(e0));
-    const s1 = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', sessioni: [{ id: 'p1', nome: 'Domande · Il Clima · 00', tipo: 'Domande aperte', data: '2026-09-06' }] });
+    const s1 = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', sessioni: [{ id: 'p1', nome: 'Domande · Il Clima · 00', tipo: 'Domande aperte', data: '2026-09-06', pdf: 'risposte.pdf' }, { id: 'p0', nome: 'senza file', tipo: 'x', data: '2026-09-05' }] });
     const e1 = Core.validaSchema(s1);
     assert.deepStrictEqual(e1.errori || e1, e1.errori ? [] : e1, 'con selezione: ' + JSON.stringify(e1));
     assert.ok(s1.nav.every(v => v.gruppo || v.chiude === false), 'una voce di nav senza chiude:false chiuderebbe la finestra');
-    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,prova', 'i tre comandi nel riquadro bento, come INSEGNA');
-    assert.ok(s1.bento[0].voci.every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
+    const sess = s1.tabelle.filter(x => x.id === 'sessioni')[0];
+    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,prova,docente', 'i comandi nel riquadro bento, come INSEGNA (+ Docente, scambio 7/9)');
+    assert.ok(s1.bento[0].voci.slice(0, 3).every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
+    assert.strictEqual(s1.bento[0].voci[3].chiude, false, '«Docente» apre un modale sopra la console: non conclude');
+    assert.strictEqual(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', scambio: false }).bento[0].voci.length, 3, 'kill-switch: via la voce');
+    assert.deepStrictEqual(sess.righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['invia', 'cartella'], 'la cella Invia prima della cartella');
     assert.deepStrictEqual(s1.bento[0].bottoni, { bg: '#f1f4f8', testo: '#404040', hoverBg: '#41e6aa', hoverTesto: '#0b0b0b' }, 'gli stessi token di _consBentoMappa');
     assert.strictEqual(s1.bento[1].voci[0].forma, 'materiali');
-    const sess = s1.tabelle.filter(x => x.id === 'sessioni')[0];
-    assert.strictEqual(sess.righe.length, 1);
+    assert.strictEqual(sess.righe.length, 2);
+    assert.deepStrictEqual(sess.righe[1].celle[3].azioni.map(a => a.id.split(':')[0]), ['cartella'], 'senza un file da mandare niente Invia');
     assert.strictEqual(sess.righe[0].celle[2], '06/09/2026', 'date in GG/MM/AAAA (inv. 12)');
 });
 
-test('schema: sull\'iPad niente «Apri una cartella», ma la nota; una sola cella-azione (cartella)', () => {
-    const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', ipad: true, sessioni: [{ id: 'p1', nome: 'x', tipo: 'Domande aperte', data: '2026-09-06' }] });
+test('schema: sull\'iPad niente «Apri una cartella», ma la nota; le celle Invia e cartella', () => {
+    const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', ipad: true, sessioni: [{ id: 'p1', nome: 'x', tipo: 'Domande aperte', data: '2026-09-06', pdf: 'risposte.pdf' }] });
     const e = Core.validaSchema(s);
     assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
     assert.strictEqual(s.azioni.length, 0);
     assert.ok(/File/.test(s.nota));
-    assert.deepStrictEqual(s.tabelle.filter(x => x.id === 'sessioni')[0].righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['cartella']);
+    assert.deepStrictEqual(s.tabelle.filter(x => x.id === 'sessioni')[0].righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['invia', 'cartella']);
 });
 
 test('materiali: per tipologia, solo i gruppi pieni, niente json, la riga conclude con mat:<rel>', () => {
