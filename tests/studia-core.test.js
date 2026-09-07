@@ -27,9 +27,13 @@ test('schema: la console STUDIA passa validaSchema, con e senza un vault scelto'
     const e1 = Core.validaSchema(s1);
     assert.deepStrictEqual(e1.errori || e1, e1.errori ? [] : e1, 'con selezione: ' + JSON.stringify(e1));
     assert.ok(s1.nav.every(v => v.gruppo || v.chiude === false), 'una voce di nav senza chiude:false chiuderebbe la finestra');
-    assert.strictEqual(s1.sezioni[0].azioni.map(a => a.id).join(','), 'mappa,flashcard,prova');
-    assert.strictEqual(s1.tabelle[0].righe.length, 1);
-    assert.strictEqual(s1.tabelle[0].righe[0].celle[2], '06/09/2026', 'date in GG/MM/AAAA (inv. 12)');
+    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,prova', 'i tre comandi nel riquadro bento, come INSEGNA');
+    assert.ok(s1.bento[0].voci.every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
+    assert.deepStrictEqual(s1.bento[0].bottoni, { bg: '#f1f4f8', testo: '#404040', hoverBg: '#41e6aa', hoverTesto: '#0b0b0b' }, 'gli stessi token di _consBentoMappa');
+    assert.strictEqual(s1.bento[1].voci[0].forma, 'materiali');
+    const sess = s1.tabelle.filter(x => x.id === 'sessioni')[0];
+    assert.strictEqual(sess.righe.length, 1);
+    assert.strictEqual(sess.righe[0].celle[2], '06/09/2026', 'date in GG/MM/AAAA (inv. 12)');
 });
 
 test('schema: sull\'iPad niente «Apri una cartella», ma la nota; una sola cella-azione (cartella)', () => {
@@ -38,7 +42,23 @@ test('schema: sull\'iPad niente «Apri una cartella», ma la nota; una sola cell
     assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
     assert.strictEqual(s.azioni.length, 0);
     assert.ok(/File/.test(s.nota));
-    assert.deepStrictEqual(s.tabelle[0].righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['cartella']);
+    assert.deepStrictEqual(s.tabelle.filter(x => x.id === 'sessioni')[0].righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['cartella']);
+});
+
+test('materiali: per tipologia, solo i gruppi pieni, niente json, la riga conclude con mat:<rel>', () => {
+    const files = ['Sintesi-voce-Clima.html', 'Quiz-MC-Clima-causa.pdf', 'Quiz-VF-Clima.pdf', 'Domande-aperte-Clima-causa.pdf', 'Flashcard-Clima.pdf',
+        'MM-Clima-4ª.pdf', 'Focus-Aria-parentela.pdf', 'set-set_1.json', '.DS_Store', 'Timeline-Clima.pdf']
+        .map(n => ({ name: n, relPath: 'Materiale Studio/' + n }));
+    const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', materiali: files, sessioni: [] });
+    const e = Core.validaSchema(s);
+    assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
+    assert.deepStrictEqual(s.tabelle.map(x => x.id), ['mat-sintesi', 'mat-mappa', 'mat-flashcard', 'mat-quiz', 'mat-aperte', 'mat-altri', 'sessioni']);
+    assert.strictEqual(s.tabelle[3].righe.length, 2, 'MC e VF in un elenco solo');
+    assert.strictEqual(s.tabelle[0].righe[0].id, 'mat:Materiale Studio/Sintesi-voce-Clima.html');
+    assert.strictEqual(s.tabelle[0].righe[0].celle[1], 'HTML');
+    assert.ok(s.tabelle.every(x => x.righe.every(r => !/json|DS_Store/.test(r.id))));
+    assert.strictEqual(C.genere('Sintesi -VERDE.html').et, 'Sintesi');
+    assert.ok(/Cerco/.test(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', materiali: null }).bento[1].voci[0].vuoto), 'null = non ancora letti');
 });
 
 test('schema: senza vault la nav ha comunque una voce (il motore lo pretende)', () => {

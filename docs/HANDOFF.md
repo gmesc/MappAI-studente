@@ -8,6 +8,21 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9, quinto giro: la console di un progetto come in INSEGNA.** (1) I tre comandi
+(Mappa · Flashcard · Prova) sono un riquadro BENTO identico a `_consBentoMappa` di
+mappai-landing-teach.js: stessi `stile`/`bottoni` (#f1f4f8 / #404040 / hover #41e6aa), forma
+`azione` (icona a riposo, etichetta al passaggio), `layout.colonneVoci`. ⚠️ Serviva il modulo
+`mappai-bento-composizione.js` (`MappAIBento`: colori e griglia dei riquadri) — senza, il bento
+usciva NERO e in colonna; ora è copiato (sincronizza + index). (2) I **materiali del vault
+nella console**, per tipologia: `studia-core.tabelleMateriali` (GENERI e GRUPPI spostati lì dal
+dock, puri, testati) → `s.tabelle` sotto i comandi, un elenco per gruppo (Sintesi · La mappa
+stampata · Flashcard · Quiz · Domande aperte · Fogli · Catena · Altri), solo i pieni, niente
+json; la riga CONCLUDE con `mat:<rel>` → console.js apre la mappa e il file nel dock. La
+tabella «Le tue prove» sta in coda. Verificato nel browser: riga → mappa + dock col PDF.
+(3) Lo scambio dei file col docente: NON fatto — vedi la risposta a Giacomo del 7/9 (il
+progetto QR-stream è AGPL-3.0; la strada proposta è il server Live di MappAI re, che ha già
+`/api/materials` e `/files/<nome>` per la ricezione; manca un endpoint per l'invio).
+
 **⟵ 7/9 notte, quarto giro: tre rilievi di Giacomo sul dock.** (a) «Materiali» a prova in
 corso copriva le domande: ora `materiali()` rifiuta con un avviso finché il dock ha una prova
 (`chiediChiusura` non nullo). (b) In fondo all'elenco lo scorrimento trascinava tutta la

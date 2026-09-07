@@ -118,18 +118,8 @@
     }
 
     /* ── i materiali del vault ──────────────────────────────────────────── */
-    var GENERI = [
-        [/^Sintesi-voce/i, 'Sintesi con voce', 'volume-2'], [/^Sintesi/i, 'Sintesi', 'sparkles'],
-        [/^Quiz-MC/i, 'Quiz a scelta multipla', 'list-checks'], [/^Quiz-VF/i, 'Quiz vero o falso', 'check-check'],
-        [/^Domande.?aperte/i, 'Domande aperte', 'pen-line'], [/^Flashcard/i, 'Flashcard', 'copy'],
-        [/^Foglio.?nodi/i, 'Foglio dei nodi', 'scissors'], [/^Focus/i, 'Focus', 'crosshair'],
-        [/^Studio/i, 'Vista studio', 'layout-grid'], [/^(MM|KG)-/i, 'Mappa', 'map'],
-        [/^Catena/i, 'Catena dei perché', 'git-branch'], [/^Dossier/i, 'Dossier', 'book-open'], [/^Analisi/i, 'Analisi della fonte', 'image']
-    ];
-    function genere(nome) {
-        for (var i = 0; i < GENERI.length; i++) if (GENERI[i][0].test(nome)) return { et: GENERI[i][1], icona: GENERI[i][2] };
-        return null;
-    }
+    /* il genere dal nome del file: la tabella vive in studia-core (pura, testata) */
+    function genere(nome) { var C = window.MappAIStudiaCore; return C && C.genere ? C.genere(nome) : null; }
     function mime(nome) {
         if (/\.pdf$/i.test(nome)) return 'application/pdf';
         if (/\.html?$/i.test(nome)) return 'text/html';

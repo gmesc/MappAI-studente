@@ -38,6 +38,7 @@ const FILES = [
   'js/mappai-font-core.js', 'js/mappai-font.js',
   'js/mappai-modal-core.js', 'js/mappai-modal.js',
   'js/mappai-console-bento.js',
+  'js/mappai-bento-composizione.js',   /* MappAIBento: colori e disposizione dei riquadri bento (senza, la console resta nuda e scura) */
   'js/mappai-ui-modals.js', 'js/mappai-teach-core.js', 'js/mappai-storage-lang.js',
   'js/mappai-d3-render.js', 'js/mappai-ui-canvas.js',
   'js/mappai-latex.js',

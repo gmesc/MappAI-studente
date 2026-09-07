@@ -20,7 +20,7 @@
     function S() { try { return (typeof appState !== 'undefined') ? appState : window.appState; } catch (e) { return window.appState; } }
     var C = function () { return window.MappAIStudiaCore; };
 
-    var st = { vaults: [], sel: '', chiusi: {}, sessioni: [], aperta: false };
+    var st = { vaults: [], sel: '', chiusi: {}, sessioni: [], materiali: null, aperta: false };
     try { st.sel = localStorage.getItem('mappai_studente_sel') || ''; } catch (e) { }
 
     function leggi() {
@@ -44,8 +44,13 @@
         }).then(function (l) { return l.filter(Boolean).sort(function (a, b) { return String(b.data || '').localeCompare(String(a.data || '')); }); })
           .catch(function () { return []; });
     }
+    /* i materiali del vault (Materiale Studio/*), per la console: null finché non li ha letti */
+    function leggiMateriali(fullPath) {
+        if (!fullPath) return Promise.resolve([]);
+        return window.electronAPI.vaultMaterialsList({ vaultPath: fullPath }).then(function (r) { return (r && r.files) || []; }).catch(function () { return []; });
+    }
     function schema() {
-        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, chiusi: st.chiusi, t: window.t,
+        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, chiusi: st.chiusi, t: window.t,
             ipad: !!(window.MappAIStudenteFS && window.MappAIStudenteFS.provider === 'ipad') });
     }
     function briciole() {
@@ -56,9 +61,11 @@
     function scegli(fullPath, ridisegna) {
         st.sel = fullPath;
         try { localStorage.setItem('mappai_studente_sel', fullPath); } catch (e) { }
-        st.sessioni = [];
+        st.sessioni = []; st.materiali = null;
         ridisegna(schema()); briciole();
-        leggiSessioni(fullPath).then(function (s) { if (st.sel === fullPath) { st.sessioni = s; ridisegna(schema()); briciole(); } });
+        Promise.all([leggiSessioni(fullPath), leggiMateriali(fullPath)]).then(function (r) {
+            if (st.sel === fullPath) { st.sessioni = r[0]; st.materiali = r[1]; ridisegna(schema()); briciole(); }
+        });
     }
 
     /* ── la mappa ──────────────────────────────────────────────────────────
@@ -111,7 +118,7 @@
             rid = ridisegna;
             leggi().then(function () {
                 ridisegna(schema()); briciole();
-                if (st.sel) leggiSessioni(st.sel).then(function (x) { st.sessioni = x; ridisegna(schema()); briciole(); });
+                if (st.sel) Promise.all([leggiSessioni(st.sel), leggiMateriali(st.sel)]).then(function (r) { st.sessioni = r[0]; st.materiali = r[1]; ridisegna(schema()); briciole(); });
             });
         };
         s.suAzione = function (ev, box, ridisegna) {
@@ -139,6 +146,11 @@
             if (a === 'flashcard' && scelto) return apriFlashcard(scelto);
             /* «Prova»: la mappa sotto, poi il launcher dello studente (autotest, viste, strumenti) */
             if (a === 'prova' && scelto) return apriMappa(scelto).then(function (ok) { if (ok && window.ActiveStudy) window.ActiveStudy.openLauncher(); });
+            /* un materiale dalla console: la mappa sotto, il documento nel dock accanto */
+            if (/^mat:/.test(a) && scelto) {
+                var rel = a.slice(4), nome = rel.split('/').pop();
+                return apriMappa(scelto).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, rel, nome); });
+            }
             /* chiusa dal pallino: se sotto c'è una mappa la si mostra, altrimenti si riapre */
             var ss = S();
             if (ss && ss.db && ss.db.nodes && ss.db.nodes.length && window.switchToMapLayout) { window.switchToMapLayout(); return; }
