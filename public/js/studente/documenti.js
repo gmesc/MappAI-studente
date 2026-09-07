@@ -45,6 +45,8 @@
         else { dock.style.height = ''; dock.style.width = v + 'px'; }
         ingombro(basso ? 0 : v, basso ? v : 0);
         if (corpo && corpo.__risistema) { try { corpo.__risistema(); } catch (e) { } }
+        /* girando l'iPad lo split cambia asse: il disegno della mappa lo segue */
+        if (window.MappAIStudenteMappa) window.MappAIStudenteMappa.adatta();
         return v;
     }
     /* quanto il dock toglie al canvas, come variabili CSS sull'<html>: la barra dei comandi
@@ -98,6 +100,7 @@
         /* un PDF aperto tiene un documento pdf.js e un worker: si chiudono */
         if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
         corpo.classList.remove('sd-corpo--pdf');
+        if (dock) dock.classList.remove('sd--senza-testa');
         corpo.innerHTML = ''; chiediChiusura = null;
     }
     /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool> ) */
@@ -117,6 +120,7 @@
         else if (typeof o.monta === 'function') o.monta(corpo);
         dock.hidden = false;
         window.dispatchEvent(new Event('resize'));
+        if (window.MappAIStudenteMappa) window.MappAIStudenteMappa.conDocumento();
         return corpo;
     }
     /* la VESTE dei documenti HTML di MappAI nel dock (7/9): la sintesi nasce con la
@@ -132,11 +136,33 @@
             var st = d.createElement('style'); st.id = 'sd-veste';
             st.textContent = ':root{--ap-ui-k:1.05 !important}#ap-doc-brand{display:none}#ap-topbar{padding:8px 12px}';
             d.head.appendChild(st);
-            /* «Aa Dislessia» → «Aa x1» (Giacomo, 7/9): l'etichetta dice la TAGLIA del
-               testo, non chi dovrebbe premerla. In MappAI re è già cambiata alla
-               fonte; qui si riscrive per i documenti GIÀ sul disco dello studente. */
+            /* «Aa Dislessia» → «Aa x+» (Giacomo, 7/9): l'etichetta dice che il testo
+               CRESCE, non chi dovrebbe premerla. In MappAI re è cambiata alla fonte;
+               qui si riscrive per i documenti già sul disco dello studente — anche dopo
+               un giro completo dei tre stati, perché il ciclo la ripesca dal suo elenco. */
             var aa = d.getElementById('ap-dys-btn');
-            if (aa && /dislessia|dyslexia/i.test(aa.textContent || '')) aa.textContent = 'Aa x1';
+            if (aa) {
+                aa.textContent = 'Aa x+';
+                aa.addEventListener('click', function () {
+                    setTimeout(function () { if (/dislessia|dyslexia/i.test(aa.textContent || '')) aa.textContent = 'Aa x+'; }, 0);
+                });
+            }
+            /* LA × VIVE NELLA BARRA DEL DOCUMENTO (7/9): la testata del pannello portava
+               solo lei e si mangiava una riga intera dello schermo. Il documento ha già
+               la sua fila di comandi (Aa · Evidenzia · Riga · Stampa): la chiusura entra
+               lì in coda, e la testata del pannello si nasconde. Il player del TTS resta
+               sulla riga sotto — è il documento stesso a mandarcelo sotto i 790px. */
+            var cmd = d.querySelector('#ap-topbar .ap-cmd');
+            if (cmd && !d.getElementById('sd-x')) {
+                var x = d.createElement('button');
+                x.id = 'sd-x'; x.type = 'button'; x.className = 'ap-hdr-btn';
+                x.textContent = '✕';
+                x.setAttribute('title', t('st_chiudi', 'Chiudi'));
+                x.setAttribute('aria-label', t('st_chiudi', 'Chiudi'));
+                x.addEventListener('click', function () { chiudiChiedendo(); });
+                cmd.appendChild(x);
+                if (dock) dock.classList.add('sd--senza-testa');
+            }
         } catch (e) { }
     }
     function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); ingombro(0, 0); window.dispatchEvent(new Event('resize')); }
@@ -303,5 +329,5 @@
         }
     }
 
-    window.MappAIStudenteDocumenti = { apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere, corpo: function () { return corpo; } };
+    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());

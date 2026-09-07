@@ -82,6 +82,14 @@
        mostra e basta; altrimenti si carica come fa INSEGNA (`directLoadVault`:
        adotta l'identità, applica vista.json, monta il canvas). */
     function apriMappa(fullPath) {
+        return _apriMappa(fullPath).then(function (ok) {
+            /* la mappa si presenta sempre allo stesso modo: sidebar chiusa, vista Albero,
+               e in split il disegno per il verso del tablet (studente/mappa.js) */
+            if (ok && window.MappAIStudenteMappa) setTimeout(function () { window.MappAIStudenteMappa.assetto(); }, 60);
+            return ok;
+        });
+    }
+    function _apriMappa(fullPath) {
         var s = S();
         if (s && s.activeVaultPath === fullPath && s.db && s.db.nodes && s.db.nodes.length) {
             if (window.switchToMapLayout) window.switchToMapLayout();

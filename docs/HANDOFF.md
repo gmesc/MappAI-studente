@@ -8,6 +8,23 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 notte, terzo giro sull'iPad: la barra del documento e l'assetto della mappa.**
+(1) La testata del pannello portava solo la × e si mangiava una riga: ora la **× entra nella
+barra del documento** (in coda a Aa · Evidenzia · Riga · Stampa, iniettata da `vesti()` nello
+stesso origine) e `.sd-testa` si nasconde (`sd--senza-testa`); il player del TTS resta sulla riga
+sotto — ce lo manda il documento stesso sotto i 790 px. Se un HTML non ha `#ap-topbar` la testata
+resta, o la × sparirebbe. (2) L'etichetta base è **«Aa x+»** (dice che il testo cresce): cambiata
+alla fonte in MappAI re e riscritta qui anche DOPO un giro completo dei tre stati, perché il ciclo
+la ripesca dal suo elenco. (3) **`studente/mappa.js`**: la mappa si presenta sempre con la
+**sidebar chiusa** e in **Albero**, e in SPLIT il disegno segue il tablet (`orient` = `lr`
+sdraiato, `td` in piedi) girando da sé; **a tutto schermo la rotazione non tocca niente** — lì il
+layout è una scelta dello studente. ⚠️ `layoutMode === 'studio'` NON basta come guardia: arriva
+anche da `vista.json` mentre a schermo la vista non c'è; comanda il DOM (`#studio-overlay`). E
+`renderGraph` può arrivare dopo di noi e portarsi via il riquadro (il `riprendi` di MappAI non lo
+rimette: per lui è la stessa mappa), quindi `assetto()` vigila per tre secondi. Misurato nel
+browser a 1024×768 e 768×1024: 14 nodi disegnati, `lr` ↔ `td` col dock aperto, invariato col dock
+chiuso.
+
 **⟵ 7/9 notte: i quattro rilievi di Giacomo sull'iPad (build con «La carta»).**
 (1) **«Aa Dislessia» → «Aa x1»** nella sintesi: l'etichetta dice la taglia, non chi
 dovrebbe premerla. Corretta alla fonte in MappAI re (`mappai-branch-synthesis.js`,

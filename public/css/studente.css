@@ -136,3 +136,6 @@ html.studente #studente-dock .sd-titolo {
 #studente-dock .sp-pagina { background: #fff; box-shadow: 0 2px 10px rgba(15, 23, 42, .16); border-radius: 2px; overflow: hidden; }
 #studente-dock .sp-pagina canvas { display: block; }
 #studente-dock .sp-attesa { padding: 24px; font-size: 13px; color: #64748b; }
+
+/* la testata del pannello sparisce quando la × è entrata nella barra del documento */
+html.studente #studente-dock.sd--senza-testa .sd-testa { display: none; }
