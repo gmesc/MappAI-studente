@@ -8,6 +8,19 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 sera: IL VAULT DIMOSTRATIVO e la scheda per l'App Store.** `public/demo/vault.json`
+(4,5 MB, 51 file) è «La carta» (2A · Storia), generata da zero in MappAI re da «Storia della
+CARTA.pdf» (14 nodi, 7 quiz MC per angolo, 7 fogli di domande aperte + gemelli in Sorgenti,
+flashcard, foglio nodi, sintesi, catena, PDF allegato); lo impacchetta `npm run demo`
+(`tools/vault-json.js` con un `dest` sotto public/demo/ filtra con `relVaultStudente`).
+`studente/demo.js`: al primo avvio, se Documenti è vuoto, `MappAIStudenteFS.importa(lista)` lo
+scrive lì (IndexedDB nel browser, Filesystem sull'iPad) e segna `mappai_studente_demo='1'`; è
+la mappa che il revisore di Apple vede. Verificato nel browser (`?pulisci=1` senza `?vault=`):
+la console mostra «La carta» sotto Storia. `docs/APP-STORE.md`: nome, sottotitolo, testo
+promozionale, descrizione, parole chiave, privacy, note per il revisore, elenco degli screenshot
+da fare con Giacomo, checklist prima dell'invio (togliere `NSAllowsArbitraryLoads`). MappAI re:
+rilascio **v1.0.0-beta.2** su GitHub (varianti del carattere nel Cestino, scambio con lo studente).
+
 **⟵ 7/9 notte: LO SCAMBIO COL DOCENTE, fasi 1-2 (piano `docs/PIANO-scambio-qr.md`, fase 0 in
 MappAI re `d1ec90c`).** Nel bento della console la quarta voce **Docente** (`chiude:false`, modale
 sopra la console): «Chi sei» (numero personale + classe, `identitaStudente` di files-core — classe

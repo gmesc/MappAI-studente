@@ -499,6 +499,12 @@
         return FS.scrivi(vp + '/' + ok, String(base64 || ''));
     }
     function leggiB64(vaultPath, rel) { return FS.leggi(vaultPath + '/' + rel).then(function (r) { return r ? r.base64 : null; }); }
-    window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, plugin: plugin, leggiTesto: leggiTesto, leggiB64: leggiB64, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd, scriviRicevuto: scriviRicevuto };
+    /* un elenco [{rel, base64}] scritto in Documenti (il vault dimostrativo, demo.js): nel
+       browser va in IndexedDB in un colpo, sull'iPad un file alla volta */
+    function importa(lista) {
+        if (!PROV_CAP) return PROV_IDB.importa(lista);
+        return (lista || []).reduce(function (p, f) { return p.then(function () { return FS.scrivi(ROOT + '/' + f.rel, f.base64); }); }, Promise.resolve()).then(function () { return true; });
+    }
+    window.MappAIStudenteFS = { ROOT: ROOT, provider: FS.nome, plugin: plugin, leggiTesto: leggiTesto, leggiB64: leggiB64, lista: FS.lista, esiste: FS.esiste, yamlMinimo: yamlMinimo, relAmmesso: relAmmesso, nodoDaMd: nodoDaMd, scriviRicevuto: scriviRicevuto, importa: importa };
     console.log('[MappAI studente] adapter pronto (' + FS.nome + ')');
 }());

@@ -25,7 +25,8 @@
     try { st.sel = localStorage.getItem('mappai_studente_sel') || ''; } catch (e) { }
 
     function leggi() {
-        return window.electronAPI.getAllVaults().then(function (v) {
+        var demo = window.MappAIStudenteDemo ? window.MappAIStudenteDemo.assicura() : Promise.resolve();
+        return demo.then(function () { return window.electronAPI.getAllVaults(); }).then(function (v) {
             st.vaults = v || [];
             if (st.sel && !st.vaults.some(function (x) { return x.fullPath === st.sel; })) st.sel = '';
             return st.vaults;
