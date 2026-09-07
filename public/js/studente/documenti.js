@@ -97,6 +97,7 @@
         if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; }
         /* un PDF aperto tiene un documento pdf.js e un worker: si chiudono */
         if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
+        corpo.classList.remove('sd-corpo--pdf');
         corpo.innerHTML = ''; chiediChiusura = null;
     }
     /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool> ) */
