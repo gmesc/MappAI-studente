@@ -27,6 +27,14 @@ sul disco il test si salta (un rosso per un file assente addestrerebbe a ignorar
    selettore in `css/studente.css`, il menu contestuale in `pota.js` con una allowlist), mai
    ritoccando la copia.
 
+## I file di terze parti
+
+`public/js/vendor/` porta ciò che non è di MappAI e non passa da `sincronizza`:
+`pdf.min.js` (pdf.js 3.4.120, Apache-2.0 — la stessa copia che MappAI re usa per
+leggere i PDF delle fonti) e `pdf.worker.min.js`, che MappAI re non ha perché di là
+il worker arriva da un CDN. Qui no: l'app dello studente lavora senza rete. Li carica
+`studente/pdf-vista.js`, e solo alla prima apertura di un PDF.
+
 ## Come si aggiorna
 
 ```bash

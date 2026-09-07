@@ -8,6 +8,27 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/9 notte: i quattro rilievi di Giacomo sull'iPad (build con «La carta»).**
+(1) **«Aa Dislessia» → «Aa x1»** nella sintesi: l'etichetta dice la taglia, non chi
+dovrebbe premerla. Corretta alla fonte in MappAI re (`mappai-branch-synthesis.js`,
+la scala è ora x1 · x1,5 · x2 + EN) e riscritta da `vesti()` sui documenti già sul
+disco dello studente. (2) **La testata del pannello** non porta più il nome del
+documento (resta nel DOM per la voce sintetica, `clip`); resta la ×. (3) **I PDF si
+sfogliano**: dentro un iframe la WKWebView mostra solo la prima pagina, senza scorrimento
+né pinch — ora `studente/pdf-vista.js` li disegna con pdf.js (vendor, caricato alla prima
+apertura), pagine impilate che scorrono, disegnate quando si avvicinano
+(IntersectionObserver), pinch con `gesture*` di WebKit più il ripiego a due dita e
+ctrl+rotella. Misurato nel browser sul PDF della fonte: 2 pagine, scale(2,2) durante il
+gesto e ridisegno a 1005 px dopo. (4) **I PDF di flashcard, fogli dei nodi, quiz e
+domande aperte NON arrivano più allo studente** (`materialeSoloDocente` in files-core,
+la stessa regola per chi espone e per chi elenca): l'ultima pagina porta le soluzioni, e
+le attività lo studente se le compone dai `set-*.json` e dai gemelli in
+`Materiale Studio/Sorgenti/` — verificato che «Prova» trova ancora 7 fogli e 8 set.
+Il vault dimostrativo è stato ripacchettato: 35 file, 2,9 MB. (5) **Quarto comando
+«Sintesi»** nel bento (icona `file-text`, apre la mappa e il documento accanto;
+`trovaSintesi` è nel core) e **i cinque comandi mostrano icona E testo** — l'etichetta
+al passaggio del mouse su un iPad non si vede mai.
+
 **⟵ 7/9 sera: IL VAULT DIMOSTRATIVO e la scheda per l'App Store.** `public/demo/vault.json`
 (4,5 MB, 51 file) è «La carta» (2A · Storia), generata da zero in MappAI re da «Storia della
 CARTA.pdf» (14 nodi, 7 quiz MC per angolo, 7 fogli di domande aperte + gemelli in Sorgenti,

@@ -29,15 +29,16 @@ test('cartellaDestinazione: classe/materia/mappa, senza materia, piatto, NFC', (
 
 test('pianoRicezione: filtra di nuovo con relVaultStudente, url con token, totale', () => {
     const man = { nome: 'Clima', classe: '4R', materia: 'Geografia', files: [
-        { rel: 'index.yaml', size: 100 }, { rel: 'Nodi/Clima.md', size: 50 }, { rel: 'Materiale Studio/Quiz-MC-Clima.pdf', size: 1000 },
-        { rel: 'vista.json', size: 10 }, { rel: '../evil', size: 1 }, { rel: 'Studio Attivo/sessioni.jsonl', size: 5 }
+        { rel: 'index.yaml', size: 100 }, { rel: 'Nodi/Clima.md', size: 50 }, { rel: 'Materiale Studio/MM-Clima - TM Sans-00.pdf', size: 1000 },
+        { rel: 'vista.json', size: 10 }, { rel: '../evil', size: 1 }, { rel: 'Studio Attivo/sessioni.jsonl', size: 5 },
+        { rel: 'Materiale Studio/Quiz-MC-Clima.pdf', size: 900 }   /* soluzioni in coda: resta al docente */
     ] };
     const p = S.pianoRicezione(man, 'http://10.0.0.2:8768', 'tok', 'Documents', FC);
     assert.strictEqual(p.dest, 'Documents/4R/Geografia/Clima');
-    assert.deepStrictEqual(p.files.map(f => f.rel), ['index.yaml', 'Nodi/Clima.md', 'Materiale Studio/Quiz-MC-Clima.pdf']);
+    assert.deepStrictEqual(p.files.map(f => f.rel), ['index.yaml', 'Nodi/Clima.md', 'Materiale Studio/MM-Clima - TM Sans-00.pdf']);
     assert.strictEqual(p.files[1].url, 'http://10.0.0.2:8768/vault/Nodi%2FClima.md?s=tok');
     assert.strictEqual(p.totale, 1150);
-    assert.strictEqual(p.scartati, 3);
+    assert.strictEqual(p.scartati, 4);
     assert.strictEqual(S.pianoRicezione({ nome: '' }, 'b', 't', 'Documents', FC), null);
 });
 

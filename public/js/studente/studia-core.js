@@ -8,9 +8,11 @@
  * vede in Node e non come una console che «non fa niente» (trappola 33).
  */
 (function (root, factory) {
-    if (typeof module === 'object' && module.exports) module.exports = factory();
-    else root.MappAIStudiaCore = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+    /* `FilesCore` arriva da fuori: è la copia di MappAI re (RIUSO regola 1) e porta la
+       regola UNICA su che cosa di un vault è dello studente (`materialeSoloDocente`). */
+    if (typeof module === 'object' && module.exports) module.exports = factory(require('../mappai-files-core.js'));
+    else root.MappAIStudiaCore = factory(root.MappAIFilesCore);
+}(typeof self !== 'undefined' ? self : this, function (FC) {
     'use strict';
 
     function _s(x) { return String(x == null ? '' : x); }
@@ -63,12 +65,24 @@
         { id: 'altri', chiave: 'st_g_altri', testo: 'Altri materiali', tipi: null }
     ];
     function formato(nome) { var m = /\.([a-z0-9]+)$/i.exec(_s(nome)); return m ? m[1].toUpperCase() : ''; }
+    /* i file che lo studente NON vede: i .json interni, i nascosti, e i PDF che
+       restano al docente (soluzioni in coda — `materialeSoloDocente`) */
+    function daMostrare(f) {
+        if (!f || !f.name || f.name.charAt(0) === '.' || /\.json$/i.test(f.name)) return false;
+        return !(FC && FC.materialeSoloDocente && FC.materialeSoloDocente(f.name));
+    }
+    /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta, altrimenti il PDF */
+    function trovaSintesi(files) {
+        var l = (files || []).filter(daMostrare);
+        var q = function (re, est) { return l.filter(function (f) { return re.test(f.name) && est.test(f.name); })[0] || null; };
+        return q(/^Sintesi-voce/i, /\.html?$/i) || q(/^Sintesi/i, /\.html?$/i) || q(/^Sintesi/i, /\.pdf$/i);
+    }
     /* le tabelle dei materiali, una per gruppo, solo i gruppi che hanno righe; la riga
        CONCLUDE (`mat:<relPath>`): la console si chiude e il file si apre accanto alla mappa */
     function tabelleMateriali(files, t) {
         var noti = {};
         GRUPPI.forEach(function (g) { (g.tipi || []).forEach(function (x) { noti[x] = 1; }); });
-        var lista = (files || []).filter(function (f) { return f && f.name && !/\.json$/i.test(f.name) && f.name.charAt(0) !== '.'; })
+        var lista = (files || []).filter(daMostrare)
             .map(function (f) { var g = genere(f.name); return { name: f.name, relPath: f.relPath, tipo: g ? g.et : '', icona: g ? g.icona : 'file' }; });
         return GRUPPI.map(function (g) {
             var righe = lista.filter(function (m) { return g.tipi ? g.tipi.indexOf(m.tipo) >= 0 : !noti[m.tipo]; });
@@ -139,7 +153,10 @@
             var az = [
                 { id: 'mappa', et: t('st_mappa', 'Mappa'), forma: 'azione', icona: 'git-merge', aiuto: t('st_tip_mappa', 'Apre la mappa.') },
                 { id: 'flashcard', et: t('st_flashcard', 'Flashcard'), forma: 'azione', icona: 'copy', aiuto: t('st_tip_flashcard', 'Le carte: leggi, pensa, gira.') },
-                { id: 'prova', et: t('st_prova', 'Prova'), forma: 'azione', icona: 'help-circle', aiuto: t('st_tip_prova', 'Un quiz o un foglio di domande aperte.') }
+                { id: 'prova', et: t('st_prova', 'Prova'), forma: 'azione', icona: 'help-circle', aiuto: t('st_tip_prova', 'Un quiz o un foglio di domande aperte.') },
+                /* «Sintesi» (7/9): il documento che si legge per primo aveva una sola
+                   strada — l'elenco dei materiali — e lì era una riga fra venti. */
+                { id: 'sintesi', et: t('st_sintesi', 'Sintesi'), forma: 'azione', icona: 'file-text', aiuto: t('st_tip_sintesi', 'Il riassunto della mappa, da leggere o da ascoltare.') }
             ];
             /* «Docente» (scambio, 7/9): NON conclude — apre il modale dello scambio sopra la
                console (inv. 10/11). Via col kill-switch `mappai_studente_scambio`. */
@@ -196,5 +213,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali };
+    return { SENZA: SENZA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare };
 }));

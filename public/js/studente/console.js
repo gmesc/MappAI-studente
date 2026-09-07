@@ -152,6 +152,12 @@
             if (a === 'flashcard' && scelto) return apriFlashcard(scelto);
             /* «Prova»: la mappa sotto, poi il launcher dello studente (autotest, viste, strumenti) */
             if (a === 'prova' && scelto) return apriMappa(scelto).then(function (ok) { if (ok && window.ActiveStudy) window.ActiveStudy.openLauncher(); });
+            /* «Sintesi»: la stessa strada di un materiale, ma il file lo trova il core */
+            if (a === 'sintesi' && scelto) {
+                var sin = C().trovaSintesi(st.materiali);
+                if (!sin) { toast(t('st_sintesi_manca_toast', 'Questa mappa non porta una sintesi: il docente non l\'ha pubblicata.'), 'info'); setTimeout(apri, 50); return; }
+                return apriMappa(scelto).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, sin.relPath, sin.name); });
+            }
             /* un materiale dalla console: la mappa sotto, il documento nel dock accanto */
             if (/^mat:/.test(a) && scelto) {
                 var rel = a.slice(4), nome = rel.split('/').pop();

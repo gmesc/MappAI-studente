@@ -44,6 +44,7 @@
         if (basso) { dock.style.width = ''; dock.style.height = v + 'px'; }
         else { dock.style.height = ''; dock.style.width = v + 'px'; }
         ingombro(basso ? 0 : v, basso ? v : 0);
+        if (corpo && corpo.__risistema) { try { corpo.__risistema(); } catch (e) { } }
         return v;
     }
     /* quanto il dock toglie al canvas, come variabili CSS sull'<html>: la barra dei comandi
@@ -92,7 +93,12 @@
         if (mq && mq.addEventListener) mq.addEventListener('change', risistema);
         return dock;
     }
-    function libera() { if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; } corpo.innerHTML = ''; chiediChiusura = null; }
+    function libera() {
+        if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; }
+        /* un PDF aperto tiene un documento pdf.js e un worker: si chiudono */
+        if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
+        corpo.innerHTML = ''; chiediChiusura = null;
+    }
     /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool> ) */
     function apri(o) {
         if (!monta()) return null;
@@ -125,6 +131,11 @@
             var st = d.createElement('style'); st.id = 'sd-veste';
             st.textContent = ':root{--ap-ui-k:1.05 !important}#ap-doc-brand{display:none}#ap-topbar{padding:8px 12px}';
             d.head.appendChild(st);
+            /* «Aa Dislessia» → «Aa x1» (Giacomo, 7/9): l'etichetta dice la TAGLIA del
+               testo, non chi dovrebbe premerla. In MappAI re è già cambiata alla
+               fonte; qui si riscrive per i documenti GIÀ sul disco dello studente. */
+            var aa = d.getElementById('ap-dys-btn');
+            if (aa && /dislessia|dyslexia/i.test(aa.textContent || '')) aa.textContent = 'Aa x1';
         } catch (e) { }
     }
     function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); ingombro(0, 0); window.dispatchEvent(new Event('resize')); }
@@ -150,6 +161,10 @@
         return new Blob([u], { type: tipo });
     }
     function apriFile(vaultPath, relPath, nome) {
+        /* i PDF NON vanno in un iframe: nella WKWebView si vedrebbe solo la prima
+           pagina, senza scorrimento né pinch (misurato sull'iPad il 7/9). Li disegna
+           `studente/pdf-vista.js` con pdf.js. */
+        if (/\.pdf$/i.test(nome || relPath)) return apriPdf(vaultPath, relPath, nome);
         /* sull'iPad il file si carica dal suo URL vero (`capacitor://…` via convertFileSrc):
            l'HTML della sintesi apre così anche l'audio che sta accanto (percorsi relativi),
            cosa che un blob: non può fare; ed è la stessa strada che la WKWebView usa per i PDF */
@@ -162,6 +177,14 @@
             }).catch(function () { return apriBlob(vaultPath, relPath, nome); });
         }
         return apriBlob(vaultPath, relPath, nome);
+    }
+    function apriPdf(vaultPath, relPath, nome) {
+        var V = window.MappAIStudentePdfVista;
+        if (!V) return apriBlob(vaultPath, relPath, nome);
+        return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
+            if (!r || !r.ok) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (r && r.error ? ' ' + r.error : ''), 'error'); return; }
+            apri({ titolo: nome, monta: function (host) { host.classList.add('sd-corpo--pdf'); V.monta(host, r.base64); } });
+        });
     }
     function apriBlob(vaultPath, relPath, nome) {
         return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
@@ -181,13 +204,20 @@
         if (chiediChiusura) { toast(t('st_prova_in_corso', 'C\'è una prova in corso: consegnala o chiudila prima di aprire i materiali.'), 'warning'); return; }
         apri({ titolo: t('st_materiali', 'Materiali'), monta: function (host) { host.innerHTML = '<p class="sd-vuoto">' + esc(t('st_carico', 'Leggo la cartella…')) + '</p>'; } });
         window.electronAPI.vaultMaterialsList({ vaultPath: vp }).then(function (r) {
-            var files = ((r && r.files) || []).filter(function (f) { return !/\.json$/i.test(f.name) && f.name.charAt(0) !== '.'; });
+            /* i PDF di flashcard, fogli, quiz e domande aperte NON si mostrano allo
+               studente: l'ultima pagina porta le soluzioni, e le sue attività se le
+               compone dai set e dai gemelli in Sorgenti (`materialeSoloDocente` in
+               files-core, la stessa regola con cui il docente non li spedisce). */
+            var FCd = window.MappAIFilesCore;
+            var files = ((r && r.files) || []).filter(function (f) {
+                if (/\.json$/i.test(f.name) || f.name.charAt(0) === '.') return false;
+                return !(FCd && FCd.materialeSoloDocente && FCd.materialeSoloDocente(f.name));
+            });
             var html = '';
             /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta (il Dossier del
                docente è stato tolto da qui il 7/9: era un comando di CREA) */
-            var sintesi = files.filter(function (f) { return /^Sintesi-voce/i.test(f.name) && /\.html?$/i.test(f.name); })[0]
-                || files.filter(function (f) { return /^Sintesi/i.test(f.name) && /\.html?$/i.test(f.name); })[0]
-                || files.filter(function (f) { return /^Sintesi/i.test(f.name) && /\.pdf$/i.test(f.name); })[0] || null;
+            var C0 = window.MappAIStudiaCore;
+            var sintesi = C0 && C0.trovaSintesi ? C0.trovaSintesi(files) : null;
             if (!files.length) html += '<p class="sd-vuoto">' + esc(t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.')) + '</p>';
             files.forEach(function (f) {
                 var g = genere(f.name) || { et: t('st_file', 'File'), icona: 'file' };

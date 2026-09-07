@@ -28,10 +28,10 @@ test('schema: la console STUDIA passa validaSchema, con e senza un vault scelto'
     assert.deepStrictEqual(e1.errori || e1, e1.errori ? [] : e1, 'con selezione: ' + JSON.stringify(e1));
     assert.ok(s1.nav.every(v => v.gruppo || v.chiude === false), 'una voce di nav senza chiude:false chiuderebbe la finestra');
     const sess = s1.tabelle.filter(x => x.id === 'sessioni')[0];
-    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,prova,docente', 'i comandi nel riquadro bento, come INSEGNA (+ Docente, scambio 7/9)');
-    assert.ok(s1.bento[0].voci.slice(0, 3).every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
-    assert.strictEqual(s1.bento[0].voci[3].chiude, false, '«Docente» apre un modale sopra la console: non conclude');
-    assert.strictEqual(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', scambio: false }).bento[0].voci.length, 3, 'kill-switch: via la voce');
+    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,prova,sintesi,docente', 'i comandi nel riquadro bento, come INSEGNA (+ Sintesi e Docente)');
+    assert.ok(s1.bento[0].voci.slice(0, 4).every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
+    assert.strictEqual(s1.bento[0].voci[4].chiude, false, '«Docente» apre un modale sopra la console: non conclude');
+    assert.strictEqual(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', scambio: false }).bento[0].voci.length, 4, 'kill-switch: via la sola voce Docente');
     assert.deepStrictEqual(sess.righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['invia', 'cartella'], 'la cella Invia prima della cartella');
     assert.deepStrictEqual(s1.bento[0].bottoni, { bg: '#f1f4f8', testo: '#404040', hoverBg: '#41e6aa', hoverTesto: '#0b0b0b' }, 'gli stessi token di _consBentoMappa');
     assert.strictEqual(s1.bento[1].voci[0].forma, 'materiali');
@@ -56,11 +56,15 @@ test('materiali: per tipologia, solo i gruppi pieni, niente json, la riga conclu
     const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', materiali: files, sessioni: [] });
     const e = Core.validaSchema(s);
     assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
-    assert.deepStrictEqual(s.tabelle.map(x => x.id), ['mat-sintesi', 'mat-mappa', 'mat-flashcard', 'mat-quiz', 'mat-aperte', 'mat-altri', 'sessioni']);
-    assert.strictEqual(s.tabelle[3].righe.length, 2, 'MC e VF in un elenco solo');
+    /* i PDF di flashcard, quiz e domande aperte NON si mostrano allo studente (7/9):
+       restano al docente perché portano le soluzioni in coda */
+    assert.deepStrictEqual(s.tabelle.map(x => x.id), ['mat-sintesi', 'mat-mappa', 'mat-altri', 'sessioni']);
     assert.strictEqual(s.tabelle[0].righe[0].id, 'mat:Materiale Studio/Sintesi-voce-Clima.html');
     assert.strictEqual(s.tabelle[0].righe[0].celle[1], 'HTML');
-    assert.ok(s.tabelle.every(x => x.righe.every(r => !/json|DS_Store/.test(r.id))));
+    assert.deepStrictEqual(s.tabelle[1].righe.map(r => r.celle[0]).sort(), ['Focus-Aria-parentela.pdf', 'MM-Clima-4ª.pdf']);
+    assert.ok(s.tabelle.every(x => x.righe.every(r => !/json|DS_Store|Flashcard|Quiz-|Domande-aperte/.test(r.id))));
+    assert.strictEqual(C.trovaSintesi(files).name, 'Sintesi-voce-Clima.html', 'la voce vince sullo scritto');
+    assert.strictEqual(C.trovaSintesi([{ name: 'Quiz-MC-x.pdf', relPath: 'a' }]), null);
     assert.strictEqual(C.genere('Sintesi -VERDE.html').et, 'Sintesi');
     assert.ok(/Cerco/.test(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', materiali: null }).bento[1].voci[0].vuoto), 'null = non ancora letti');
 });

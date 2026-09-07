@@ -103,3 +103,36 @@ html.studente #map-control-card #min-link-control { flex: 1 1 8rem; width: auto 
 #sc-velo .sc-velo__b { height: 8px; border-radius: 999px; background: #e2e8f0; margin: 12px 0 16px; overflow: hidden; }
 #sc-velo .sc-velo__f { height: 100%; width: 0; background: #4f46e5; transition: width .2s; }
 #sc-velo .sc-velo__x { float: right; }
+
+/* ── i comandi del progetto: icona E testo, sempre (7/9) ──────────────────
+   In MappAI l'etichetta si rivela col passaggio del mouse: su un iPad il mouse
+   non c'è, quindi lo studente vedrebbe cinque glifi muti. Qui l'icona sta sopra
+   e la parola sotto, tutte e due ferme. */
+html.studente .mn-bento-area .mn-cmd { min-height: 112px; gap: 6px; padding: 10px 6px; }
+html.studente .mn-bento-area .mn-cmd > svg { width: 38px; height: 38px; opacity: 1 !important; transition: none; }
+html.studente .mn-bento-area .mn-cmd > span {
+  position: static; opacity: 1 !important; transform: none; transition: none;
+  font-size: 13px !important; line-height: 1.15; white-space: normal;
+}
+html.studente .mn-bento-area .mn-card[data-mod="mappa-azioni"] { min-height: 0; }
+
+/* ── la testata del pannello: solo la × (7/9) ─────────────────────────────
+   Il nome del documento lo dice il documento stesso, e nel pannello stretto si
+   mangiava una riga. Resta per chi legge con la voce sintetica (`sd-titolo` è
+   ancora nel DOM, solo invisibile) e resta il bottone che chiude. */
+html.studente #studente-dock .sd-testa { min-height: 0; padding: 6px 8px 6px 12px; }
+html.studente #studente-dock .sd-titolo {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── il visore PDF (studente/pdf-vista.js) ───────────────────────────────── */
+#studente-dock .sd-corpo--pdf { background: #f1f5f9; }
+#studente-dock .sp-scroll {
+  height: 100%; overflow: auto; -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain; touch-action: pan-x pan-y; padding: 12px;
+}
+#studente-dock .sp-pila { display: flex; flex-direction: column; align-items: center; gap: 12px; transform-origin: 0 0; }
+#studente-dock .sp-pagina { background: #fff; box-shadow: 0 2px 10px rgba(15, 23, 42, .16); border-radius: 2px; overflow: hidden; }
+#studente-dock .sp-pagina canvas { display: block; }
+#studente-dock .sp-attesa { padding: 24px; font-size: 13px; color: #64748b; }
