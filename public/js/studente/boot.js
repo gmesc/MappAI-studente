@@ -17,6 +17,24 @@
     window.setTutorState = function () { window.tutorState.nodes = {}; window.tutorState.sidebar = { history: [] }; return window.tutorState; };
     window.systemPromptsConfig = window.systemPromptsConfig || {};
     document.documentElement.classList.add('manifesto', 'mn-bento-app', 'studente');
+    /* ── LA BARRA DI STATO DELL'iPAD NON STA PIÙ SOPRA L'APP (7/9) ────────────
+       Con `viewport-fit=cover` la WKWebView arriva fin sotto l'orologio e la
+       batteria: la fila di comandi di un documento aperto a destra ci finiva
+       sotto (screenshot di Giacomo), e la stessa cosa sarebbe capitata a ogni
+       superficie che tocca il bordo alto — pannello, console piena, player.
+       Invece di rincorrerle una per una con `env(safe-area-inset-top)`, si
+       sposta la webview: `setOverlaysWebView({overlay:false})` la fa cominciare
+       SOTTO la barra di stato, e da lì in giù tutto è al sicuro per costruzione
+       (gli `env()` che restano nel CSS diventano zero da soli, e reggono nel
+       browser e se il plugin non c'è). Testo scuro su fondo chiaro: `LIGHT`. */
+    try {
+        var C = window.Capacitor;
+        if (C && C.isNativePlatform && C.isNativePlatform()) {
+            var SB = (C.Plugins && C.Plugins.StatusBar) || (C.registerPlugin && C.registerPlugin('StatusBar'));
+            if (SB && SB.setOverlaysWebView) Promise.resolve(SB.setOverlaysWebView({ overlay: false })).catch(function () { });
+            if (SB && SB.setStyle) Promise.resolve(SB.setStyle({ style: 'LIGHT' })).catch(function () { });
+        }
+    } catch (e) { }
     /* le due card «a scelta» del launcher leggono l'archivio, che qui è vuoto,
        e la prova dello studente le sostituisce (inv. 21): il loro interruttore
        di MappAI le spegne senza toccare il modulo */

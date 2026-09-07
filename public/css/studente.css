@@ -139,3 +139,11 @@ html.studente #studente-dock .sd-titolo {
 
 /* la testata del pannello sparisce quando la × è entrata nella barra del documento */
 html.studente #studente-dock.sd--senza-testa .sd-testa { display: none; }
+
+/* ── il bordo alto, se la barra di stato resta sopra (ripiego) ─────────────
+   Sull'iPad ci pensa `setOverlaysWebView(false)` in studente/boot.js e questi
+   `env()` valgono zero. Restano per il browser e per il caso in cui il plugin
+   non risponda: il pannello a destra è alto quanto lo schermo, e la fila di
+   comandi del documento che porta dentro comincerebbe sotto l'orologio. */
+html.studente #studente-dock.sd--destra { padding-top: env(safe-area-inset-top, 0px); }
+html.studente #studente-dock.sd--destra .sd-man { top: env(safe-area-inset-top, 0px); }

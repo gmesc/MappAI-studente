@@ -8,6 +8,19 @@
 
 ## 0. Dove si riprende
 
+**⟵ 8/9: la barra di stato non sta più sopra l'app.** Con `viewport-fit=cover` la WKWebView
+arriva fin sotto l'orologio e la batteria: la fila di comandi del documento aperto a destra ci
+finiva sotto. Invece di rincorrere ogni superficie con `env(safe-area-inset-top)` si sposta la
+webview una volta sola: **`@capacitor/status-bar` 8.0.3** e `setOverlaysWebView({overlay:false})`
+in `studente/boot.js` (più `setStyle LIGHT`, testo scuro su fondo chiaro). Da lì in giù ogni
+superficie — pannello, console piena, player, iframe dei documenti — è al sicuro per costruzione,
+e gli `env()` che restano nel CSS valgono zero da soli. Ripiego per il browser e per il caso in cui
+il plugin non risponda: `#studente-dock.sd--destra` porta il suo `padding-top`. ⚠️ Da provare
+sull'iPad: è l'unica cosa che il browser non può misurare. Fase 0 in MappAI re (`3a6d9f1`): la
+vista di studio non misura più un riquadro che non è a schermo — `fit()` su un SVG staccato o largo
+zero lancia «Could not resolve relative length», e capitava a ogni resize con la console sopra la
+mappa.
+
 **⟵ 7/9 notte, terzo giro sull'iPad: la barra del documento e l'assetto della mappa.**
 (1) La testata del pannello portava solo la × e si mangiava una riga: ora la **× entra nella
 barra del documento** (in coda a Aa · Evidenzia · Riga · Stampa, iniettata da `vesti()` nello
