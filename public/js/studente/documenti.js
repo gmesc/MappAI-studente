@@ -140,15 +140,15 @@
             var st = d.createElement('style'); st.id = 'sd-veste';
             st.textContent = ':root{--ap-ui-k:1.05 !important}#ap-doc-brand{display:none}#ap-topbar{padding:8px 12px}';
             d.head.appendChild(st);
-            /* «Aa Dislessia» → «Aa x+» (Giacomo, 7/9): l'etichetta dice che il testo
-               CRESCE, non chi dovrebbe premerla. In MappAI re è cambiata alla fonte;
+            /* «Aa Dislessia» → «Aa x1» (Giacomo, 7/9): l'etichetta dice la TAGLIA del
+               testo (x1 · x1,5 · x2), non chi dovrebbe premerla. In MappAI re è cambiata alla fonte;
                qui si riscrive per i documenti già sul disco dello studente — anche dopo
                un giro completo dei tre stati, perché il ciclo la ripesca dal suo elenco. */
             var aa = d.getElementById('ap-dys-btn');
             if (aa) {
-                aa.textContent = 'Aa x+';
+                aa.textContent = 'Aa x1';
                 aa.addEventListener('click', function () {
-                    setTimeout(function () { if (/dislessia|dyslexia/i.test(aa.textContent || '')) aa.textContent = 'Aa x+'; }, 0);
+                    setTimeout(function () { if (/dislessia|dyslexia/i.test(aa.textContent || '')) aa.textContent = 'Aa x1'; }, 0);
                 });
             }
             /* LA × VIVE NELLA BARRA DEL DOCUMENTO (7/9): la testata del pannello portava

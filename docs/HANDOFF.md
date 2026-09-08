@@ -42,7 +42,7 @@ mappa.
 barra del documento** (in coda a Aa · Evidenzia · Riga · Stampa, iniettata da `vesti()` nello
 stesso origine) e `.sd-testa` si nasconde (`sd--senza-testa`); il player del TTS resta sulla riga
 sotto — ce lo manda il documento stesso sotto i 790 px. Se un HTML non ha `#ap-topbar` la testata
-resta, o la × sparirebbe. (2) L'etichetta base è **«Aa x+»** (dice che il testo cresce): cambiata
+resta, o la × sparirebbe. (2) L'etichetta base è **«Aa x1»** (la taglia del testo: x1 · x1,5 · x2): cambiata
 alla fonte in MappAI re e riscritta qui anche DOPO un giro completo dei tre stati, perché il ciclo
 la ripesca dal suo elenco. (3) **`studente/mappa.js`**: la mappa si presenta sempre con la
 **sidebar chiusa** e in **Albero**, e in SPLIT il disegno segue il tablet (`orient` = `lr`
