@@ -59,6 +59,51 @@
         return true;
     }
 
+    /* rimettere la mappa NEL riquadro che le resta: in studio è `render()` (finisce
+       con `fit('read')`), sul canvas libero è il centra-e-adatta di MappAI. Si chiama
+       quando il dock si apre, si chiude o cambia taglia — il contenitore è appena
+       cambiato e nessuno lo rifà da sé (il canvas D3 non ha un fit sul resize). */
+    function inquadra() {
+        var V = SV();
+        if (!conMappa()) return false;
+        if (V && overlay()) {
+            try { V.render(); } catch (e) { return false; }
+            /* ⚠️ `render()` finisce con `fit('read')`, che tiene una scala MINIMA
+               leggibile (0.62) e quindi lascia fuori dal riquadro quello che non ci
+               sta: giusto a tutto schermo, sbagliato su mezzo — lì Giacomo chiede
+               «la mappa inquadrata nel modo migliore possibile», cioè tutta.
+               `fit('all')` è lo stesso comando con l'altra modalità. */
+            if (split()) {
+                try {
+                    var st = V._state, h = (st && st.focus && st.focus.handle) || (st && st.handle);
+                    if (h && h.fit) h.fit('all');
+                } catch (e) { }
+            }
+            return true;
+        }
+        if (window.resetZoom) { try { window.resetZoom(); return true; } catch (e) { } }
+        return false;
+    }
+
+    /* ⚠️ L'INQUADRATURA VA RIFATTA QUANDO IL RIQUADRO SI FERMA, non quando si apre
+       il dock: la sidebar si chiude con una transizione, quindi il contenitore
+       cambia taglia DUE volte (prima il dock, poi la sidebar) — e la seconda volta
+       il `ResizeObserver` della vista di studio rimetteva `fit('read')`, cioè
+       l'inquadratura che lascia fuori quello che non ci sta. Qui si guarda lo
+       stesso riquadro e si rifà l'inquadratura buona 200 ms dopo (dopo i 120 di
+       MappAI), ma SOLO in split: a tutto schermo comanda lo studente. */
+    var osservatore = null;
+    function vigilaRiquadro() {
+        if (osservatore || typeof ResizeObserver === 'undefined') return;
+        var host = document.getElementById('d3-container'); if (!host) return;
+        var t = null;
+        osservatore = new ResizeObserver(function () {
+            clearTimeout(t);
+            t = setTimeout(function () { if (split()) inquadra(); }, 200);
+        });
+        osservatore.observe(host);
+    }
+
     /* l'orientamento del disegno — solo in split (vedi l'intestazione) */
     function adatta() {
         var V = SV(), s = S();
@@ -82,6 +127,7 @@
         nascondiSidebar();
         albero();
         adatta();
+        vigilaRiquadro();
         var giri = 0, vigila = setInterval(function () {
             var V = SV(), s = S();
             if (++giri > 12 || !V || !conMappa() || s.layoutMode !== 'studio') return clearInterval(vigila);
@@ -89,11 +135,17 @@
             try { V.enter(true); } catch (e) { }
         }, 250);
     }
-    /* un documento si apre accanto: la mappa si stringe, la sidebar sparisce */
+    /* un documento si apre accanto: la mappa si stringe, la sidebar sparisce, e
+       l'inquadratura si rifà su ciò che resta (il CSS accorcia #d3-container) */
     function conDocumento() {
         nascondiSidebar();
         adatta();
+        vigilaRiquadro();
+        /* tre giri: il dock (subito), la sidebar che finisce di chiudersi (~300 ms),
+           e un ultimo per sicurezza — il riquadro cambia taglia più volte di seguito
+           e l'ultima parola dev'essere l'inquadratura buona */
+        [220, 500, 900].forEach(function (ms) { setTimeout(function () { if (split()) inquadra(); }, ms); });
     }
 
-    window.MappAIStudenteMappa = { assetto: assetto, conDocumento: conDocumento, adatta: adatta, albero: albero, nascondiSidebar: nascondiSidebar, split: split };
+    window.MappAIStudenteMappa = { assetto: assetto, conDocumento: conDocumento, adatta: adatta, inquadra: inquadra, albero: albero, nascondiSidebar: nascondiSidebar, split: split };
 }());

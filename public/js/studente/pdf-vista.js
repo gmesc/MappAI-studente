@@ -120,7 +120,7 @@
                     });
                 }, { root: scroll, rootMargin: '400px 0px' });
                 pagine.forEach(function (p) { oss.observe(p.box); });
-                pizzica(scroll, pila, function (nuovo, cx, cy) { z = nuovo; rifai(); }, function () { return z; });
+                pizzica(scroll, pila, function (nuovo) { z = nuovo; rifai(); }, function () { return z; });
                 window.addEventListener('resize', rifai);
                 host.__risistema = rifai;
                 return { pagine: pagine.length, distruggi: pulisci };
@@ -131,58 +131,72 @@
         });
     }
 
-    /* IL PINCH — due strade, perché nessuna copre tutto:
-       · `gesturestart/change/end` di WebKit (iPad, Safari): dà `ev.scale` già fatto;
-       · due dita a mano (`touchmove`), per i browser che quegli eventi non li hanno.
-       Durante il gesto si scala il MUCCHIO con una trasformazione CSS (fluida, niente
-       ridisegno); al rilascio si fissa lo zoom e si ridisegna alla risoluzione giusta. */
+    /* IL PINCH — con i TOCCHI, non con gli eventi `gesture*` di WebKit.
+       ⚠️ Misurato sull'iPad l'8/9: con `touch-action: pan-x pan-y` il browser non fa
+       più il suo pinch (che ci serviva spento, o zoomava la PAGINA) — e insieme al
+       suo pinch spegne anche `gesturestart/change/end`, che da quel riconoscitore
+       nascono. Restavano quindi due dita che non zoomavano niente. Gli eventi di
+       TOCCO invece arrivano sempre: due dita, la distanza fra loro, e la scala è
+       quella. `gesture*` resta agganciato al solo scopo di dire di no alla pagina.
+
+       Durante il gesto si scala il mucchio con una trasformazione (fluida, nessun
+       ridisegno) intorno al punto fra le dita; al rilascio si fissa lo zoom, si
+       ridisegna alla risoluzione giusta e si sposta lo scorrimento in modo che quel
+       punto resti dov'era: `nuovo = p·f − (p − vecchio)`, con `p` il punto in
+       coordinate del mucchio e `f` il fattore di crescita. */
     function pizzica(scroll, pila, fatto, zoomOra) {
-        var attivo = false, base = 1, k = 1, d0 = 0, cx = 0, cy = 0;
-        function inizio(centroX, centroY) {
-            attivo = true; base = zoomOra(); k = 1;
-            var r = scroll.getBoundingClientRect();
-            cx = centroX - r.left + scroll.scrollLeft; cy = centroY - r.top + scroll.scrollTop;
-            pila.style.transformOrigin = cx + 'px ' + cy + 'px';
+        var attivo = false, base = 1, k = 1, d0 = 1, px = 0, py = 0, sx0 = 0, sy0 = 0;
+        function bordo() {
+            var cs = window.getComputedStyle(scroll);
+            return [parseFloat(cs.paddingLeft) || 0, parseFloat(cs.paddingTop) || 0];
+        }
+        function inizio(cx, cy, dist) {
+            attivo = true; base = zoomOra(); k = 1; d0 = dist || 1;
+            var r = scroll.getBoundingClientRect(), b = bordo();
+            sx0 = scroll.scrollLeft; sy0 = scroll.scrollTop;
+            px = cx - r.left + sx0 - b[0];
+            py = cy - r.top + sy0 - b[1];
+            pila.style.transformOrigin = px + 'px ' + py + 'px';
         }
         function durante(scala) {
             if (!attivo) return;
-            var z = Math.max(Z_MIN, Math.min(Z_MAX, base * scala));
-            k = z / base;
+            k = Math.max(Z_MIN, Math.min(Z_MAX, base * scala)) / base;
             pila.style.transform = 'scale(' + k + ')';
         }
         function fine() {
             if (!attivo) return;
             attivo = false;
             pila.style.transform = ''; pila.style.transformOrigin = '';
-            var z = Math.max(Z_MIN, Math.min(Z_MAX, base * k));
-            var sx = scroll.scrollLeft, sy = scroll.scrollTop;
-            fatto(z, cx, cy);
-            /* il punto che si teneva fra le dita resta lì: le distanze dal centro
-               del gesto crescono quanto lo zoom */
-            scroll.scrollLeft = (sx + cx) * (z / base) - cx;
-            scroll.scrollTop = (sy + cy) * (z / base) - cy;
+            var z = Math.max(Z_MIN, Math.min(Z_MAX, base * k)), f = z / base;
+            if (f === 1) return;
+            fatto(z);
+            scroll.scrollLeft = px * f - (px - sx0);
+            scroll.scrollTop = py * f - (py - sy0);
         }
-        scroll.addEventListener('gesturestart', function (e) { e.preventDefault(); inizio(e.clientX || 0, e.clientY || 0); });
-        scroll.addEventListener('gesturechange', function (e) { e.preventDefault(); durante(e.scale); });
-        scroll.addEventListener('gestureend', function (e) { e.preventDefault(); fine(); });
-        scroll.addEventListener('touchstart', function (e) {
-            if (e.touches.length !== 2 || 'ongesturestart' in window) return;
+        function fra(e) {
             var a = e.touches[0], b = e.touches[1];
-            d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
-            inizio((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+            return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2, d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) };
+        }
+        scroll.addEventListener('touchstart', function (e) {
+            if (e.touches.length !== 2) return;
+            var m = fra(e); inizio(m.x, m.y, m.d);
         }, { passive: true });
         scroll.addEventListener('touchmove', function (e) {
             if (!attivo || e.touches.length !== 2) return;
-            e.preventDefault();
-            var a = e.touches[0], b = e.touches[1];
-            durante(Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / d0);
+            e.preventDefault();                       /* niente scorrimento a due dita mentre si pizzica */
+            durante(fra(e).d / d0);
         }, { passive: false });
-        scroll.addEventListener('touchend', function () { if (attivo) fine(); });
-        /* col mouse: ctrl+rotella, come ovunque */
+        scroll.addEventListener('touchend', function () { fine(); }, { passive: true });
+        scroll.addEventListener('touchcancel', function () { fine(); }, { passive: true });
+        /* se il riconoscitore di WebKit parte lo stesso, non deve zoomare la PAGINA */
+        ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (n) {
+            scroll.addEventListener(n, function (e) { if (e.cancelable) e.preventDefault(); });
+        });
+        /* col mouse: ctrl/⌘ + rotella */
         scroll.addEventListener('wheel', function (e) {
             if (!e.ctrlKey && !e.metaKey) return;
             e.preventDefault();
-            inizio(e.clientX, e.clientY); durante(e.deltaY < 0 ? 1.15 : 0.87); fine();
+            inizio(e.clientX, e.clientY, 1); durante(e.deltaY < 0 ? 1.2 : 0.84); fine();
         }, { passive: false });
     }
 

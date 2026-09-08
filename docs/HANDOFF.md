@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 8/9, tre rilievi dall'iPad.** (1) **In split la mappa si inquadra da sé.** Il pannello stava
+SOPRA il canvas: metà mappa finiva nascosta. Ora `#d3-container` si accorcia davvero con le due
+variabili che il dock pubblica (`--sd-w`/`--sd-h`, più `min-height:0` che vince sui 400 px di
+MappAI), e `studente/mappa.js` rifà l'inquadratura con **`fit('all')`** — non `fit('read')`, che
+tiene una scala minima leggibile e su mezzo schermo lascia fuori i rami. ⚠️ Il riquadro cambia
+taglia DUE volte (il dock, poi la sidebar che finisce di chiudersi): un `ResizeObserver` suo
+rifà l'inquadratura 200 ms dopo ogni assestamento (dopo i 120 ms di MappAI, o vincerebbe il suo
+`fit('read')`), più tre giri a 220/500/900 ms all'apertura. Vale solo in split. Misurato: 14 nodi
+su 14 dentro il riquadro, prima 7 fuori. (2) **Il pinch sui PDF ora funziona**: con
+`touch-action: pan-x pan-y` WebKit spegne il suo pinch e con esso gli eventi `gesture*`, che da
+quel riconoscitore nascono — restavano due dita che non zoomavano niente. Il gesto si legge dai
+TOCCHI (distanza fra due dita), `gesture*` resta agganciato solo per dire di no allo zoom della
+pagina. Misurato: `scale(2)` durante, tela ridisegnata a 914 px dopo, punto sotto le dita fermo.
+(3) **La barra dei comandi della mappa** comincia dopo il bottone tondo del menu (`left:96px`:
+«Centra» ci finiva sotto) ed è più stretta di un sesto (bottoni 42, spaziature 8).
+
 **⟵ 8/9: la barra di stato non sta più sopra l'app.** Con `viewport-fit=cover` la WKWebView
 arriva fin sotto l'orologio e la batteria: la fila di comandi del documento aperto a destra ci
 finiva sotto. Invece di rincorrere ogni superficie con `env(safe-area-inset-top)` si sposta la

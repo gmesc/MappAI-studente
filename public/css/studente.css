@@ -85,11 +85,34 @@ html.studente, html.studente body { height: 100%; overflow: hidden; overscroll-b
    stavano. Qui la barra prende la larghezza del canvas (meno i margini), si
    centra con i margini automatici e il cursore si allarga o stringe. */
 html.studente #map-control-card {
-  left: 12px !important; right: calc(12px + var(--sd-w, 0px)) !important; transform: none !important;
+  /* ⚠️ `left: 96px` e non 12: a sinistra, in basso, vive il bottone tondo del menu
+     (`#floating-actions-container`, 48 px a 32 px dal bordo) e ci finiva SOPRA
+     «Centra» (misurato l'8/9 sull'iPad di Giacomo). La barra comincia dopo di lui. */
+  left: 96px !important; right: calc(12px + var(--sd-w, 0px)) !important; transform: none !important;
   width: auto; min-width: 0 !important; max-width: 720px; margin: 0 auto;
-  flex-wrap: nowrap !important; justify-content: space-between !important; gap: 8px !important;
+  flex-wrap: nowrap !important; justify-content: space-between !important;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--sd-h, 0px)) !important;
   transition: none !important;   /* `transition-all` di Tailwind: la barra deve seguire il dock subito */
+  /* e più stretta di un sesto: in split la metà di schermo è poca, e il cursore
+     dei livelli è la parte che serve larga */
+  padding: 8px !important; gap: 8px !important;
+}
+html.studente #map-control-card > button { width: 42px !important; height: 42px !important; }
+html.studente #map-control-card > button > svg { width: 18px !important; height: 18px !important; }
+html.studente #map-control-card .w-px { height: 26px !important; }
+
+/* ── il canvas si STRINGE quando c'è il dock (8/9) ────────────────────────
+   Prima il pannello ci stava SOPRA: la mappa restava disegnata a tutta larghezza
+   e metà finiva nascosta sotto il documento — «lo split deve inquadrare meglio».
+   Con le due variabili che il dock pubblica il contenitore si accorcia davvero,
+   il `ResizeObserver` della vista di studio se ne accorge e studente/mappa.js
+   richiede l'inquadratura (`inquadra`). */
+html.studente #d3-container {
+  width: calc(100% - var(--sd-w, 0px)) !important;
+  height: calc(100% - var(--sd-h, 0px)) !important;
+  /* `min-height: 400px` di MappAI vince sul calc e in verticale lascerebbe 92 px
+     di mappa sotto il pannello: qui il riquadro è quello che è */
+  min-height: 0 !important;
 }
 html.studente #map-control-card > button { flex: 0 0 auto; }
 html.studente #map-control-card #level-filter-control,

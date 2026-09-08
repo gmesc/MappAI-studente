@@ -87,7 +87,11 @@
             misura(drag.basso ? drag.h + (drag.y - e.clientY) : drag.w + (drag.x - e.clientX));
         });
         man.addEventListener('pointerup', function () {
-            if (drag) { ricorda(drag.basso ? dock.offsetHeight : dock.offsetWidth); window.dispatchEvent(new Event('resize')); }
+            if (drag) {
+                ricorda(drag.basso ? dock.offsetHeight : dock.offsetWidth);
+                window.dispatchEvent(new Event('resize'));
+                if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
+            }
             drag = null;
         });
         var risistema = function () { if (!dock.hidden) { misura(memoria()); window.dispatchEvent(new Event('resize')); } };
@@ -165,7 +169,13 @@
             }
         } catch (e) { }
     }
-    function chiudi() { if (!dock || dock.hidden) return; dock.hidden = true; libera(); ingombro(0, 0); window.dispatchEvent(new Event('resize')); }
+    function chiudi() {
+        if (!dock || dock.hidden) return;
+        dock.hidden = true; libera(); ingombro(0, 0);
+        window.dispatchEvent(new Event('resize'));
+        /* il canvas torna largo quanto lo schermo: la mappa si rimette nel riquadro */
+        if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
+    }
     /* chiudere a prova in corso è lavoro da perdere: si chiede */
     function chiudiChiedendo() {
         if (!chiediChiusura) return chiudi();
