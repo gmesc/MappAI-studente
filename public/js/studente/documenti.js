@@ -223,6 +223,7 @@
         testa.insertBefore(host, testa.querySelector('.sd-sp'));
         var aa = d.getElementById('ap-dys-btn'), riga = d.getElementById('ap-riga-btn'), stampa = d.querySelector('.ap-print-btn');
         T.fila(host, {
+            sganciabile: true,
             corpo: function () { return body; },
             /* la taglia la dicono le classi del documento, non l'etichetta (che
                nei file vecchi era «Aa Dislessia») */
