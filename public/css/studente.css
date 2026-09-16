@@ -199,15 +199,6 @@ html.studente .mm-box--console .mm-tab th { font-size: 12px; }
 }
 
 /* ── la fila del lettore dell'app nella testata del dock (studente/documenti.js) ─
-   Per la sintesi senza voce naturale: il chip della voce (lo stesso dei nodi),
-   poi Aa, Riga, lettura veloce e stampa. Va a capo se il dock è stretto. */
-#studente-dock .sd-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
-#studente-dock .sd-fila .mai-tts-wrap { flex: 1 1 320px; }
-#studente-dock .sd-bt {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-width: 44px; height: 40px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 10px;
-  background: #fff; color: #4338ca; cursor: pointer; white-space: nowrap;
-  font: 700 13px var(--app-font, 'Space Mono', ui-monospace, monospace);
-}
-#studente-dock .sd-bt svg { width: 18px; height: 18px; }
-#studente-dock .sd-bt[aria-pressed="true"] { background: #eef2ff; border-color: #c7d2fe; }
+   Pezzi e veste sono quelli di `MappAITTS.fila` (mappai-tts-reader.js), gli stessi
+   della scheda del nodo e del pannello sulla mappa: qui solo il posto nella testata. */
+#studente-dock .sd-fila { display: flex; flex: 1 1 auto; min-width: 0; }

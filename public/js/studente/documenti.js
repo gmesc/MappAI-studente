@@ -212,51 +212,34 @@
        suona ancora. */
     function lettoreApp(f, d) {
         var T = window.MappAITTS;
-        if (!T || !T.mountChip || !dock || d.getElementById('ap-audio') || !d.getElementById('ap-topbar')) return false;
+        if (!T || !T.fila || !dock || d.getElementById('ap-audio') || !d.getElementById('ap-topbar')) return false;
         var body = d.querySelector('.bs-body') || d.body;
         var st = d.createElement('style'); st.id = 'sd-lettore-app';
         st.textContent = '#ap-topbar,#ap-spacer{display:none !important}';
         d.head.appendChild(st);
 
         var testa = dock.querySelector('.sd-testa');
-        var fila = document.createElement('div'); fila.className = 'sd-fila';
-        testa.insertBefore(fila, testa.querySelector('.sd-sp'));
-        var chip = T.mountChip(fila, function () { return body; });
-        if (chip) chip.style.display = '';   /* nasce spento se gli strumenti compensativi lo sono: qui è il lettore */
-
-        function bottone(etichetta, icona, azione) {
-            var b = document.createElement('button');
-            b.type = 'button'; b.className = 'sd-bt';
-            b.title = etichetta; b.setAttribute('aria-label', etichetta);
-            if (icona) b.innerHTML = '<i data-lucide="' + icona + '"></i>';
-            b.addEventListener('click', azione);
-            fila.appendChild(b);
-            return b;
-        }
-        /* un bottone del documento, premuto da qui: l'etichetta si rilegge dopo
-           (anche dopo la correzione «Aa x1» di `vesti`, che arriva a timeout 0) */
-        function specchio(id, etichetta) {
-            var orig = d.getElementById(id); if (!orig) return;
-            var b = bottone(etichetta, null, function () {
-                orig.click();
-                setTimeout(copia, 0);
-            });
-            function copia() {
-                b.textContent = orig.textContent;
-                b.setAttribute('aria-pressed', orig.classList.contains('on') ? 'true' : 'false');
-            }
-            copia();
-        }
-        specchio('ap-dys-btn', t('st_testo_taglia', 'Grandezza del testo'));
-        specchio('ap-riga-btn', t('st_riga', 'Riga di lettura'));
-        if (window.MappAILetturaVeloce) {
-            bottone(t('rsvp_titolo', 'Lettura veloce'), 'gauge', function () {
+        var host = document.createElement('div'); host.className = 'sd-fila';
+        testa.insertBefore(host, testa.querySelector('.sd-sp'));
+        var aa = d.getElementById('ap-dys-btn'), riga = d.getElementById('ap-riga-btn'), stampa = d.querySelector('.ap-print-btn');
+        T.fila(host, {
+            corpo: function () { return body; },
+            /* la taglia la dicono le classi del documento, non l'etichetta (che
+               nei file vecchi era «Aa Dislessia») */
+            aa: aa ? {
+                leggi: function () { var c = d.body.classList; return c.contains('ap-x2') ? '×2' : (c.contains('ap-x15') ? '×1.5' : '×1'); },
+                premi: function () { aa.click(); }
+            } : null,
+            riga: riga ? {
+                leggi: function () { return { t: (riga.textContent || '').replace(/^[^:]*:\s*/, ''), on: riga.classList.contains('on') }; },
+                premi: function () { riga.click(); }
+            } : null,
+            veloce: window.MappAILetturaVeloce ? function () {
                 var nome = (titolo && titolo.textContent) || '';
                 window.MappAILetturaVeloce.daIframe(f, nome.replace(/\.[^.]+$/, ''));
-            });
-        }
-        var stampa = d.querySelector('.ap-print-btn');
-        if (stampa) bottone(t('st_stampa', 'Stampa'), 'printer', function () { stampa.click(); });
+            } : null,
+            altro: stampa ? [{ etichetta: t('st_stampa', 'Stampa'), icona: 'printer', azione: function () { stampa.click(); } }] : []
+        });
 
         /* i ▶ davanti ai titoli chiamerebbero il lettore del documento: in fase
            di cattura si fermano qui e partono con quello dell'app */
