@@ -105,6 +105,11 @@
         if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
         corpo.classList.remove('sd-corpo--pdf');
         if (dock) dock.classList.remove('sd--senza-testa');
+        /* la fila del lettore dell'app vale per il documento che se ne va: si
+           toglie, e la voce o la lettura veloce di quel documento tacciono */
+        var fila = dock && dock.querySelector('.sd-fila'); if (fila) fila.remove();
+        try { if (window.MappAITTS && window.MappAITTS.invalidate) window.MappAITTS.invalidate(); } catch (e) { }
+        try { if (window.MappAILetturaVeloce) window.MappAILetturaVeloce.chiudi(); } catch (e) { }
         corpo.innerHTML = ''; chiediChiusura = null;
     }
     /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool> ) */
@@ -156,6 +161,7 @@
                la sua fila di comandi (Aa · Evidenzia · Riga · Stampa): la chiusura entra
                lì in coda, e la testata del pannello si nasconde. Il player del TTS resta
                sulla riga sotto — è il documento stesso a mandarcelo sotto i 790px. */
+            if (lettoreApp(f, d)) return;
             var cmd = d.querySelector('#ap-topbar .ap-cmd');
             /* LA LETTURA VELOCE (17/9): nella stessa fila, prima della ×. Il documento
                si nasconde e nel pannello resta solo la parola che scorre; la sua × lo
@@ -191,6 +197,78 @@
                 if (dock) dock.classList.add('sd--senza-testa');
             }
         } catch (e) { }
+    }
+    /* ── IL LETTORE DELL'APP AL POSTO DI QUELLO DEL DOCUMENTO (17/9) ─────────
+       La sintesi porta un lettore suo, scritto dentro il file. Se il file NON ha
+       la voce naturale (`#ap-audio`), quel lettore non sa niente che quello
+       dell'app non sappia, e sa meno: niente effetti karaoke. Allora la sua
+       testata si spegne e nella testata del dock entra la fila dell'app, la
+       stessa dei nodi: ⟲10 · ▶ · 5⟳ · velocità · effetto · avanzamento, poi Aa,
+       Riga, lettura veloce, stampa e la × del dock. «Evidenzia» sparisce: al suo
+       posto c'è il bottone degli effetti. Aa, Riga e Stampa restano del
+       documento (se ne premono i bottoni nascosti): la taglia e la riga sono sue.
+       I ▶ davanti ai titoli passano al lettore dell'app.
+       Con la voce naturale non si tocca niente: l'MP3 il chip dell'app non lo
+       suona ancora. */
+    function lettoreApp(f, d) {
+        var T = window.MappAITTS;
+        if (!T || !T.mountChip || !dock || d.getElementById('ap-audio') || !d.getElementById('ap-topbar')) return false;
+        var body = d.querySelector('.bs-body') || d.body;
+        var st = d.createElement('style'); st.id = 'sd-lettore-app';
+        st.textContent = '#ap-topbar,#ap-spacer{display:none !important}';
+        d.head.appendChild(st);
+
+        var testa = dock.querySelector('.sd-testa');
+        var fila = document.createElement('div'); fila.className = 'sd-fila';
+        testa.insertBefore(fila, testa.querySelector('.sd-sp'));
+        var chip = T.mountChip(fila, function () { return body; });
+        if (chip) chip.style.display = '';   /* nasce spento se gli strumenti compensativi lo sono: qui è il lettore */
+
+        function bottone(etichetta, icona, azione) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'sd-bt';
+            b.title = etichetta; b.setAttribute('aria-label', etichetta);
+            if (icona) b.innerHTML = '<i data-lucide="' + icona + '"></i>';
+            b.addEventListener('click', azione);
+            fila.appendChild(b);
+            return b;
+        }
+        /* un bottone del documento, premuto da qui: l'etichetta si rilegge dopo
+           (anche dopo la correzione «Aa x1» di `vesti`, che arriva a timeout 0) */
+        function specchio(id, etichetta) {
+            var orig = d.getElementById(id); if (!orig) return;
+            var b = bottone(etichetta, null, function () {
+                orig.click();
+                setTimeout(copia, 0);
+            });
+            function copia() {
+                b.textContent = orig.textContent;
+                b.setAttribute('aria-pressed', orig.classList.contains('on') ? 'true' : 'false');
+            }
+            copia();
+        }
+        specchio('ap-dys-btn', t('st_testo_taglia', 'Grandezza del testo'));
+        specchio('ap-riga-btn', t('st_riga', 'Riga di lettura'));
+        if (window.MappAILetturaVeloce) {
+            bottone(t('rsvp_titolo', 'Lettura veloce'), 'gauge', function () {
+                var nome = (titolo && titolo.textContent) || '';
+                window.MappAILetturaVeloce.daIframe(f, nome.replace(/\.[^.]+$/, ''));
+            });
+        }
+        var stampa = d.querySelector('.ap-print-btn');
+        if (stampa) bottone(t('st_stampa', 'Stampa'), 'printer', function () { stampa.click(); });
+
+        /* i ▶ davanti ai titoli chiamerebbero il lettore del documento: in fase
+           di cattura si fermano qui e partono con quello dell'app */
+        d.addEventListener('click', function (e) {
+            var b = e.target && e.target.closest ? e.target.closest('.ap-sec') : null;
+            if (!b) return;
+            e.stopPropagation(); e.preventDefault();
+            var h = b.closest('h3, h4');
+            if (h && T.playFromNode) T.playFromNode(body, h);
+        }, true);
+        if (window.safeCreateIcons) window.safeCreateIcons();
+        return true;
     }
     function chiudi() {
         if (!dock || dock.hidden) return;
