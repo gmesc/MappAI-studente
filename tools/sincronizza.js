@@ -23,11 +23,13 @@ const LA = process.env.MAPPAI_RE || path.join(QUI, '..', 'MappAI re');
 const FILES = [
   /* vendor e librerie */
   'js/tailwind.js', 'js/jspdf.umd.min.js', 'js/vendor/svg2pdf.umd.min.js',
+  'js/vendor/katex-0.16.9.min.css', 'js/vendor/katex-0.16.9.min.js',
+  'js/vendor/katex-auto-render-0.16.9.min.js', 'js/vendor/katex-LICENSE.txt',
   'js/vendor/spacemono-font.js', 'js/vendor/space-mono-incorpora.js',
   'js/vendor/testme-sans-font.js', 'js/vendor/testme-sans-incorpora.js',
   'js/vendor/testme-alt-font.js', 'js/vendor/testme-alt-incorpora.js',
   'js/vendor/atkinson-font.js', 'js/vendor/atkinson-incorpora.js',
-  'js/d3.v7.min.js', 'js/lucide.min.js', 'js/hypher.js', 'js/it.js',
+  'js/d3.v7.min.js', 'js/lucide.min.js',
   /* traduzioni */
   'traduzioni/it_translations.js', 'traduzioni/en_translations.js', 'traduzioni/i18n-helper.js',
   /* CSS */
@@ -65,7 +67,7 @@ const FILES = [
   'js/mappai-a11y.js', 'js/mappai-tts-reader.js'
 ];
 /* cartelle copiate per intero (caratteri) */
-const CARTELLE = ['fonts'];
+const CARTELLE = ['fonts', 'js/vendor/katex-fonts'];
 
 function sha(p) { return crypto.createHash('sha1').update(fs.readFileSync(p)).digest('hex'); }
 function tutti() {

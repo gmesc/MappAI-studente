@@ -10,6 +10,8 @@ let currentQuizNode = null;
 
 window.generateFlashcardForNode = async function (node, silent = false, isBranch = false) {
     if (window.mappaiOccupato && window.mappaiOccupato()) return;
+    const reviewGuard = window.MappAIReview?.requireStandalone || window.MappAIReview?.requireApproved;
+    if (reviewGuard && !await reviewGuard.call(window.MappAIReview)) return;
     const apiKey = window.getSystemKey();
     if (!apiKey) {
         if (!silent) window.showToast(window.t('tst_fc_no_key', "Nessuna API Key presente per generare le flashcard."), "error"); return;
@@ -45,7 +47,10 @@ window.generateFlashcardForNode = async function (node, silent = false, isBranch
     // Angolo 'auto' (misto + sintassi varia) anche sul quiz per-nodo → più varietà
     // tra generazioni. Anteposto al payload, non a promptText (guardia template-vuoto).
     const _angleB = window.quizAngleBlock ? window.quizAngleBlock('auto') : '';
-    const payload = window.injectClassTuning({ contents: [{ parts: [{ text: (_angleB ? _angleB + '\n\n' : '') + promptText }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } });
+    /* anche il quiz per-nodo sceglie fra tre opzioni: vale la stessa regola sulla
+       lunghezza dei distrattori (vedi quizLengthBlock) */
+    const _lenB = window.quizLengthBlock ? window.quizLengthBlock() : '';
+    const payload = window.injectClassTuning({ contents: [{ parts: [{ text: (_angleB ? _angleB + '\n\n' : '') + promptText + (_lenB ? '\n\n' + _lenB : '') }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } });
 
     try {
         if (window.MappAIUsage) window.MappAIUsage.setContext('study', 'node_quiz');
@@ -53,7 +58,18 @@ window.generateFlashcardForNode = async function (node, silent = false, isBranch
         let rawText = data.candidates[0].content.parts[0].text;
         let cleanText = rawText.split(MARKER_JSON).join('').split(MARKER_END).join('').trim();
         const items = salvageTruncatedJSON(cleanText);
-        node.flashcardTest = items;
+        /* Stesso rimescolamento dei quiz di ramo (11/9): qui la forma è a tre
+           campi con l'indice 1-based, e `mescolaOpzioni` la riconosce. Il seme è
+           il nodo più il codice di variazione: due generazioni sullo stesso nodo
+           danno fogli diversi, ristampare lo stesso foglio no. */
+        let items2 = items;
+        try {
+            const PC = window.MappAIPipelineCore;
+            if (PC && PC.mescolaOpzioni && Array.isArray(items2)) {
+                items2 = PC.mescolaOpzioni(items2, String(node.id) + '|' + promptText.length);
+            }
+        } catch (e) { /* ripiego: ordine come è arrivato */ }
+        node.flashcardTest = items2;
         node.nextReview = Date.now(); // Available right away
 
         if (!isBranch) {
@@ -65,7 +81,7 @@ window.generateFlashcardForNode = async function (node, silent = false, isBranch
                 title: `${nodePrefix}: ${node.label}`,
                 mode: 'quiz', // Default mode for nodes is currently 'quiz' (multiple choice)
                 type: 'Multiple Choice',
-                items: items,
+                items: items2,
                 // Sorgente per "Rigenera domande nuove" (vedi regenerateStudySet)
                 material: String((node.label ? node.label + ': ' : '') + (nodeContent || '')).slice(0, 12000),
                 nodeQuiz: true,   // usa il template MULTIPLE_CHOICE (schema a1/a2/a3)
@@ -182,6 +198,8 @@ window.deleteStudySet = function (setId) {
 // (salvato alla creazione); i set storici senza material non sono rigenerabili.
 window.regenerateStudySet = async function (setId) {
     if (window.mappaiOccupato && window.mappaiOccupato()) return;
+    const reviewGuard = window.MappAIReview?.requireStandalone || window.MappAIReview?.requireApproved;
+    if (reviewGuard && !await reviewGuard.call(window.MappAIReview)) return;
     const set = appState.db.studySets.find(s => s.id === setId);
     if (!set) return;
     if (!set.material) {
@@ -208,7 +226,8 @@ window.regenerateStudySet = async function (setId) {
             const _PLfc = window.MappAIPrintLayout;
             const _regolaFc = _PLfc ? _PLfc.promptRule(_PLfc.flashGeom(), null, window.getMapLanguage ? window.getMapLanguage() : "it") : "";
             const promptText = window.fillPromptTemplate("FLASHCARD_GENERATOR", { quantity: set.quantity || set.items.length || 5, nodeLabel: set.title, nonce }) + _regolaFc;
-            const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { front: { type: "STRING" }, back: { type: "STRING" } }, required: ["front", "back"] } };
+            const _q = Math.max(1, parseInt(set.quantity || set.items.length, 10) || 5);
+            const schema = { type: "ARRAY", maxItems: _q, items: { type: "OBJECT", properties: { front: { type: "STRING" }, back: { type: "STRING" } }, required: ["front", "back"] } };
             if (window.MappAIUsage) window.MappAIUsage.setContext('study', 'flashcards');
             const data = await window.fetchModelAPI(window.injectClassTuning({ contents: [{ parts: [{ text: promptText + "\n\nMateriale:\n" + set.material }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } }), apiKey);
             const raw = data.candidates[0].content.parts[0].text;
@@ -260,6 +279,8 @@ window.getDescendants = function (nodeId) {
 };
 
 window.generateBranchFlashcards = async function (node) {
+    const reviewGuard = window.MappAIReview?.requireStandalone || window.MappAIReview?.requireApproved;
+    if (reviewGuard && !await reviewGuard.call(window.MappAIReview)) return;
     const apiKey = window.getSystemKey();
     if (!apiKey) { window.showToast(window.t('tst_enter_key', "Inserisci API Key."), "error"); return; }
 

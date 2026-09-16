@@ -124,51 +124,67 @@
 
     // ── Elenco fonti deduplicato + blocco contenuti per il prompt ─────────
     function _buildSourcesAndContent(nodes) {
-        const sourcesDict = appState.db.sourcesDict || {};
-        const sourcesArr = [];
-        const sourceKeyToIdx = {};
-        const nodeBlocks = [];
+        const reviewApi = window.MappAIReview;
+        const review = reviewApi && reviewApi.current ? reviewApi.current() : appState._pipelineManifest?.review;
+        const sources = reviewApi && reviewApi.sources ? reviewApi.sources()
+            : (appState._pdfPagine?.length ? appState._pdfPagine : appState.sources || []);
+        if (!window.MappAIGroundingCore) throw new Error('Grounding module not loaded');
+        return window.MappAIGroundingCore.buildInput(appState.db, nodes, sources, review);
+    }
 
-        nodes.forEach(node => {
-            const text = (node.desc || node.content || '').trim();
-            if (!text) return;
-
-            const refs = [];
-            const chunks = sourcesDict[node.id];
-            if (Array.isArray(chunks)) {
-                chunks.forEach(c => {
-                    if (!c || !c.text) return;
-                    const key = (c.title || '') + '|' + (c.source || '');
-                    let idx = sourceKeyToIdx[key];
-                    if (idx === undefined) {
-                        idx = sourcesArr.length + 1;
-                        sourceKeyToIdx[key] = idx;
-                        sourcesArr.push({ idx, title: c.title || 'Documento', source: c.source || '', text: c.text });
-                    }
-                    if (!refs.includes(idx)) refs.push(idx);
-                });
-            }
-
-            const label = window.cleanLabel ? window.cleanLabel(node.label) : node.label;
-            let block = `## ${label} (Livello ${node.level || 0})\n${text}`;
-            if (refs.length) block += `\n(Fonti per questo concetto: ${refs.map(i => `[${i}]`).join('')})`;
-            nodeBlocks.push(block);
-        });
-
-        const sourcesListText = sourcesArr.length
-            ? sourcesArr.map(s => {
-                const flat = s.text.replace(/\s+/g, ' ').trim();
-                const snippet = flat.length > 150 ? flat.slice(0, 150) + '…' : flat;
-                return `${s.idx}. ${s.title}${s.source ? ' — ' + s.source : ''}: "${snippet}"`;
-            }).join('\n')
-            : (_isEnglish() ? '(no specific sources available)' : '(nessuna fonte specifica disponibile)');
-
-        return { nodesListText: nodeBlocks.join('\n\n'), sourcesListText, sourcesArr };
+    function _sourceVersion() {
+        const core = window.MappAIReviewCore;
+        if (!core) return null;
+        const review = window.MappAIReview?.current ? window.MappAIReview.current() : appState._pipelineManifest?.review;
+        const sources = window.MappAIReview?.sources ? window.MappAIReview.sources()
+            : (review?.sources?.length ? review.sources : appState._pdfPagine?.length ? appState._pdfPagine : appState.sources || []);
+        return { revision: core.revision(appState.db, sources), project: appState.activeVaultPath };
+    }
+    function _requireSameVersion(before) {
+        if (!before) return;
+        const after = _sourceVersion();
+        if (!after || before.revision !== after.revision || before.project !== after.project) {
+            const error = new Error(window.t('bs_revision_changed', 'I contenuti sono cambiati durante la generazione. Rivedili prima di creare una nuova sintesi.'));
+            error.code = 'STALE_SYNTHESIS_SOURCE';
+            throw error;
+        }
     }
 
     // ── Markdown → HTML (sottoinsieme: ##/###, **bold**, *italic*, liste, [n]) ─
-    function _mdToHtml(md, variant) {
-        const lines = String(md || '').replace(/\r\n/g, '\n').split('\n');
+    function _referenceLabels() {
+        return { sourceLabel: _isEnglish() ? 'Source' : 'Fonte', unknownLabel: _isEnglish() ? 'Source to verify' : 'Fonte da verificare' };
+    }
+    function _referenceView(value, entries) {
+        const G = window.MappAIGroundingCore;
+        return G && G.referenceView ? G.referenceView(value, entries || [], _referenceLabels())
+            : { text: String(value || '').replace(/\[{1,2}src-[\w-]+\]{1,2}/g, '[' + _referenceLabels().unknownLabel + ']'), mapping: [] };
+    }
+    function _citationId(scope, n) { return 'bs-cite-' + (scope || 'whole') + '-' + n; }
+    // Protect TeX before Markdown and citations can consume its syntax. Native
+    // MathML travels in the exported HTML: no network, scripts or fonts required.
+    function _protectMath(value, htmlEncoded) {
+        const original = String(value || ''), formulas = [];
+        let prefix = 'MAPPAIMATH';
+        while (original.includes(prefix)) prefix += 'X';
+        const text = original.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|(?<!\\)\$([^$\n]+?)(?<!\\)\$/g,
+            (_, blockDollar, blockBracket, inlineBracket, inlineDollar) => {
+                let tex = blockDollar ?? blockBracket ?? inlineBracket ?? inlineDollar;
+                if (htmlEncoded) tex = new DOMParser().parseFromString(tex, 'text/html').body.textContent;
+                if (!window.katex) throw new Error('Il motore delle formule non è disponibile. Ricarica MappAI.');
+                const rendered = window.katex.renderToString(tex, { output: 'mathml', displayMode: blockDollar !== undefined || blockBracket !== undefined,
+                    throwOnError: false, trust: false, strict: false });
+                const token = prefix + formulas.length + 'END';
+                formulas.push({ token, rendered });
+                return token;
+            });
+        return { text, restore: html => formulas.reduce((result, f) => result.split(f.token).join(f.rendered), html) };
+    }
+    function _mdToHtml(md, variant, sourcesArr, scope) {
+        const math = _protectMath(md);
+        const G = window.MappAIGroundingCore;
+        const resolved = G && G.resolveCitations ? G.resolveCitations(math.text, sourcesArr || []).text : math.text;
+        const refs = _referenceView(resolved, sourcesArr);
+        const lines = refs.text.replace(/\r\n/g, '\n').split('\n');
         let html = '';
         let inList = false;
 
@@ -182,9 +198,14 @@
                 ? '<strong class="font-bold text-slate-800">$1</strong>'
                 : '<strong>$1</strong>');
             s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
-            s = s.replace(/\[(\d+)\]/g, (m, n) => variant === 'modal'
-                ? `<sup class="text-indigo-600 font-bold cursor-pointer" onclick="window._scrollToBranchCitation(${n})">[${n}]</sup>`
-                : `<sup>[${n}]</sup>`);
+            s = s.replace(/\[(\d+)\]/g, (m, n) => {
+                const linked = (sourcesArr || []).some(source => Number(source.idx) === Number(n));
+                const reference = linked ? '<a href="#' + _citationId(scope, n) + '" aria-label="' + _referenceLabels().sourceLabel + ' ' + n + '">[' + n + ']</a>' : '[' + n + ']';
+                return '<sup' + (variant === 'modal' ? ' class="text-indigo-600 font-bold"' : '') + '>' + reference + '</sup>';
+            });
+            refs.mapping.forEach(ref => {
+                s = s.split(_escBS(ref.label)).join('<span data-ap-skip class="bs-reference-unverified">' + _escBS(ref.label) + '</span>');
+            });
             return s;
         }
 
@@ -214,22 +235,22 @@
             html += `<${P}>${inlineFmt(trimmed)}</p>`;
         });
         closeList();
-        return html;
+        return math.restore(html);
     }
 
     // ── Blocco citazioni (modale o stampa) ────────────────────────────────
-    function _buildCitationsHtml(sourcesArr, variant) {
+    function _buildCitationsHtml(sourcesArr, variant, scope) {
         if (!sourcesArr.length) return '';
         const titleLabel = _isEnglish() ? 'Sources' : 'Fonti';
 
         if (variant === 'modal') {
             const rows = sourcesArr.map(s => {
-                const snippet = s.text.length > 280 ? s.text.slice(0, 280).trim() + '…' : s.text;
-                return `<div id="bs-cite-${s.idx}" class="flex gap-2 py-2 border-b border-slate-100 last:border-0 transition-colors rounded">
+                const snippet = s.text;
+                return `<div id="${_citationId(scope, s.idx)}" tabindex="-1" class="flex gap-2 py-2 border-b border-slate-100 last:border-0 transition-colors rounded">
                     <span class="text-[11px] font-bold text-indigo-600 flex-shrink-0">[${s.idx}]</span>
                     <div class="text-[11px] text-slate-500 leading-relaxed">
                         <span class="font-bold text-slate-600">${_escBS(s.title)}${s.source ? ' — ' + _escBS(s.source) : ''}</span>
-                        <p class="italic mt-0.5">&ldquo;${_escBS(snippet)}&rdquo;</p>
+                        <blockquote class="italic mt-0.5" style="white-space:pre-wrap;">${_escBS(snippet)}</blockquote>
                     </div>
                 </div>`;
             }).join('');
@@ -241,10 +262,10 @@
 
         // print
         const rows = sourcesArr.map(s => {
-            const snippet = s.text.length > 280 ? s.text.slice(0, 280).trim() + '…' : s.text;
-            return `<div class="bs-cite-row">
+            const snippet = s.text;
+            return `<div id="${_citationId(scope, s.idx)}" tabindex="-1" class="bs-cite-row" style="scroll-margin-top:calc(var(--ap-hdr-h, 52px) + 12px)">
                 <div class="bs-cite-num">[${s.idx}]</div>
-                <div class="bs-cite-text"><strong>${_escBS(s.title)}${s.source ? ' — ' + _escBS(s.source) : ''}</strong><br>&ldquo;${_escBS(snippet)}&rdquo;</div>
+                <div class="bs-cite-text"><strong>${_escBS(s.title)}${s.source ? ' — ' + _escBS(s.source) : ''}</strong><blockquote style="white-space:pre-wrap; margin:.3em 0;">${_escBS(snippet)}</blockquote></div>
             </div>`;
         }).join('');
         return `<div class="bs-citations">
@@ -253,8 +274,8 @@
         </div>`;
     }
 
-    window._scrollToBranchCitation = function (n) {
-        const el = document.getElementById('bs-cite-' + n);
+    window._scrollToBranchCitation = function (n, scope) {
+        const el = document.getElementById(_citationId(scope, n)) || document.getElementById('bs-cite-' + n);
         if (!el) return;
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.classList.add('bg-indigo-50');
@@ -394,7 +415,9 @@
     // Una passata di sintesi su un insieme di nodi (un ramo, o l'intera mappa
     // se piccola). Ritorna { rawText, sourcesArr } o null se niente contenuti.
     async function _synthesizeOnce(nodes, label, apiKey) {
-        const { nodesListText, sourcesListText, sourcesArr } = _buildSourcesAndContent(nodes);
+        const version = _sourceVersion();
+        const input = _buildSourcesAndContent(nodes);
+        const { nodesListText, sourcesArr } = input;
         if (!nodesListText) return null;
 
         // «Catena dei perché» (19/7/26): nessi causa-effetto DETERMINISTICI del ramo
@@ -410,9 +433,9 @@
 
         const promptText = window.fillPromptTemplate('BRANCH_SYNTHESIS', {
             branchLabel: label,
-            sourcesList: sourcesListText,
-            nodesList: nodesListText
-        }) + causalScaffold;
+            sourcesList: _isEnglish() ? 'Original passages and IDs are included below.' : 'Gli estratti originali e i loro ID sono nel materiale seguente.',
+            nodesList: input.material
+        }) + causalScaffold + '\nUse only the supplied [[src-...]] passage IDs for references. Do not compose or transcribe quotations; the application inserts archived source text.';
 
         const payload = {
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
@@ -425,12 +448,33 @@
         if (window.MappAIUsage) window.MappAIUsage.setContext('materials', 'synthesis');
         if (window.injectClassTuning) window.injectClassTuning(payload); // taratura [VERDE]: no-op se MappAITune non armato
         const response = await window.fetchModelAPI(payload, apiKey);
-        const rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        _requireSameVersion(version);
+        let rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (!rawText.trim()) throw new Error('Risposta AI vuota');
-        return { rawText, sourcesArr, causalTriples };
+        /* IL METATESTO NON VA ALLO STUDENTE (11/9). Nelle sintesi vere: «Ciao!
+           Oggi parliamo…», «Ecco una panoramica scritta per i tuoi studenti»,
+           «questa categoria è separata dalle altre» — frasi che parlano della
+           MAPPA, non della storia, e che l'allievo deve scavalcare per arrivare
+           al contenuto. L'elenco delle forme è chiuso (anchor-core): «ramo» e
+           «categoria» usati per il loro significato non vengono toccati. */
+        try {
+            if (window.MappAIAnchorCore) {
+                const _m = window.MappAIAnchorCore.togliMeta(rawText);
+                if (_m.tolte.length && _m.text.trim().length > 40) {
+                    rawText = _m.text;
+                    console.log('[Sintesi] tolte ' + _m.tolte.length + ' frasi di metatesto');
+                }
+            }
+        } catch (e) { /* ripiego: si stampa il testo come è arrivato */ }
+        const citations = window.MappAIGroundingCore.resolveCitations(rawText, sourcesArr);
+        return { rawText: citations.text, sourcesArr, causalTriples,
+            grounding: { unverified: input.unverified, unknownCitationIds: citations.unknownIds,
+                nodeIds: nodes.map(n => n.id) } };
     }
 
     window.generateBranchSynthesisWithAI = async function () {
+        const reviewGuard = window.MappAIReview?.requireStandalone || window.MappAIReview?.requireApproved;
+        if (reviewGuard && !await reviewGuard.call(window.MappAIReview)) return;
         const configModal = document.getElementById('branch-synthesis-config-modal');
         const selectedId = document.getElementById('branch-synthesis-select')?.value;
         const tuneOn = !!(document.getElementById('bs-tune-toggle') && document.getElementById('bs-tune-toggle').checked);
@@ -469,6 +513,7 @@
                 mapName: window._getTimelineProjectName ? window._getTimelineProjectName() : 'MappAI',
                 rawText: out.rawText,
                 sourcesArr: out.sourcesArr,
+                grounding: out.grounding,
                 causalTriples: out.causalTriples || [],
                 tuned: tuneOn
             };
@@ -484,13 +529,14 @@
 
     // ── Sintesi dell'INTERA mappa ──────────────────────────────────────────
     // Mappe piccole (≤ WHOLE_SINGLE_MAX nodi): una chiamata sola. Mappe grandi:
-    // map-reduce — una sintesi per ramo (budget token invariato per chiamata),
-    // poi UNA chiamata di panoramica sulle sintesi accorciate. Le citazioni
+    // Una sintesi per ramo, poi una panoramica dagli stessi fatti approvati
+    // e passaggi originali: mai dalle sintesi appena parafrasate. Le citazioni
     // restano numerate PER SEZIONE: rinumerarle globalmente è fragile e non
     // aggiunge nulla per lo studente. Un ramo fallito non azzera gli altri.
     const WHOLE_SINGLE_MAX = 30;
 
     async function _generateWholeMapSynthesis(apiKey) {
+        const version = _sourceVersion();
         const mapName = window._getTimelineProjectName ? window._getTimelineProjectName() : 'MappAI';
         const allNodes = appState.db.nodes || [];
 
@@ -499,12 +545,13 @@
                 _ovl(true, window.t('bs_progress_whole', 'Sintesi della mappa in corso…'));
                 const out = await _synthesizeOnce(
                     [...allNodes].sort((a, b) => (a.level || 0) - (b.level || 0)), mapName, apiKey);
+                _requireSameVersion(version);
                 _ovl(false);
                 if (!out) {
                     if (!_silent) window.showToast('La mappa non ha contenuti (descrizioni) da sintetizzare', 'warning');
                     return null;
                 }
-                _lastSynthesis = { branchLabel: mapName, mapName, rawText: out.rawText, sourcesArr: out.sourcesArr, causalTriples: out.causalTriples || [], tuned: !!(window.MappAITune && window.MappAITune.armed) };
+                _lastSynthesis = { branchLabel: mapName, mapName, rawText: out.rawText, sourcesArr: out.sourcesArr, grounding: out.grounding, causalTriples: out.causalTriples || [], tuned: !!(window.MappAITune && window.MappAITune.armed) };
                 _maybeResultModal(_lastSynthesis);
                 return _lastSynthesis;
             }
@@ -523,8 +570,9 @@
                     window.t('bs_progress', 'Sintesi ramo') + ' ' + (i + 1) + '/' + branches.length + ': ' + label + '…');
                 try {
                     const out = await _synthesizeOnce(_collectBranchNodes(b.id), label, apiKey);
-                    if (out) sections.push({ branchLabel: label, rawText: out.rawText, sourcesArr: out.sourcesArr, causalTriples: out.causalTriples || [] });
+                    if (out) sections.push({ branchLabel: label, rawText: out.rawText, sourcesArr: out.sourcesArr, grounding: out.grounding, causalTriples: out.causalTriples || [] });
                 } catch (e) {
+                    if (e.code === 'STALE_SYNTHESIS_SOURCE') throw e;
                     console.warn('[BranchSynthesis] Ramo fallito:', label, e);
                     sections.push({ branchLabel: label, failed: true });
                 }
@@ -537,16 +585,17 @@
             }
 
             // Panoramica introduttiva (best-effort: se fallisce, il documento esce senza)
-            let intro = '';
+            let intro = '', introSources = [], introGrounding = { unknownCitationIds: [] };
             try {
                 _ovl(true, window.t('bs_progress_overview', 'Scrivo la panoramica…'));
-                const digest = sections.filter(s => !s.failed)
-                    .map(s => '## ' + s.branchLabel + '\n' + s.rawText.slice(0, 900)).join('\n\n');
+                const input = _buildSourcesAndContent(allNodes);
                 const langNote = window.mapLangNote ? window.mapLangNote() : '';
-                const prompt = 'Queste sono le sintesi dei rami della mappa mentale "' + mapName + '".\n' +
+                const prompt = 'Questi sono i contenuti approvati e le fonti originali della mappa "' + mapName + '".\n' +
                     'Scrivi una PANORAMICA introduttiva (150-220 parole) che colleghi i temi dei rami ' +
-                    'in un discorso unico: niente elenchi, niente citazioni numerate, tono da introduzione di dispensa.\n' +
-                    langNote + '\n\n' + digest;
+                    'in un discorso unico: niente elenchi, tono da introduzione di dispensa.\n' +
+                    'Conserva soggetti, fatti documentati e rettifiche esplicite, senza introdurre nuove cause o generalizzazioni. ' +
+                    'Per i riferimenti usa soltanto gli ID [[src-...]] forniti, senza numerarli o trascrivere le citazioni.\n' +
+                    langNote + '\n\n' + input.material;
                 const payload = {
                     contents: [{ role: 'user', parts: [{ text: prompt }] }],
                     generationConfig: {
@@ -557,13 +606,18 @@
                 if (window.MappAIUsage) window.MappAIUsage.setContext('materials', 'synthesis');
                 if (window.injectClassTuning) window.injectClassTuning(payload);
                 const resp = await window.fetchModelAPI(payload, apiKey);
+                _requireSameVersion(version);
                 intro = (resp?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+                introSources = _sourcesForMarkers(intro, input.sourcesArr);
+                introGrounding = { unknownCitationIds: window.MappAIGroundingCore.resolveCitations(intro, introSources).unknownIds };
             } catch (e) {
+                if (e.code === 'STALE_SYNTHESIS_SOURCE') throw e;
                 console.warn('[BranchSynthesis] Panoramica fallita (non bloccante):', e);
             }
 
+            _requireSameVersion(version);
             _ovl(false);
-            _lastSynthesis = { whole: true, branchLabel: mapName, mapName, intro, sections, tuned: !!(window.MappAITune && window.MappAITune.armed) };
+            _lastSynthesis = { whole: true, branchLabel: mapName, mapName, intro, introSources, introGrounding, sections, tuned: !!(window.MappAITune && window.MappAITune.armed) };
             _maybeResultModal(_lastSynthesis);
             return _lastSynthesis;
         } catch (err) {
@@ -575,18 +629,48 @@
         }
     }
 
+    // Intro numbers are local. A legacy intro may resolve stable IDs from the
+    // branch registries, but must never borrow the meaning of their [1].
+    function _sourcesForMarkers(value, entries) {
+        return window.MappAIGroundingCore?.citationRegistry(value, entries) || [];
+    }
+    function _introSources(data) {
+        return Array.isArray(data.introSources) ? data.introSources : _sourcesForMarkers(data.intro,
+            (data.sections || []).flatMap(s => s.sourcesArr || []));
+    }
+    function _editedHtml(data) {
+        const math = _protectMath(window.MappAIDocEdit.blocksToHtml(data.editedBlocks), true);
+        const entries = data.whole ? _introSources(data).concat((data.sections || []).flatMap(s => s.sourcesArr || [])) : data.sourcesArr || [];
+        const refs = _referenceView(math.text, entries);
+        let result = refs.text;
+        refs.mapping.forEach(ref => {
+            const source = ref.source;
+            const label = source ? _referenceLabels().sourceLabel + ': ' + (source.title || source.docId || '') + (source.page ? ' — ' + (_isEnglish() ? 'page ' : 'pagina ') + source.page : source.source ? ' — ' + source.source : '') : ref.label;
+            result = result.split(ref.label).join('<sup data-ap-skip>' + _escBS(label) + '</sup>');
+        });
+        return math.restore(result);
+    }
+
     // Corpo HTML della sintesi intera: panoramica + una sezione per ramo,
     // ciascuna con le SUE citazioni (numerazione per-sezione).
     function _wholeBodyHtml(data, variant) {
+        /* h2, non h3 (11/9): il titolo del documento è l'h1 (mm-dh__t) e queste
+           sono le sue sezioni. Prima erano tutte h3 senza nulla sopra — la
+           gerarchia si vedeva con gli occhi ma non esisteva per chi naviga
+           saltando da un'intestazione all'altra, né nell'albero dei tag del PDF.
+           Nel modale la classe porta tutto lo stile, quindi l'aspetto non cambia;
+           nella stampa si ridichiara la misura per non ereditare l'h2 grande del
+           browser. */
         const H = variant === 'modal'
-            ? (txt) => '<h3 class="text-sm font-extrabold text-indigo-700 mt-5 mb-2 pb-1 border-b border-slate-100">' + _escBS(txt) + '</h3>'
-            : (txt) => '<h3>' + _escBS(txt) + '</h3>';
+            ? (txt) => '<h2 class="text-sm font-extrabold text-indigo-700 mt-5 mb-2 pb-1 border-b border-slate-100">' + _escBS(txt) + '</h2>'
+            : (txt) => '<h2 style="font-size:1.05em; margin:1.1em 0 .4em;">' + _escBS(txt) + '</h2>';
         let html = '';
         if (data.intro) {
+            const introSources = _introSources(data);
             html += H(window.t('bs_overview', 'Panoramica'));
-            html += _mdToHtml(data.intro, variant);
+            html += _mdToHtml(data.intro, variant, introSources, 'intro') + _buildCitationsHtml(introSources, variant, 'intro');
         }
-        (data.sections || []).forEach(sec => {
+        (data.sections || []).forEach((sec, index) => {
             html += H(sec.branchLabel);
             if (sec.failed) {
                 const msg = _escBS(window.t('bs_branch_failed', 'Sintesi di questo ramo non riuscita — riprova sul ramo singolo.'));
@@ -595,9 +679,9 @@
                     : '<p style="color:#b45309">' + msg + '</p>';
                 return;
             }
-            html += _mdToHtml(sec.rawText, variant)
+            html += _mdToHtml(sec.rawText, variant, sec.sourcesArr, 'section-' + index)
                 + (variant === 'print' ? _causalBoxHtml(sec.causalTriples) : '')
-                + _buildCitationsHtml(sec.sourcesArr, variant);
+                + _buildCitationsHtml(sec.sourcesArr, variant, 'section-' + index);
         });
         return html;
     }
@@ -624,7 +708,7 @@
 
         const contentHtml = data.whole
             ? _wholeBodyHtml(data, 'modal')
-            : _mdToHtml(data.rawText, 'modal') + _buildCitationsHtml(data.sourcesArr, 'modal');
+            : _mdToHtml(data.rawText, 'modal', data.sourcesArr) + _buildCitationsHtml(data.sourcesArr, 'modal');
         const titlePrefix = data.whole
             ? _escBS(window.t('bs_whole_title', 'Sintesi della mappa')) + ': '
             : 'Sintesi: ';
@@ -735,7 +819,7 @@
         // TTS e i cue dell'audio continuano a trovarli. Citazioni e box causale
         // restano quelli generati (non editabili).
         const editedHtml = (data.editedBlocks && data.editedBlocks.length && window.MappAIDocEdit)
-            ? window.MappAIDocEdit.blocksToHtml(data.editedBlocks)
+            ? _editedHtml(data)
             : null;
         // Con i blocchi editati: nella sintesi di RAMO citazioni e box causale si
         // riappendono in coda (vivono fuori dal corpo); in quella di TUTTA LA MAPPA
@@ -767,7 +851,7 @@
                 : _senzaRichiami(editedHtml) + _coda())
             : (data.whole
                 ? _wholeBodyHtml(data, 'print')
-                : _senzaRichiami(_mdToHtml(data.rawText, 'print')) + _coda());
+                : _senzaRichiami(_mdToHtml(data.rawText, 'print', data.sourcesArr)) + _coda());
         /* ── L'IMMAGINE DI RIFERIMENTO (dossier di fonte, 21/8) ─────────────
            Una sintesi che nasce da una fonte iconografica si apre con la FOTO:
            il testo parla di ciò che si vede, e senza l'immagine accanto va
@@ -831,7 +915,7 @@
         const hlLabelsJson = JSON.stringify(hlLabels).replace(/</g, '\\u003c');
 
         return `<!DOCTYPE html>
-<html lang="it">
+<html lang="${(window.MappAIDocHead && window.MappAIDocHead.lingua) ? window.MappAIDocHead.lingua() : 'it'}">
 <head>
     <meta charset="UTF-8">
     <!-- Senza questa riga un tablet dichiara una finestra finta di 980px e poi
@@ -1255,7 +1339,7 @@ ${_bsPie(data.mapName)}
         var w=document.createTreeWalker(block,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
           var p=n.parentNode;
           while(p&&p!==block){ if(p.nodeType===1){ var tg=p.tagName.toLowerCase();
-            if(tg==='sup'||tg==='button'||tg==='style'||tg==='script') return NodeFilter.FILTER_REJECT;
+            if(tg==='sup'||tg==='annotation'||tg==='button'||tg==='style'||tg==='script') return NodeFilter.FILTER_REJECT;
             if(p.classList&&(p.classList.contains('bs-citations')||p.hasAttribute('data-ap-skip'))) return NodeFilter.FILTER_REJECT; }
             p=p.parentNode; }
           return NodeFilter.FILTER_ACCEPT; }});
@@ -1548,7 +1632,7 @@ ${_bsPie(data.mapName)}
         // Stessa regola dei lettori: materiale generato fuori dal parlato.
         // Se qui e nei lettori i blocchi non coincidessero, i cue finirebbero
         // sul paragrafo sbagliato.
-        bodyEl.querySelectorAll('.bs-citations, [data-ap-skip], sup').forEach(n => n.remove());
+        bodyEl.querySelectorAll('.bs-citations, [data-ap-skip], sup, annotation').forEach(n => n.remove());
         const out = [];
         bodyEl.querySelectorAll('h3,h4,p,li,blockquote').forEach(bl => {
             const txt = _cleanPlain(bl.textContent || '');
@@ -2038,9 +2122,9 @@ ${_bsPie(data.mapName)}
             const d = data || _lastSynthesis;
             if (!d) return '';
             if (d.editedBlocks && d.editedBlocks.length && window.MappAIDocEdit) {
-                return window.MappAIDocEdit.blocksToHtml(d.editedBlocks);
+                return _editedHtml(d);
             }
-            return d.whole ? _wholeBodyHtml(d, 'print') : _mdToHtml(d.rawText, 'print');
+            return d.whole ? _wholeBodyHtml(d, 'print') : _mdToHtml(d.rawText, 'print', d.sourcesArr);
         }
     };
 
@@ -2052,6 +2136,7 @@ ${_bsPie(data.mapName)}
     window.MappAISynthesis = {
         runWholeMap: async function (opts) {
             opts = opts || {};
+            if (window.MappAIReview?.requireApproved && !await window.MappAIReview.requireApproved()) return null;
             const apiKey = opts.apiKey || (window.getSystemKey ? window.getSystemKey() : '');
             if (!apiKey) throw new Error(window.t('tst_need_key', "Inserisci un'API Key per continuare"));
             const _prevArmed = window.MappAITune ? window.MappAITune.armed : false;

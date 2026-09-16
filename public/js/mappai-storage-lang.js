@@ -66,6 +66,7 @@ const StorageManager = {
     },
 
     saveCurrentProject: function () {
+        if (appState && (appState._reviewRestoring || appState._reviewRestoreError)) return;
         // GUARDIA Studio attivo: durante una sessione la mappa sul canvas è
         // (20/8: qui si saltava il salvataggio mentre una modalità di Studio
         // attivo teneva il grafo smontato. Quelle modalità sono in pensione e
@@ -292,13 +293,13 @@ const StorageManager = {
         }
     },
 
-    loadProject: function (id) {
+    loadProject: async function (id) {
     /* ⚠️ Non si cambia mappa mentre la pipeline lavora (13/8): i suoi passi
        leggono `appState` mentre scrivono in una cartella fissata all'inizio —
        caricarne un'altra farebbe finire i materiali della mappa nuova nel vault
        della vecchia, in silenzio. Il velo copre la sola area di CREA apposta,
        per lasciar GIRARE per l'app: guardare sì, sostituire no. */
-    if (window.mappaiOccupato && window.mappaiOccupato()) return false;
+    if ((window.mappaiOccupato && window.mappaiOccupato()) || appState._reviewRestoring) return false;
         try {
             const data = localStorage.getItem(id);
             /* Senza snapshot ma con un VAULT, la mappa non è persa: si apre
@@ -367,6 +368,9 @@ const StorageManager = {
             if (loadedState.layoutMode === 'studio') loadedState.layoutMode = 'default';
 
             // Overwrite global appState
+            loadedState._reviewRestoring = true;
+            delete loadedState._reviewRestoreError;
+            delete loadedState._reviewCommit;
             appState = loadedState;
 
             // Normalize links: D3 stores source/target as objects after simulation
@@ -386,6 +390,23 @@ const StorageManager = {
             // Reset simulation so D3 creates a fresh one with correct node references
             simulation = null;
             this.currentProjectId = id;
+
+            // Il manifest sul disco precede quello della cache. L'eventuale
+            // bozza locale viene riconciliata dal controller prima di render e
+            // autosave; una revisione di un altro progetto non viene ereditata.
+            if (appState.activeVaultPath && window.electronAPI && window.electronAPI.loadVault) {
+                const vaultPath = appState.activeVaultPath;
+                const disk = await window.electronAPI.loadVault(vaultPath);
+                if (!disk || !disk.success) throw new Error((disk && disk.error) || 'Impossibile leggere la cartella del progetto');
+                if (window.MappAIReview && window.MappAIReview.restore) {
+                    await window.MappAIReview.restore(vaultPath, disk.data._pipelineManifest || null, { fromCache: true, diskData: disk.data });
+                } else if (disk.data._pipelineManifest?.review) throw new Error('Revisione non disponibile: caricamento interrotto');
+                else { appState._pipelineManifest = disk.data._pipelineManifest || null; delete appState._reviewRevision; }
+            } else {
+                appState._pipelineManifest = null;
+                delete appState._reviewRevision;
+            }
+            appState._reviewRestoring = false;
 
             // Ripristina posizioni salvate
             if (appState.db.nodes) {
@@ -418,9 +439,11 @@ const StorageManager = {
             if (!appState.activeVaultPath && window.ensureProjectVault) {
                 setTimeout(() => { try { window.ensureProjectVault({ reason: 'open' }); } catch (e) { } }, 400);
             }
+            if (appState.activeVaultPath && window.MappAIPipeline && window.MappAIPipeline.checkResume) window.MappAIPipeline.checkResume(appState.activeVaultPath);
 
             return true;
         } catch (e) {
+            if (appState._reviewRestoring) { appState._reviewRestoring = false; appState._reviewRestoreError = e.message; }
             console.error("Critical Load Error:", e);
             window.showAlert("Errore Caricamento", "Impossibile caricare il progetto: " + e.message);
             window.showLoadingOverlay(false);
@@ -944,6 +967,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const productInput = document.getElementById('infomaniak-product-id');
         if (productInput) productInput.value = appState.infomaniakProductId;
     }
+    // Interruttore del reranker Infomaniak (spento se mai toccato)
+    const rerankToggle = document.getElementById('infomaniak-reranker-toggle');
+    if (rerankToggle) { try { rerankToggle.checked = localStorage.getItem('mappai_reranker_infomaniak') === '1'; } catch (e) { rerankToggle.checked = false; } }
 
     // Load saved models on boot
     const isInfomaniak = (appState.aiProvider === 'infomaniak');
@@ -979,7 +1005,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Aggiorna dinamicamente l'etichetta del percorso cartella dei vault
     const labelEl = document.getElementById('vault-manager-folder-path-label');
     if (labelEl) {
-        labelEl.textContent = isCapacitor ? "Cartella: MappAI - Vault" : "Cartella: Documents/Salvataggi MappAI";
+        /* `isCapacitor` non è mai stato definito in questo file: era un
+           ReferenceError a OGNI avvio, l'ultima riga del gestore. Registrato nel
+           diario degli errori di Giacomo tre volte l'11 settembre. */
+        var _cap = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+        labelEl.textContent = _cap ? "Cartella: MappAI - Vault" : "Cartella: Documents/Salvataggi MappAI";
     }
 });
 
@@ -994,6 +1024,7 @@ if (window.electronAPI && window.electronAPI.onSalvaPrimaDiUscire) {
     window.electronAPI.onSalvaPrimaDiUscire(async () => {
         const fatto = () => { try { window.electronAPI.salvataggioUscitaFatto(); } catch (e) { } };
         try {
+            if (appState._reviewRestoring || appState._reviewRestoreError) { fatto(); return; }
             /* Le opzioni della Vista studio vivono in DUE posti: nel progetto
                (ci pensa saveCurrentProject, sono dentro appState) e a livello
                UTENTE, che è la taratura con cui si riapre la prossima mappa.

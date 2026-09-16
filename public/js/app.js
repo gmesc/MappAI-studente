@@ -1,3 +1,23 @@
+/*
+ * MappAI — nucleo del renderer
+ * Copyright (C) 2026 Giacomo Meschini <giacomo@insegnai.ch>
+ *
+ * Questo programma è software libero: puoi ridistribuirlo e/o modificarlo
+ * secondo i termini della GNU General Public License come pubblicata dalla
+ * Free Software Foundation, nella versione 3 della Licenza o (a tua scelta)
+ * in una versione successiva.
+ *
+ * Questo programma è distribuito nella speranza che sia utile, ma SENZA
+ * ALCUNA GARANZIA; senza neppure la garanzia implicita di COMMERCIABILITÀ o
+ * IDONEITÀ A UNO SCOPO PARTICOLARE. Vedi la GNU General Public License per
+ * maggiori dettagli.
+ *
+ * Dovresti aver ricevuto una copia della GNU General Public License insieme a
+ * questo programma. In caso contrario, vedi <https://www.gnu.org/licenses/>.
+ *
+ * I componenti di terze parti inclusi (font, librerie) restano sotto le loro
+ * licenze: vedi THIRD-PARTY-NOTICES.md.
+ */
 // Safely Initialize Icons
 let modalTextZoomLevel = 0;
 window.safeCreateIcons = function () {
@@ -435,6 +455,7 @@ window.switchAIProvider = function (provider) {
     const btnInfomaniak = document.getElementById('provider-infomaniak');
     const geminiFields = document.getElementById('gemini-api-key-container');
     const infomaniakFields = document.getElementById('infomaniak-api-key-container');
+    const notaReranker = document.getElementById('infomaniak-reranker-nota');
 
     if (!btnGoogle || !btnInfomaniak) return;
 
@@ -445,7 +466,10 @@ window.switchAIProvider = function (provider) {
         btnInfomaniak.classList.add('text-slate-500');
 
         if (geminiFields) geminiFields.classList.remove('hidden');
-        if (infomaniakFields) infomaniakFields.classList.add('hidden');
+        /* Token e Product ID di Infomaniak restano visibili anche con Google (16/9/26):
+           servono al reranker, che si chiama con Infomaniak qualunque sia il provider. */
+        if (infomaniakFields) infomaniakFields.classList.remove('hidden');
+        if (notaReranker) notaReranker.classList.remove('hidden');
     } else {
         btnInfomaniak.classList.add('bg-white', 'shadow-sm', 'text-indigo-600');
         btnInfomaniak.classList.remove('text-slate-500');
@@ -454,6 +478,7 @@ window.switchAIProvider = function (provider) {
 
         if (geminiFields) geminiFields.classList.add('hidden');
         if (infomaniakFields) infomaniakFields.classList.remove('hidden');
+        if (notaReranker) notaReranker.classList.add('hidden');
     }
 
     // Add visual 'active' checkmark indicator to provider buttons
@@ -523,27 +548,86 @@ const MARKER_END = String.fromCharCode(96, 96, 96);
    ========================================== */
 
 if (typeof pdfjsLib !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/vendor/pdf.worker.min.js';
 } else {
     console.warn("pdfjsLib non caricato correttamente. L'estrazione da PDF potrebbe non funzionare.");
 }
 
-window.extractTextFromPDF = async function (file) {
+/* ── LE PAGINE E I TITOLI DEL PDF (11/9/26) ───────────────────────────────────
+   Prima di oggi tutto il PDF veniva unito in una stringa sola con degli spazi:
+   sparivano il numero di pagina (quindi nessuna citazione poteva dire «a pagina
+   4») e i TITOLI delle sezioni — che pdf.js conosce benissimo, perché ogni pezzo
+   di testo porta la sua altezza, e che l'app buttava via. Un docente vede a colpo
+   d'occhio che il dossier ha una sezione economica; il modello no, e infatti la
+   pagina economica è sparita da due mappe su due.
+   `extractTextFromPDF` continua a restituire la stessa stringa di sempre (sei
+   chiamanti, invariati); chi vuole di più chiama `extractPdfPages`. */
+window.extractPdfPages = async function (file) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
+    const pages = [];
+    const altezze = [];
+    const grezzi = [];
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        fullText += content.items.map(item => item.str).join(" ") + "\n";
+        pages.push({ n: i, text: content.items.map(item => item.str).join(" ") });
+        // altezza del glifo: `height`, o la scala verticale della matrice
+        content.items.forEach(it => {
+            const h = it.height || (it.transform && Math.abs(it.transform[3])) || 0;
+            const s = String(it.str || '').trim();
+            if (h > 0 && s) { altezze.push(h); grezzi.push({ h, s, n: i }); }
+        });
     }
-    return fullText;
+    /* ── COME SI RICONOSCE UN TITOLO ──────────────────────────────────────────
+       Due criteri, in OR, perché da soli non bastano:
+       (a) testo BREVE scritto più in grande della mediana (soglia +15%). Funziona
+           sui documenti impaginati con una gerarchia tipografica;
+       (b) testo che comincia con «1.» / «2)» — la numerazione delle sezioni.
+
+       ⚠️ Il criterio (b) non è un di più: misurato sul dossier di Storia della
+       4a Media, TUTTI i 381 pezzi di testo hanno la STESSA altezza (11,49) —
+       titoli compresi. Col solo criterio (a) l'indice usciva vuoto. Con (b) escono
+       esattamente le quattro sezioni vere, fra cui «2. L'economia svizzera», che è
+       proprio la parte sparita dalle mappe.
+
+       ⚠️ Il FONT non si usa come criterio, benché lì i titoli siano in un font
+       diverso: provato, dà 121 candidati su quel PDF, quasi tutti grassetti in
+       mezzo ai paragrafi («piano Wahlen», «razionamento»). Un indice di rumore è
+       peggio di nessun indice. */
+    let titoli = [];
+    const ord = altezze.slice().sort((a, b) => a - b);
+    const mediana = ord.length ? ord[Math.floor(ord.length / 2)] : 0;
+    const soglia = mediana * 1.15;
+    /* ⚠️ dopo il numero basta UN carattere non-spazio, non tre: misurato sul
+       dossier vero, tre titoli su quattro cominciano con «La» — con `\S{3,}`
+       ne usciva uno solo. A tenere fuori le briciole ci pensa la lunghezza
+       minima qui sotto. */
+    const numerato = /^\d{1,2}[.)]\s+\S/;
+    const visti = new Set();
+    grezzi.forEach(g => {
+        const grande = (altezze.length > 20 && mediana > 0 && g.h >= soglia);
+        if (!grande && !numerato.test(g.s)) return;
+        if (g.s.length < 8 || g.s.length > 90) return;
+        if (/^[\d\s.,;:–—-]+$/.test(g.s)) return;                 // numeri di pagina
+        const k = g.s.toLowerCase();
+        if (visti.has(k)) return;                                  // intestazione ripetuta
+        visti.add(k);
+        titoli.push({ page: g.n, text: g.s });
+    });
+    if (titoli.length > 24) titoli = titoli.slice(0, 24);          // un indice, non un secondo documento
+    return { text: pages.map(p => p.text).join('\n'), pages, titoli };
+};
+
+window.extractTextFromPDF = async function (file) {
+    const r = await window.extractPdfPages(file);
+    return r.text;
 };
 
 
 
 window.getSystemKey = function () {
-    const isInfomaniak = (appState.aiProvider === 'infomaniak');
+    const isInfomaniak = ((appState._reviewAIContext?.provider || appState.aiProvider) === 'infomaniak');
     const inputId = isInfomaniak ? 'infomaniak-api-key-input' : 'gemini-api-key-input';
     const storageKey = isInfomaniak ? 'infomaniak_api_key' : 'gemini_api_key';
 
@@ -587,14 +671,15 @@ window.getMaxOutputTokens = function (baseTokens) {
     // Guard: baseTokens undefined/NaN → NaN si serializza come null nel payload
     // → null = nessun limite → thinking illimitato su gemini-2.5. Default: 4096.
     if (!baseTokens || typeof baseTokens !== 'number' || isNaN(baseTokens)) baseTokens = 4096;
+    const provider = appState._reviewAIContext?.provider || appState.aiProvider;
     const modelEl = document.getElementById('model-select');
     // Fallback a localStorage: il DOM può essere null durante le fasi async
     // del multi-pass (loop rami, Phase4, Phase5) → il modello non viene rilevato
     // → moltiplicatori ignorati → budget troppo piccolo → troncamenti.
     // Stesso pattern già usato in fetchModelAPI.
-    const storageKey = (appState.aiProvider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
-    const model = ((modelEl ? modelEl.value : '') || localStorage.getItem(storageKey) || '').toLowerCase();
-    if (appState.aiProvider === 'infomaniak') {
+    const storageKey = (provider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
+    const model = (appState._reviewAIContext?.model || (modelEl ? modelEl.value : '') || localStorage.getItem(storageKey) || '').toLowerCase();
+    if (provider === 'infomaniak') {
         if (model.includes('qwen') || model.includes('kimi') || model.includes('moonshot')) {
             return Math.max(baseTokens, 16384);
         }
@@ -672,14 +757,15 @@ function _detectTruncation(response) {
 }
 
 window.fetchModelAPI = async function (payload, apiKey) {
+    const provider = appState._reviewAIContext?.provider || appState.aiProvider;
     const modelEl = document.getElementById('model-select');
-    let model = modelEl ? modelEl.value : null;
+    let model = appState._reviewAIContext?.model || (modelEl ? modelEl.value : null);
     if (!model) {
-        const storageKey = (appState.aiProvider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
+        const storageKey = (provider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
         model = localStorage.getItem(storageKey);
     }
     if (!model) {
-        model = (appState.aiProvider === 'google' ? 'gemini-2.0-flash' : 'mistral-small-4-119B-2603');
+        model = (provider === 'google' ? 'gemini-2.0-flash' : 'mistral-small-4-119B-2603');
     }
 
     // ── Gemini 2.5+: disabilita il thinking per fasi con budget ridotto ─────────
@@ -697,7 +783,23 @@ window.fetchModelAPI = async function (payload, apiKey) {
     // (===MERGES===, ===RECLASSIFY===, array JSON raw) → non hanno responseMimeType
     // ma subiscono comunque il problema thinking. La condizione li escludeva.
     const _gcfg = payload?.generationConfig || {};
-    if (appState.aiProvider === 'google' &&
+    if (provider === 'google' && /(?:^|\/)gemini-3\.8-flash(?:$|-)/i.test(model || '')) {
+        // 3.8 uses thinkingLevel and no sampling parameters. Normalize here
+        // before both Electron IPC and the browser adapter see the request.
+        // https://ai.google.dev/gemini-api/docs/generate-content/latest-model
+        const gc = { ..._gcfg }, thinking = { ...gc.thinkingConfig };
+        ['temperature', 'topP', 'topK', 'candidateCount'].forEach(key => { delete gc[key]; });
+        const small = gc.maxOutputTokens > 0 && gc.maxOutputTokens <= 12288;
+        const level = String(thinking.thinkingLevel || '').toLowerCase();
+        if (['low', 'medium', 'high'].includes(level)) thinking.thinkingLevel = level;
+        else if (level || thinking.thinkingBudget != null || small) {
+            thinking.thinkingLevel = level === 'minimal' || thinking.thinkingBudget === 0 || small ? 'low' : 'medium';
+        }
+        delete thinking.thinkingBudget;
+        if (Object.keys(thinking).length) gc.thinkingConfig = thinking;
+        else delete gc.thinkingConfig;
+        payload = { ...payload, generationConfig: gc };
+    } else if (provider === 'google' &&
         (model || '').toLowerCase().match(/gemini-2\.5|gemini-3/) &&
         (_gcfg.maxOutputTokens || 0) > 0 &&
         (_gcfg.maxOutputTokens || 0) <= 12288) {
@@ -710,6 +812,15 @@ window.fetchModelAPI = async function (payload, apiKey) {
     // Budget tokens richiesto (per diagnosticare se siamo vicini al cap)
     const requestedMax = payload?.generationConfig?.maxOutputTokens || null;
 
+    /* QUANTI ITEM SONO STATI CHIESTI (12/9). Non serve farlo viaggiare dai
+       moduli: ogni generatore di materiali mette il numero nello schema come
+       `maxItems` dell'array esterno — flashcard, quiz a scelta, vero/falso,
+       domande aperte. Leggerlo qui vale per tutti e non tocca un solo chiamante.
+       Dove non c'è un array (fasi della mappa, sintesi, tutor) resta null, che
+       è la verità: quella chiamata non chiede un numero di cose. */
+    const _schema = payload?.generationConfig?.responseSchema;
+    const chiesti = (_schema && _schema.type === 'ARRAY' && _schema.maxItems) || null;
+
     // Registro consumi: snapshot del contesto ALL'ENTRATA (non dopo l'await:
     // un altro flusso potrebbe cambiare il contesto mentre la risposta arriva)
     const _usageCtx = (window.MappAIUsage && window.MappAIUsage.current()) || null;
@@ -717,7 +828,7 @@ window.fetchModelAPI = async function (payload, apiKey) {
     if (window.electronAPI) {
         try {
             let response;
-            if (appState.aiProvider === 'infomaniak') {
+            if (provider === 'infomaniak') {
                 const productId = document.getElementById('infomaniak-product-id')?.value || appState.infomaniakProductId;
                 if (!productId) throw new Error("Inserisci il Product ID di Infomaniak nel Setup.");
 
@@ -745,6 +856,14 @@ window.fetchModelAPI = async function (payload, apiKey) {
                 response = await window.electronAPI.generateGemini({ apiKey, payload: gPayload, model });
             }
 
+            /* ⚠️ LA RILEVAZIONE DEL TRONCAMENTO SALE QUI (12/9), sopra il registro
+               consumi: prima stava sotto, e la riga del registro partiva senza
+               sapere perché la chiamata si fosse fermata. Quel verdetto finiva
+               solo in `MappAITruncationTracker`, che vive in RAM e muore a fine
+               sessione — così sul disco restava un numero di token e nessun
+               modo di sapere se era una risposta finita o una tagliata. */
+            const { finishReason, truncated } = _detectTruncation(response);
+
             // Tracking Usage
             if (response && response.usageMetadata) {
                 if (!appState.generationUsage) appState.generationUsage = { promptTokens: 0, candidateTokens: 0, totalTokens: 0 };
@@ -753,20 +872,35 @@ window.fetchModelAPI = async function (payload, apiKey) {
                 appState.generationUsage.totalTokens += (response.usageMetadata.totalTokenCount || 0);
                 window.updateCostDisplay();
                 // Registro consumi AI (riga JSONL su disco, categoria dal contesto)
+                /* I QUATTRO CAMPI DEL 12/9. Il registro sapeva quanti token erano
+                   usciti e nient'altro, e per questo la domanda «abbassare il
+                   numero di domande riduce i troncamenti?» non aveva risposta:
+                   mancava il denominatore (`n`), mancava il motivo dello stop, e
+                   `outTok` conta solo la risposta mentre il tetto lo riempiono
+                   anche i token di PENSIERO — sopra le 8 domande per ramo il
+                   pensiero si riaccende (getMaxOutputTokens > 12288, vedi la
+                   soglia qui sopra) e una chiamata svuotata da lui si scriveva
+                   come una chiamata piccola e tranquilla.
+                   Sono tutti già calcolati poche righe più su: costano quattro
+                   chiavi in più per riga e rendono ogni generazione leggibile
+                   da sola, senza indovinare il troncamento dai valori ripetuti. */
                 if (window.MappAIUsage) window.MappAIUsage.record({
-                    provider: appState.aiProvider,
+                    provider: provider,
                     model,
                     inTok: response.usageMetadata.promptTokenCount || 0,
                     outTok: response.usageMetadata.candidatesTokenCount || 0,
+                    thoughts: response.usageMetadata.thoughtsTokenCount || 0,
+                    n: chiesti,
+                    stop: finishReason,
+                    tetto: requestedMax,
                     ctx: _usageCtx
                 });
             }
 
-            // Strategia 0 — rilevamento troncamento finishReason
-            const { finishReason, truncated } = _detectTruncation(response);
+            // Strategia 0 — troncamento (il verdetto è calcolato sopra)
             window.MappAITruncationTracker.record({
                 model,
-                provider: appState.aiProvider,
+                provider: provider,
                 finishReason,
                 truncated,
                 requestedMax,
@@ -1302,6 +1436,9 @@ window.startGeneration = async function () {
         (document.getElementById('focus-input') ? document.getElementById('focus-input').value.trim() : '') || '';
 
     var textParts = [];
+    /* pagine + titoli dei PDF di QUESTA generazione: alimentano l'àncora e
+       l'indice del documento in Fase 1. Vuoto se le fonti non sono PDF. */
+    var _pdfPagine = [];
     var fileParts = [];
     var hasSources = false;
 
@@ -1341,9 +1478,14 @@ window.startGeneration = async function () {
         } else if (src.type === 'pdf' && src.file) {
             window.showLoadingOverlay(true, window.t('lo_pdf_local', "Estrazione testo dal PDF locale..."));
             try {
-                let pdfText = await window.extractTextFromPDF(src.file);
+                let _pdf = await window.extractPdfPages(src.file);
+                let pdfText = _pdf.text;
                 if (pdfText.trim()) {
                     textParts.push("[FONTE PDF " + src.file.name + "]:\n" + pdfText);
+                    /* pagine e titoli viaggiano a parte: servono all'ANCORA (le
+                       citazioni sanno da che pagina vengono) e alla Fase 1 (i
+                       titoli del dossier come indice). Il prompt non cambia. */
+                    _pdfPagine.push({ nome: src.file.name, pages: _pdf.pages, titoli: _pdf.titoli });
                     hasSources = true;
                 }
             } catch (err) {
@@ -1355,9 +1497,14 @@ window.startGeneration = async function () {
             // Caso PDF caricato tramite bottone Documenti
             window.showLoadingOverlay(true, window.t('lo_pdf', "Estrazione testo dal PDF..."));
             try {
-                let pdfText = await window.extractTextFromPDF(src.file);
+                let _pdf = await window.extractPdfPages(src.file);
+                let pdfText = _pdf.text;
                 if (pdfText.trim()) {
                     textParts.push("[FONTE PDF " + src.file.name + "]:\n" + pdfText);
+                    /* pagine e titoli viaggiano a parte: servono all'ANCORA (le
+                       citazioni sanno da che pagina vengono) e alla Fase 1 (i
+                       titoli del dossier come indice). Il prompt non cambia. */
+                    _pdfPagine.push({ nome: src.file.name, pages: _pdf.pages, titoli: _pdf.titoli });
                     hasSources = true;
                 }
             } catch (err) {
@@ -1470,6 +1617,19 @@ window.startGeneration = async function () {
         return;
     }
 
+    // Archive original text before cleaning it for generation. Text/URL/DOCX
+    // inputs may live only in textParts, while the source UI stores just an ID.
+    var _reviewSourceSnapshot = _pdfPagine.map(function (doc) {
+        return { nome: doc.nome, pages: doc.pages.map(p => ({ n: p.n, text: p.text })) };
+    });
+    textParts.forEach(function (part, index) {
+        if (/^\[FONTE (?:PDF|YOUTUBE)\b/.test(part)) return;
+        var header = /^\[FONTE ([^\]]+)\]:\s*\n/.exec(part);
+        var content = header ? part.slice(header[0].length) : part;
+        if (content.trim()) _reviewSourceSnapshot.push({ id: 'text-' + index,
+            title: header ? header[1] : 'Fonte ' + (index + 1), type: 'text', content: content });
+    });
+
     // #1 (22/7): rimuove intestazioni/piè di pagina ricorrenti dal corpus di
     // generazione (es. "Storia IV Media · La Guerra Fredda · pag. 3") → la mappa
     // non ingerisce il boilerplate come contenuto. Per-fonte (i repeat sono
@@ -1492,6 +1652,26 @@ window.startGeneration = async function () {
         }
     } catch (e) { /* best-effort: se fallisce, corpus invariato */ }
 
+    /* ── PAGINE E INDICE DEL DOCUMENTO (11/9) ─────────────────────────────────
+       Restano su appState per tutta la generazione: le pagine servono all'ANCORA
+       (che gira a valle della Fase 3, dove `textParts` non arriva piu') e i titoli
+       alla Fase 1. `_docOutline` e' testo gia' pronto da appendere a un prompt:
+       chi lo usa non deve sapere com'e' fatto un PDF. */
+    appState._pdfPagine = _pdfPagine;
+    appState._docOutline = '';
+    try {
+        var _tt = [];
+        _pdfPagine.forEach(function (f) {
+            (f.titoli || []).forEach(function (t) { _tt.push('p.' + t.page + ' \u2014 ' + t.text); });
+        });
+        if (_tt.length >= 3) {
+            appState._docOutline = '\n\nINDICE DEL DOCUMENTO (i titoli come compaiono nella fonte, in ordine). '
+                + 'Dicono di quali parti e' + "'" + ' fatto il documento: copri TUTTE le sezioni, non solo le prime. '
+                + 'NON copiarli come etichette se non sono adatti.\n' + _tt.join('\n') + '\n';
+            console.log('[Outline] ' + _tt.length + ' titoli riconosciuti nella fonte');
+        }
+    } catch (e) { appState._docOutline = ''; }
+
     // Nuova mappa = chat nuove: mai ereditare il tutorState della mappa precedente
     if (window.setTutorState) window.setTutorState(null);
 
@@ -1505,6 +1685,12 @@ window.startGeneration = async function () {
        la generazione in silenzio, coi token già spesi.
        Qui si alza attorno all'estrazione e si abbassa SEMPRE, anche se lancia:
        un lucchetto che resta su dopo un errore blocca l'app per sempre. */
+    appState._pipelineManifest = null;
+    appState._generationSources = _reviewSourceSnapshot;
+    appState._reviewRevision = undefined;
+    appState._reviewRequested = !!(window.MappAIReview && window.MappAIReview.enabled());
+    appState._judgeReport = appState._giudiceReport = null;
+    appState._generationId = (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'gen-' + Date.now();
     window.MappAIGen.inizia(appState.rootNodeLabel, appState.extractionMode);
     /* Il contesto si congela anche qui, e per la stessa ragione: una MindMap
        multi-pass fa decine di chiamate su parecchi minuti, e la taratura si
@@ -1541,6 +1727,7 @@ window.startGeneration = async function () {
             await extractKnowledgeGraphSinglePass(textParts, fileParts, apiKey);
         }
     }
+    if (window.MappAIReview && appState._reviewRequested && !(window.MappAIPipeline && window.MappAIPipeline._running)) await window.MappAIReview.finishMapOnly();
     } finally {
         window.MappAIGen.fine();
         if (window.MappAITune && window.MappAITune.scongela) window.MappAITune.scongela();
@@ -1673,7 +1860,10 @@ window.MappAITune = {
        `classTuningPrompt`; `contesto()` dà le due etichette che vanno scritte
        nell'archivio — la voce d'archivio senza `cls`/`disc` li prende dal
        contesto ATTIVO, cioè da quello che c'è alla FINE. */
-    congela: function () {
+    congela: function (snapshot) {
+        if (snapshot && ['pieno', 'livello', 'nome', 'disc'].every(k => typeof snapshot[k] === 'string')) {
+            this._gelo = Object.assign({}, snapshot); return this._gelo;
+        }
         var c = null, nome = '', disc = '';
         try {
             var CL = window.MappAIClasses;
@@ -1858,6 +2048,9 @@ window.accessibleDescRules = function () {
 // KG EXTRACTION (extractResponseText, _kgGenerationConfig, extractKnowledgeGraph{SinglePass,Community,MultiPass})
 // → estratto in js/mappai-kg-extraction.js (caricato dopo app.js)
 window.showGenerationReport = function () {
+    // Assisted runs persist synchronously at the checkpoint; this delayed legacy
+    // callback must neither resave the vault nor read a different open project.
+    if (appState._reviewRequested && window.MappAIReview) return;
     if (!appState.generationUsage) return;
 
     const modelEl = document.getElementById('model-select');
@@ -1875,6 +2068,51 @@ window.showGenerationReport = function () {
     const tokens = appState.generationUsage.totalTokens.toLocaleString();
 
     window.showToast(`${window.t('tst_gen_done', "Generazione completata!")} Token: ${tokens} | ${window.t('ui_cost', "Costo")}: ${costText}`, "success");
+    /* ── QUELLO CHE IL DOCENTE DEVE SAPERE PRIMA DI STAMPARE (11/9) ────────────
+       L'àncora ha misurato copertura, fedeltà e nessi impossibili. Prima queste
+       cose non esistevano: una pagina intera della fonte poteva non entrare in
+       mappa senza che comparisse un avviso da nessuna parte. Le righe si mostrano
+       solo quando c'è qualcosa da dire — un secondo avviso a ogni generazione
+       smetterebbe di essere letto. */
+    try {
+        var _q = appState._qualityReport;
+        if (_q && window.anchorReportLines) {
+            var _righe = window.anchorReportLines();
+            console.log('%c[Qualità della mappa]', 'font-weight:bold', '\n · ' + _righe.join('\n · '));
+            var _allarmi = [];
+            var _scoperte = _q.copertura.pagine.filter(function (p) { return p.pct < 40 && p.tot >= 3; });
+            if (_scoperte.length) {
+                _allarmi.push(window.t('gen_rep_cov', 'Parti della fonte quasi assenti dalla mappa: ')
+                    + _scoperte.map(function (p) { return (p.page ? 'pagina ' + p.page : 'fonte') + ' (' + p.pct + '%)'; }).join(', '));
+            }
+            if (_q.nessiDeclassati.length) {
+                _allarmi.push(window.t('gen_rep_nessi', 'Nessi causali impossibili, corretti: ') + _q.nessiDeclassati.length);
+            }
+            if (_q.fedelta && _q.fedelta.sotto.length) {
+                _allarmi.push(window.t('gen_rep_fid', 'Descrizioni poco ancorate alla fonte, da rileggere: ') + _q.fedelta.sotto.length);
+            }
+            /* ⚠️ IL VERDETTO DEL GIUDICE VA VISTO (12/9). In sola segnalazione —
+               che è il modo in cui va acceso la prima volta — il giudice non
+               tocca niente: se il suo verdetto restasse in console, accenderlo
+               non servirebbe a raccogliere i numeri per cui lo si accende. */
+            var _g = appState._giudiceReport;
+            if (_g && _g.correzioni && _g.correzioni.length) {
+                _allarmi.push(_g.applicaAcceso
+                    ? (window.t('gen_rep_giu_on', 'Errori di senso corretti dal controllo: ') + _g.applicate)
+                    : (window.t('gen_rep_giu_off', 'Errori di senso TROVATI dal controllo (non corretti: le scritture sono spente): ') + _g.correzioni.length));
+            }
+            /* Il reranker acceso che non arriva in fondo va visto (16/9/26): senza questa
+               riga un token sbagliato o un Product ID mancante restavano in Console, e
+               le citazioni restavano quelle dell'àncora senza che nessuno lo sapesse. */
+            var _rr = appState._rerankerReport;
+            if (_rr && (_rr.stato === 'interrotto' || (_rr.stato === 'saltato' && _rr.motivo && !/^spento/.test(_rr.motivo)))) {
+                _allarmi.push(window.t('gen_rep_rerank', 'Reranker Infomaniak non completato: ') + _rr.motivo);
+            }
+            if (_allarmi.length) {
+                setTimeout(function () { window.showToast(_allarmi.join(' · '), 'warning'); }, 2600);
+            }
+        }
+    } catch (e) { /* il rapporto è un di più: la mappa c'è comunque */ }
 
     // Riordino su disco (22/7): a fine generazione crea/aggiorna in automatico la
     // cartella vault della mappa in «Mappe» (nome = ROOT; annidata nella classe
@@ -1887,10 +2125,37 @@ window.showGenerationReport = function () {
                il vault perché una delle due chiavi È il suo percorso — INSEGNA
                elenca cartelle, non progetti. */
             if (_pv && _pv.then) _pv.then(function (res) {
+                /* ── IL RAPPORTO DI QUALITÀ RESTA SUL DISCO (12/9) ─────────────
+                   Àncora e giudice scrivevano in `appState` e in console, cioè in
+                   due posti che spariscono chiudendo l'app. Ma il giudice si
+                   accende la PRIMA volta in sola segnalazione, proprio per
+                   raccogliere i numeri con cui decidere se lasciarlo scrivere: un
+                   verdetto che non sopravvive alla sessione non serve a decidere
+                   niente. Si scrive qui e non prima perché `activeVaultPath` è
+                   ancora nullo durante la generazione — la cartella la risolve
+                   `ensureProjectVault`, che è proprio ciò che stiamo aspettando. */
+                var _cart = (res && res.folderPath) || appState.activeVaultPath || '';
+                try {
+                    if (_cart && window.electronAPI && window.electronAPI.saveVaultFile &&
+                        (appState._qualityReport || appState._giudiceReport)) {
+                        window.electronAPI.saveVaultFile({
+                            vaultPath: _cart, relPath: 'qualita.json',
+                            text: JSON.stringify({
+                                schema: 'mappai-qualita@1',
+                                quando: new Date().toISOString(),
+                                modello: (document.getElementById('model-select') || {}).value || '',
+                                ancora: appState._qualityReport || null,
+                                giudice: appState._giudiceReport || null,
+                                reranker: appState._rerankerReport || null
+                            }, null, 2)
+                        });
+                    }
+                } catch (e) { /* il rapporto è un di più: la mappa c'è comunque */ }
+
                 if (!window.MappAIGen || !window.MappAIGen.segnaNuovo) return;
                 window.MappAIGen.segnaNuovo({
                     nome: appState.rootNodeLabel || '',
-                    vault: (res && res.folderPath) || appState.activeVaultPath || '',
+                    vault: _cart,
                     id: (window.StorageManager && window.StorageManager.currentProjectId) || ''
                 });
             }).catch(function () { });

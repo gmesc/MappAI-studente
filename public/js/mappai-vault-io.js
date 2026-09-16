@@ -44,9 +44,39 @@ function _contestoDellaMappa() {
     return out;
 }
 
+/* ── LA RETE DI SICUREZZA SI FA SENTIRE (12/9) ────────────────────────────────
+   `save-vault` mette da parte una copia quando la mappa che sta per scrivere è
+   molto più piccola di quella già in cartella. Una protezione silenziosa però
+   non protegge: l'11 settembre il guasto è rimasto invisibile finché il docente
+   non ha riaperto il progetto. Qui si dice che cosa è successo e dove sta la
+   copia, con un avviso che resta a schermo più a lungo di un toast normale. */
+window.avvisaIstantanea = function (res) {
+    try {
+        const i = res && res.istantanea;
+        if (!i || !i.serve) return;
+        const dove = i.dove || '.versioni';
+        const msg = window.t
+            ? window.t('vault_istantanea', 'Attenzione: la cartella conteneva {p} nodi e ne ho salvati {n}. Ho messo da parte una copia di prima in «{d}».')
+                .replace('{p}', i.esistenti).replace('{n}', i.nuovi).replace('{d}', dove)
+            : ('La cartella conteneva ' + i.esistenti + ' nodi e ne ho salvati ' + i.nuovi + '. Copia di prima in «' + dove + '».');
+        console.warn('[Vault] ' + msg);
+        if (window.showToast) window.showToast(msg, 'warning');
+    } catch (e) { /* l'avviso è un di più: la copia c'è comunque */ }
+};
+
+/* Si ascolta una volta sola, all'avvio: da qui in poi ogni salvataggio che ha
+   avuto bisogno della rete lo dice, da qualunque punto sia partito. */
+try {
+    if (window.electronAPI && window.electronAPI.onIstantaneaVault) {
+        window.electronAPI.onIstantaneaVault(function (d) { window.avvisaIstantanea({ istantanea: d }); });
+    }
+} catch (e) { /* senza canale resta l'avviso dei punti espliciti */ }
+
 window.buildVaultMapData = function () {
     var ctx = _contestoDellaMappa();
     return {
+        reviewRevision: appState._reviewRevision,
+        reviewCommit: appState._reviewCommit,
         extractionMode: appState.extractionMode,
         rootNodeLabel: appState.rootNodeLabel,
         /* DOSSIER di fonte (20/8): lo dice il grafo stesso — la radice dei
@@ -57,7 +87,10 @@ window.buildVaultMapData = function () {
         materia: ctx.materia,
         nodes: appState.db.nodes,
         links: appState.db.links,
+        sourcesDict: appState.db.sourcesDict || {},
         studySets: appState.db.studySets || [],
+        // Il frontmatter conserva anche ID/pagina/verbatim delle citazioni;
+        // la sezione Fonti rimane leggibile nel Markdown.
         userProfile: appState.userProfile,
         tutorState: serializeTutorState(tutorState),
         aiProvider: appState.aiProvider,
@@ -76,6 +109,7 @@ window.saveMapVault = async function () {
     if (!appState.db.nodes.length) return window.showAlert("Errore", "Nessuna mappa da esportare.");
 
     try {
+        if (appState._reviewRestoring || appState._reviewRestoreError) return null;
         const result = await window.electronAPI.pickFolder({ createOnly: true });
         if (result.canceled) return;
 
@@ -88,7 +122,18 @@ window.saveMapVault = async function () {
 
         window.showLoadingOverlay(false);
         if (saveRes.success) {
+            window.avvisaIstantanea(saveRes);
             appState.activeVaultPath = result.folderPath;
+            /* Adottare la cartella, non solo scriverne il percorso (11/9): senza,
+               `activeVaultClassDir`/`activeVaultDiscDir` restano quelli della
+               mappa di prima e il progetto si registra in una posizione che non
+               è la sua. Da lì un'altra mappa può rivendicare la stessa cartella
+               e sovrascriverla — è successo davvero. */
+            try {
+                if (typeof StorageManager !== 'undefined' && StorageManager.adottaVault) {
+                    await StorageManager.adottaVault(result.folderPath, appState);
+                }
+            } catch (e) { console.warn('[Vault] adozione non riuscita:', e && e.message); }
             /* il disco è cambiato: chi mostra elenchi rilegge (9/8) */
             try { if (window.MappAIVaults) window.MappAIVaults.segnala('mappa-salvata', { vaultPath: result.folderPath }); } catch (e) { }
 
@@ -146,6 +191,7 @@ window.saveMapVault = async function () {
 window.ensureProjectVault = async function (opts) {
     opts = opts || {};
     try {
+        if (appState._reviewRestoring || appState._reviewRestoreError) return null;
         if (localStorage.getItem('mappai_autovault') === '0') return null;
         if (!window.electronAPI || !window.electronAPI.saveVault || !window.electronAPI.filesRootGet) return null;
         if (!appState.db.nodes || !appState.db.nodes.length) return null;
@@ -155,7 +201,8 @@ window.ensureProjectVault = async function (opts) {
         // (1) Progetto già legato a una cartella → aggiorna in place.
         if (appState.activeVaultPath) {
             var upd = await window.electronAPI.saveVault({ folderPath: appState.activeVaultPath, mapData: window.buildVaultMapData() });
-            if (upd && upd.success && window.StorageManager && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
+            if (!upd || !upd.success) return null;
+            if (typeof StorageManager !== 'undefined' && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
             /* Sorgenti/: ripescaggio dei fogli di domande aperte dall'archivio (6/9), senza sovrascrivere */
             try {
                 if (upd && upd.success && window.MappAIQuizPrint && window.MappAIQuizPrint.ripescaSorgenti) window.MappAIQuizPrint.ripescaSorgenti(appState.activeVaultPath, appState.rootNodeLabel || '');
@@ -211,6 +258,7 @@ window.ensureProjectVault = async function (opts) {
         appState.activeVaultPath = folderPath;
         appState.activeVaultClassDir = classDir;
         appState.activeVaultDiscDir = discDir || null;
+        if (typeof StorageManager !== 'undefined' && StorageManager.adottaVault) await StorageManager.adottaVault(folderPath, appState);
         /* AUTO-VAULT a fine generazione: è il caso che Giacomo vedeva più spesso —
            la mappa appena fatta non compariva negli elenchi finché non si
            riapriva la finestra. Ora lo dice (9/8). */
@@ -230,7 +278,7 @@ window.ensureProjectVault = async function (opts) {
         var syncBtn = document.getElementById('sync-vault-btn');
         if (syncBtn) { syncBtn.classList.remove('hidden'); syncBtn.classList.add('flex'); }
 
-        if (window.StorageManager && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
+        if (typeof StorageManager !== 'undefined' && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
         return { created: true, folderPath: folderPath, classDir: classDir, discDir: discDir || null };
     } catch (e) {
         console.warn('[autovault] ensureProjectVault fallito:', e && e.message);
@@ -328,6 +376,11 @@ window.loadMapVault = async function () {
 
         window.showLoadingOverlay(false);
         if (loadRes.success) {
+            appState._reviewRestoring = true;
+            delete appState._reviewRestoreError;
+            delete appState._reviewCommit;
+            delete appState._reviewRevision;
+            appState._pipelineManifest = loadRes.data._pipelineManifest || null;
             appState.activeVaultPath = result.folderPath;
             /* stessa adozione di directLoadVault (15/8): l'identità del
                progetto appartiene alla mappa a schermo, mai alla precedente */
@@ -339,16 +392,17 @@ window.loadMapVault = async function () {
                ricevuto da un collega non cambia materia perché lo apre un altro */
             appState.vaultClasse = loadRes.data.classe || '';
             appState.vaultMateria = loadRes.data.materia || '';
-            appState.rootNodeLabel = result.folderPath.split('/').pop().replace(/_/g, ' ') || "Mappa Esempio";
+            appState.rootNodeLabel = loadRes.data.rootNodeLabel || result.folderPath.split('/').pop().replace(/_/g, ' ') || "Mappa Esempio";
 
             let nodesList = loadRes.data.nodes || [];
             let linksList = loadRes.data.links || [];
 
             const rootNode = nodesList.find(n => n.level === 0);
-            if (rootNode) {
+            if (rootNode && !loadRes.data._pipelineManifest?.review) {
                 rootNode.label = appState.rootNodeLabel;
             }
             if (nodesList.length === 0) {
+                if (loadRes.data._pipelineManifest?.review) throw new Error('Mappa revisionata senza nodi: ripristino interrotto');
                 const rootId = "node_" + Math.random().toString(36).substr(2, 9);
                 nodesList = [{
                     id: rootId,
@@ -390,17 +444,30 @@ window.loadMapVault = async function () {
             // Ripristina le chat del vault (o azzera: mai ereditare quelle della mappa precedente)
             window.setTutorState(loadRes.data.tutorState || null);
 
-            if (window.renderStudySets) window.renderStudySets();
-
+            /* Un dizionario già in `mapData` (non lo scrive `save-vault`, ma può
+               arrivare da un demo o da un import) ha la precedenza; per tutto il
+               resto si ricostruisce dai chunks del markdown, che dall'11/9
+               portano anche la pagina. */
+            const _sdSalvato = loadRes.data.sourcesDict;
+            if (_sdSalvato && typeof _sdSalvato === 'object') {
+                Object.keys(_sdSalvato).forEach(k => { appState.db.sourcesDict[k] = _sdSalvato[k]; });
+            }
             appState.db.nodes.forEach(n => {
+                if (_sdSalvato) return;
+                if (appState.db.sourcesDict[n.id]) return;
                 if (n.chunks && n.chunks.length > 0) {
-                    appState.db.sourcesDict[n.id] = n.chunks.map(c => ({
+                    appState.db.sourcesDict[n.id] = n.chunks.map(c => Object.assign({}, typeof c === 'object' ? c : {}, {
                         title: c.title || "Fonte",
                         source: c.source || "Documento",
                         text: c.text || c
                     }));
                 }
             });
+            if (window.MappAIReview && window.MappAIReview.restore) {
+                await window.MappAIReview.restore(result.folderPath, loadRes.data._pipelineManifest || null, { fromCache: false });
+            } else if (loadRes.data._pipelineManifest?.review) throw new Error('Revisione non disponibile: caricamento interrotto');
+            appState._reviewRestoring = false;
+            if (window.renderStudySets) window.renderStudySets();
 
             /* LE FONTI TORNANO DAL VAULT (9/8). Senza questo, riaprendo una mappa
                `appState.sources` restava vuoto: ELABORA non aveva né testo né PDF
@@ -433,6 +500,7 @@ window.loadMapVault = async function () {
             window.showAlert("Errore Caricamento", loadRes.error);
         }
     } catch (e) {
+        if (appState._reviewRestoring) { appState._reviewRestoring = false; appState._reviewRestoreError = e.message; }
         window.showLoadingOverlay(false);
         console.error(e);
         window.showAlert("Errore", e.message);
