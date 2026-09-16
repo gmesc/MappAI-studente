@@ -108,6 +108,13 @@
         /* la fila del lettore dell'app vale per il documento che se ne va: si
            toglie, e la voce o la lettura veloce di quel documento tacciono */
         var fila = dock && dock.querySelector('.sd-fila'); if (fila) fila.remove();
+        /* un documento con un lettore suo (la sintesi con la voce naturale) parla dal
+           SUO window: togliere l'iframe non lo zittisce — la voce di sistema non è
+           appesa al DOM e sull'iPad continuava a pannello chiuso */
+        Array.prototype.forEach.call(corpo.querySelectorAll('iframe'), function (fr) {
+            try { fr.contentWindow.speechSynthesis.cancel(); } catch (e) { }
+            try { fr.contentDocument.querySelectorAll('audio, video').forEach(function (a) { a.pause(); }); } catch (e) { }
+        });
         try { if (window.MappAITTS && window.MappAITTS.invalidate) window.MappAITTS.invalidate(); } catch (e) { }
         try { if (window.MappAILetturaVeloce) window.MappAILetturaVeloce.chiudi(); } catch (e) { }
         corpo.innerHTML = ''; chiediChiusura = null;
@@ -342,15 +349,18 @@
                docente è stato tolto da qui il 7/9: era un comando di CREA) */
             var C0 = window.MappAIStudiaCore;
             var sintesi = C0 && C0.trovaSintesi ? C0.trovaSintesi(files) : null;
+            /* la sintesi ha la sua riga qui sotto («Sintesi»): nell'elenco sopra
+               comparirebbe due volte (Giacomo, 17/9) */
+            var elenco = sintesi ? files.filter(function (f) { return f !== sintesi; }) : files;
             if (!files.length) html += '<p class="sd-vuoto">' + esc(t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.')) + '</p>';
-            files.forEach(function (f) {
+            elenco.forEach(function (f) {
                 var g = (C1 && C1.inAllegati && C1.inAllegati(f)) ? { et: t('st_g_scheda', 'La scheda del docente'), icona: 'book-open' }
                     : (genere(f.name) || { et: t('st_file', 'File'), icona: 'file' });
                 html += '<button type="button" class="sd-riga" data-rel="' + esc(f.relPath) + '" data-nome="' + esc(f.name) + '">' +
                     '<i data-lucide="' + g.icona + '"></i><span class="sd-riga__t"><b>' + esc(g.et) + '</b><small>' + esc(f.name) + '</small></span></button>';
             });
             html += '<h4 class="sd-h">' + esc(t('st_stampa_mappa', 'Stampa dalla mappa')) + '</h4>' +
-                '<button type="button" class="sd-riga" data-fn="exportPDF"><i data-lucide="file-down"></i><span class="sd-riga__t"><b>' + esc(t('st_pdf_mappa', 'PDF della mappa')) + '</b></span></button>' +
+                '<button type="button" class="sd-riga" data-fn="exportPDFVista"><i data-lucide="file-down"></i><span class="sd-riga__t"><b>' + esc(t('st_pdf_mappa', 'PDF della mappa')) + '</b></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="openNodeLabelsPrintModal"><i data-lucide="scissors"></i><span class="sd-riga__t"><b>' + esc(t('st_foglio_nodi', 'Foglio dei nodi')) + '</b></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="sintesi"><i data-lucide="sparkles"></i><span class="sd-riga__t"><b>' + esc(t('st_sintesi', 'Sintesi')) + '</b><small>' + esc(sintesi ? sintesi.name : t('st_sintesi_manca', 'questa mappa non ha una sintesi')) + '</small></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="catena"><i data-lucide="git-branch"></i><span class="sd-riga__t"><b>' + esc(t('st_catena', 'Catena dei perché')) + '</b></span></button>';
