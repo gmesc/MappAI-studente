@@ -189,22 +189,3 @@ html.studente .mm-box--console .mm-nav__s { font-size: 13px; }
 html.studente .mm-box--console .mm-tabg__t { font-size: 13px; }
 html.studente .mm-box--console .mm-tab { font-size: 15px; }
 html.studente .mm-box--console .mm-tab th { font-size: 12px; }
-
-/* ── la lettura veloce (studente/lettura-veloce.js) ──────────────────────
-   Il pannello e la parola sono quelli del lettore ad alta voce; qui solo ciò
-   che è suo: la parola più grande e trascinabile, la frase, la velocità. */
-#mai-rsvp-float .lv-titolo { font-size: 14px; font-weight: 800; color: #4338ca; margin: 0 30px 8px 0; }
-#mai-rsvp-float .lv-parola {
-  font-size: 46px; min-height: 2.1em; cursor: ew-resize; touch-action: none;
-  user-select: none; -webkit-user-select: none; outline-offset: 3px;
-}
-#mai-rsvp-float .lv-frase { font-size: 15px; line-height: 1.8; color: #64748b; margin: 0 0 12px; max-height: 5.4em; overflow: auto; }
-#mai-rsvp-float .lv-frase span { cursor: pointer; border-radius: 4px; padding: 1px 2px; }
-#mai-rsvp-float .lv-frase span.is-ora { color: #0f172a; background: #fde68a; }
-#mai-rsvp-float .lv-vel { flex: 1 1 180px; min-width: 120px; height: 36px; accent-color: #4f46e5; }
-#mai-rsvp-float .lv-ppm { min-width: 86px; }
-@media (prefers-color-scheme: dark) {
-  #mai-rsvp-float .lv-titolo { color: #c7d2fe; }
-  #mai-rsvp-float .lv-frase { color: #94a3b8; }
-  #mai-rsvp-float .lv-frase span.is-ora { color: #0f172a; }
-}

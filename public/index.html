@@ -58,7 +58,7 @@
          resta visibile, tetto di larghezza). Dopo la veste: ne usa i token. -->
     <link rel="stylesheet" href="css/mappai-console-manifesto.css?v=sync-20260916">
     <!-- la veste dello studente: bersagli a 44px, il dock, la console STUDIA -->
-    <link rel="stylesheet" href="css/studente.css?v=st38">
+    <link rel="stylesheet" href="css/studente.css?v=lv1">
 
     <!-- ⚠️ BOOT DELLA VESTE, e perché sta QUI (5/8/26) ─────────────────────────
          Le classi `manifesto` e `mappai-ridotta` le mettevano i due moduli a
@@ -815,6 +815,8 @@
                     title="Zoom Testo"><i data-lucide="zoom-in"></i></button>
                 <button id="btn-modal-tts" onclick="window.MappAITTS && window.MappAITTS.playSlotNear(this)" class="tts-button"
                     title="Leggi ad alta voce" aria-label="Leggi ad alta voce" data-i18n-title="tt_read_aloud"><i data-lucide="volume-2"></i></button>
+                <button id="btn-modal-rsvp" onclick="window.MappAILetturaVeloce && window.MappAILetturaVeloce.daScheda()" class="tts-button"
+                    title="Lettura veloce" aria-label="Lettura veloce" data-i18n-title="rsvp_titolo"><i data-lucide="gauge"></i></button>
                 <span class="mai-tts-slot" data-tts-body="#source-modal-body"></span>
             </div>
 
@@ -1461,8 +1463,8 @@
     </div>
 
     <!-- ══ MAPPAI STUDENTE — gli script, nell'ordine di MappAI (l'ordine di caricamento è una dipendenza) ══ -->
-    <script src="traduzioni/it_translations.js?v=rsvp1"></script>
-    <script src="traduzioni/en_translations.js?v=rsvp1"></script>
+    <script src="traduzioni/it_translations.js?v=lv1"></script>
+    <script src="traduzioni/en_translations.js?v=lv1"></script>
     <script src="traduzioni/i18n-helper.js"></script>
     <!-- la controfigura di electronAPI dello studente: PRIMA di ogni modulo (app.js la legge al caricamento) -->
     <script src="js/studente/adapter.js?v=st35"></script>
@@ -1482,7 +1484,7 @@
     <script src="js/mappai-teach-core.js?v=st1"></script>
     <script src="js/mappai-storage-lang.js?v=sync-20260916"></script>
     <script src="js/mappai-d3-render.js?v=st1"></script>
-    <script src="js/mappai-ui-canvas.js?v=tts1"></script>
+    <script src="js/mappai-ui-canvas.js?v=lv1"></script>
     <script src="js/mappai-latex.js?v=sync-20260916"></script>
     <script src="js/mappai-timeline-core.js?v=st1"></script>
     <script src="js/mappai-timeline.js?v=st1"></script>
@@ -1499,7 +1501,7 @@
     <script src="js/mappai-branch-synthesis.js?v=sync-20260916"></script>
     <script src="js/mappai-studio-layouts.js?v=st1"></script>
     <script src="js/mappai-studio-draw.js?v=st1"></script>
-    <script src="js/mappai-studio-view.js?v=tts1"></script>
+    <script src="js/mappai-studio-view.js?v=lv1"></script>
     <script src="js/mappai-node-styling.js?v=st1"></script>
     <script src="js/mappai-mastery.js?v=st1"></script>
     <script src="js/mappai-study-bus.js?v=st1"></script>
@@ -1526,12 +1528,13 @@
     <script src="js/mappai-vault-manager.js?v=sync-20260916"></script>
     <script src="js/mappai-vault-io.js?v=sync-20260916"></script>
     <script src="js/mappai-print-dossier.js?v=sync-20260916"></script>
-    <script src="js/mappai-context-menu.js?v=st1"></script>
+    <script src="js/mappai-context-menu.js?v=lv1"></script>
     <script src="js/mappai-flashcards-sr.js?v=sync-20260916"></script>
     <script src="js/mappai-study-session.js?v=sync-20260916"></script>
     <script src="js/mappai-a11y.js?v=sync-20260916"></script>
     <script src="js/mappai-rsvp-core.js?v=rsvp1"></script>
-    <script src="js/mappai-tts-reader.js?v=rsvp2"></script>
+    <script src="js/mappai-tts-reader.js?v=lv1"></script>
+    <script src="js/mappai-lettura-veloce.js?v=lv1"></script>
     <script>
         window.toggleSidebar = function () {
             const mapView = document.getElementById('map-view');
@@ -1570,9 +1573,8 @@
     </script>
 
     <!-- i moduli dello studente: la potatura dei comandi del docente, il dock, la console STUDIA -->
-    <script src="js/studente/pota.js?v=st35"></script>
-    <script src="js/studente/lettura-veloce.js?v=rsvp2"></script>
-    <script src="js/studente/documenti.js?v=st35"></script>
+    <script src="js/studente/pota.js?v=lv1"></script>
+    <script src="js/studente/documenti.js?v=lv2"></script>
     <script src="js/studente/prova-core.js?v=st36"></script>
     <script src="js/studente/prova-pdf.js?v=st35"></script>
     <script src="js/studente/launcher-core.js?v=st36"></script>

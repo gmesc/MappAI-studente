@@ -16,7 +16,7 @@
     if (window.MappAIStudentePota) return;
 
     /* le azioni del menu contestuale che uno studente può fare */
-    var CTX_OK = ['tts', 'test_flashcard', 'test_flashcard_branch', 'status_todo', 'status_review', 'status_done', 'status_none'];
+    var CTX_OK = ['tts', 'rsvp', 'test_flashcard', 'test_flashcard_branch', 'status_todo', 'status_review', 'status_done', 'status_none'];
     var FN_OK = ['window.resetZoom', 'window.salvaLayout'];
     function potaCtx(menu) {
         Array.prototype.slice.call(menu.querySelectorAll('.ctx-item')).forEach(function (it) {

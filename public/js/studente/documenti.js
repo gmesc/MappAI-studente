@@ -157,6 +157,29 @@
                lì in coda, e la testata del pannello si nasconde. Il player del TTS resta
                sulla riga sotto — è il documento stesso a mandarcelo sotto i 790px. */
             var cmd = d.querySelector('#ap-topbar .ap-cmd');
+            /* LA LETTURA VELOCE (17/9): nella stessa fila, prima della ×. Il documento
+               si nasconde e nel pannello resta solo la parola che scorre; la sua × lo
+               riporta (mappai-lettura-veloce.js, lo stesso strumento della scheda). */
+            if (cmd && window.MappAILetturaVeloce && !d.getElementById('sd-rsvp')) {
+                var lv = d.createElement('button');
+                lv.id = 'sd-rsvp'; lv.type = 'button'; lv.className = 'ap-hdr-btn';
+                lv.setAttribute('title', t('rsvp_titolo', 'Lettura veloce'));
+                lv.setAttribute('aria-label', t('rsvp_titolo', 'Lettura veloce'));
+                /* solo l'icona: con la parola la fila si allargava e il player del
+                   documento finiva sopra «Aa x1» (misurato a 800 px). Lucide sta nella
+                   pagina, non nel documento: l'SVG si crea qui e si importa. */
+                try { lv.appendChild(d.importNode(window.lucide.createElement(window.lucide.icons.Gauge), true)); }
+                catch (e) { lv.textContent = t('rsvp_titolo', 'Lettura veloce'); }
+                if (lv.firstChild && lv.firstChild.setAttribute) {
+                    lv.firstChild.setAttribute('width', '16'); lv.firstChild.setAttribute('height', '16');
+                    lv.firstChild.style.verticalAlign = '-3px';
+                }
+                lv.addEventListener('click', function () {
+                    var nome = (titolo && titolo.textContent) || '';
+                    window.MappAILetturaVeloce.daIframe(f, nome.replace(/\.[^.]+$/, ''));
+                });
+                cmd.appendChild(lv);
+            }
             if (cmd && !d.getElementById('sd-x')) {
                 var x = d.createElement('button');
                 x.id = 'sd-x'; x.type = 'button'; x.className = 'ap-hdr-btn';
