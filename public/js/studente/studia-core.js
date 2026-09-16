@@ -9,7 +9,7 @@
  */
 (function (root, factory) {
     /* `FilesCore` arriva da fuori: è la copia di MappAI re (RIUSO regola 1) e porta la
-       regola UNICA su che cosa di un vault è dello studente (`materialeSoloDocente`). */
+       regola UNICA su che cosa di un vault è dello studente (`relVaultStudente`). */
     if (typeof module === 'object' && module.exports) module.exports = factory(require('../mappai-files-core.js'));
     else root.MappAIStudiaCore = factory(root.MappAIFilesCore);
 }(typeof self !== 'undefined' ? self : this, function (FC) {
@@ -70,21 +70,19 @@
         { id: 'altri', chiave: 'st_g_altri', testo: 'Altri materiali', tipi: null }
     ];
     function formato(nome) { var m = /\.([a-z0-9]+)$/i.exec(_s(nome)); return m ? m[1].toUpperCase() : ''; }
-    /* i file che lo studente NON vede: i .json interni, i nascosti, e i PDF che
-       restano al docente (soluzioni in coda — `materialeSoloDocente`) */
+    /* i file che lo studente vede: quelli dell'ELENCO CHIUSO che viaggia dal docente
+       (`relVaultStudente`, 16/9 — la stessa regola dello scambio), meno i .json
+       interni (i set si giocano, non si aprono) */
     function inAllegati(f) { return /^Allegati\//.test(_s(f && f.relPath)); }
     function daMostrare(f) {
-        if (!f || !f.name || f.name.charAt(0) === '.' || /\.json$/i.test(f.name)) return false;
-        /* la regola vale DENTRO «Materiale Studio»: la scheda in `Allegati/` è un PDF
-           e deve vedersi (è l'unico che il docente manda) */
-        if (inAllegati(f)) return true;
-        return !(FC && FC.materialeSoloDocente && FC.materialeSoloDocente(f.name));
+        if (!f || !f.name || /\.json$/i.test(f.name)) return false;
+        return !!(FC && FC.relVaultStudente && FC.relVaultStudente(f.relPath));
     }
-    /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta, altrimenti il PDF */
+    /* la sintesi del vault: con la voce se c'è, altrimenti quella scritta */
     function trovaSintesi(files) {
         var l = (files || []).filter(daMostrare);
-        var q = function (re, est) { return l.filter(function (f) { return re.test(f.name) && est.test(f.name); })[0] || null; };
-        return q(/^Sintesi-voce/i, /\.html?$/i) || q(/^Sintesi/i, /\.html?$/i) || q(/^Sintesi/i, /\.pdf$/i);
+        var q = function (re) { return l.filter(function (f) { return re.test(f.name) && /\.html?$/i.test(f.name); })[0] || null; };
+        return q(/^Sintesi-voce/i) || q(/^Sintesi/i);
     }
     /* le tabelle dei materiali, una per gruppo, solo i gruppi che hanno righe; la riga
        CONCLUDE (`mat:<relPath>`): la console si chiude e il file si apre accanto alla mappa */

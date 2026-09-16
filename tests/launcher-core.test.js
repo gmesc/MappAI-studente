@@ -40,7 +40,7 @@ test('su-misura: i campi di ambito e angoli, ramo solo se c\'è, split in coda, 
     assert.strictEqual(s.azioni[1].id, 'avvia');
     const senzaRami = L.schema(Object.assign({}, BASE, { sel: 'su-misura', opzioni: { rami: null, angoli: [] } }));
     ok(senzaRami, 'senza rami');
-    assert.ok(senzaRami.sezioni[0].campi.every(c => c.id !== 'ramo' && c.id !== 'angolo'), 'senza rami e senza angoli: niente tendine vuote');
+    assert.deepStrictEqual(senzaRami.sezioni[0].campi.map(c => c.id), ['amb-tutto', 'amb-ramo', 'split'], 'senza rami e senza angoli: niente tendine vuote né radio orfani');
 });
 
 test('senza materiali le viste restano, e set-mc senza set mostra il motivo', () => {

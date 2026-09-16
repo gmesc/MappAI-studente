@@ -67,6 +67,10 @@ test('materiali: per tipologia, solo i gruppi pieni, niente json, la riga conclu
     assert.ok(s.tabelle.every(x => x.righe.every(r => !/Materiale Studio\/.*\.pdf|json|DS_Store/.test(r.id))), 'nessun PDF da Materiale Studio');
     assert.strictEqual(C.trovaSintesi(files).name, 'Sintesi-voce-Clima.html', 'la voce vince sullo scritto');
     assert.strictEqual(C.trovaSintesi([{ name: 'Quiz-MC-x.pdf', relPath: 'a' }]), null);
+    /* elenco chiuso (16/9): un genere nuovo, un HTML di altri generi, un export non si vedono */
+    ['Genere-nuovo.html', 'Domande-aperte-Clima-causa.html', 'MM-Clima.svg', 'Sintesi-Clima.pdf'].forEach(n =>
+        assert.strictEqual(C.daMostrare({ name: n, relPath: 'Materiale Studio/' + n }), false, n));
+    assert.strictEqual(C.daMostrare({ name: 'Sintesi-audio-Clima.mp3', relPath: 'Materiale Studio/Sintesi-audio-Clima.mp3' }), true);
     assert.strictEqual(C.genere('Sintesi -VERDE.html').et, 'Sintesi');
     assert.ok(/Cerco/.test(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', materiali: null }).bento[1].voci[0].vuoto), 'null = non ancora letti');
 });

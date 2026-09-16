@@ -47,7 +47,9 @@
         var rami = [], angoli = [], vr = {}, va = {};
         (pool || []).forEach(function (v) {
             if (v.ramo && !vr[v.ramo]) { vr[v.ramo] = 1; rami.push(v.ramo); }
-            if (v.angle && !va[v.angle]) { va[v.angle] = 1; angoli.push(v.angle); }
+            /* `auto` non è un taglio: un foglio misto vecchio (senza l'angolo per
+               domanda) non offre la scelta degli angoli (16/9) */
+            if (v.angle && v.angle !== 'auto' && !va[v.angle]) { va[v.angle] = 1; angoli.push(v.angle); }
         });
         var ordA = SC().ANGOLI();
         angoli.sort(function (a, b) { return (ordA.indexOf(a) < 0 ? 99 : ordA.indexOf(a)) - (ordA.indexOf(b) < 0 ? 99 : ordA.indexOf(b)); });
@@ -64,6 +66,10 @@
         if (o.ambito === 'ramo' && o.ramo) p = p.filter(function (v) { return _chiave(v.ramo) === _chiave(o.ramo); });
         var dueTempi = o.angoli !== 'uno';
         if (!dueTempi && o.angolo) p = p.filter(function (v) { return v.angle === o.angolo || (v.anche || []).indexOf(o.angolo) >= 0; });
+        /* prima le domande d'avvio, poi quelle di ponte (16/9); sort stabile */
+        p = p.map(function (v, i) { return [v, i]; })
+            .sort(function (a, b) { return ((a[0].livello === 'base') ? 0 : 1) - ((b[0].livello === 'base') ? 0 : 1) || a[1] - b[1]; })
+            .map(function (x) { return x[0]; });
         return { pool: p, dueTempi: dueTempi };
     }
 
@@ -92,7 +98,9 @@
             if (!r || !SC().scritta(r)) return;
             var score = null;
             if (v.tipo === 'mc' && v.giusta >= 0) score = (r.scelta === v.giusta) ? 1 : 0;
-            /* aperte: la misura è l'AUTOVALUTAZIONE della view (3 sicuro · 2 così così ·
+            /* aperte coi CRITERI (16/9): spuntati/totali, spuntati dopo la risposta */
+            else if (SC().punteggioCriteri(v, r) != null) score = SC().punteggioCriteri(v, r);
+            /* fogli senza criteri: l'AUTOVALUTAZIONE a tre livelli (3 sicuro · 2 così così ·
                1 a caso → 1 · 0,5 · 0), come in mappai-scelta.js; senza, resta null */
             else if (r.auto === 3) score = 1;
             else if (r.auto === 2) score = 0.5;

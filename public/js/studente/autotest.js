@@ -169,6 +169,8 @@
             return {
                 pool: o.pool, cfg: cfg, stato: stato, t: window.t, verdetti: verdetti,
                 mostraAngolo: o.dueTempi, senzaAree: true,
+                /* le aperte coi criteri si autovalutano spuntandoli, DOPO la risposta (16/9) */
+                criteri: !o.mc,
                 chip: o.dueTempi ? PC().CHIP_PERCHE : [],
                 chipPrende: o.dueTempi ? 'capito' : '',
                 raggruppa: o.dueTempi ? 'domanda-per-angoli' : '',

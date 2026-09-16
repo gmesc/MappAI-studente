@@ -85,10 +85,11 @@
                   aiuto: op.rami ? '' : t('st_ramo_spento', 'non disponibile: questi fogli non dichiarano il ramo') }
             ];
             if (op.rami) campi.push({ id: 'ramo', tipo: 'scelta', etichetta: t('st_quale_ramo', 'Quale ramo'), opzioni: op.rami.map(function (r) { return { valore: r, etichetta: r }; }), valore: op.rami[0], larghezza: 'meta' });
-            campi.push({ id: 'ang-tutti', tipo: 'radio', gruppo: 'angoli', etichetta: t('st_tutti_angoli', 'Tutti gli angoli'), valore: true,
-                aiuto: t('st_tutti_angoli_aiuto', 'la sessione metacognitiva: leggi la stessa domanda in tutti i tagli, dì per ognuna «Perché:», poi rispondi a quelle verdi') });
-            /* senza angoli dichiarati (fogli vecchi) la tendina nascerebbe VUOTA — validaSchema lo rifiuta */
+            /* senza angoli dichiarati (fogli vecchi, o misti senza l'angolo per domanda) non
+               c'è niente da scegliere: niente radio orfano e niente tendina VUOTA (16/9) */
             if (op.angoli && op.angoli.length) campi.push(
+                { id: 'ang-tutti', tipo: 'radio', gruppo: 'angoli', etichetta: t('st_tutti_angoli', 'Tutti gli angoli'), valore: true,
+                  aiuto: t('st_tutti_angoli_aiuto', 'la sessione metacognitiva: leggi la stessa domanda in tutti i tagli, dì per ognuna «Perché:», poi rispondi a quelle verdi') },
                 { id: 'ang-uno', tipo: 'radio', gruppo: 'angoli', etichetta: t('st_un_angolo', 'Un angolo solo'), valore: false },
                 { id: 'angolo', tipo: 'scelta', etichetta: t('st_quale_angolo', 'Quale angolo'), opzioni: op.angoli.map(function (a) { return { valore: a.k, etichetta: a.et }; }), valore: op.angoli[0].k, larghezza: 'meta' }
             );

@@ -129,3 +129,19 @@ test('MC in split: dal set al pool, il verdetto, il report dallo stato', () => {
     assert.strictEqual(r.pct, 50);
     assert.strictEqual(r.results.perStudent[0].blankCount, 1);
 });
+
+/* 16/9 — fogli misti con l'angolo per domanda, base prima di ponte, criteri come misura */
+test('misti e criteri: `auto` non è un angolo, base prima di ponte, voci = spuntati/totali', () => {
+    const vecchio = P.poolAperte([P.foglioDaHtml('Domande-aperte-X-misto.html', { angle: 'auto', items: [{ question: 'a?' }] })]);
+    assert.deepStrictEqual(P.opzioni(vecchio).angoli, [], 'misto vecchio: nessuna scelta d\'angolo');
+    const pool = P.poolAperte([P.foglioDaHtml('Domande-aperte-X-misto.html', { angle: 'auto', items: [
+        { question: 'ponte?', angle: 'causa', livello: 'ponte', ramo: 'Atmosfera', criteria: ['uno', 'due', 'tre', 'quattro'] },
+        { question: 'base?', angle: 'esempio', livello: 'base', ramo: 'Atmosfera' }
+    ] })]);
+    assert.deepStrictEqual(P.opzioni(pool).angoli.slice().sort(), ['causa', 'esempio']);
+    assert.deepStrictEqual(P.componi(pool, { ambito: 'tutto', angoli: 'tutti' }).pool.map(v => v.testo), ['base?', 'ponte?']);
+    const st = { risposte: {}, letture: {} };
+    st.risposte[pool[0].id] = { testo: 'x', auto: 3, criteriVisti: true, spunte: [true, false, true, false] };
+    st.risposte[pool[1].id] = { testo: 'y', auto: 2 };
+    assert.deepStrictEqual(P.voci(pool, st, NODES).map(x => x.score), [0.5, 0.5], 'coi criteri vincono le spunte; senza, la scala a tre');
+});
