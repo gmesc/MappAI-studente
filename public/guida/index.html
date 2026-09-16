@@ -4,118 +4,267 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Come si usa MappAI studente</title>
-<!-- La guida per chi ha 11-12 anni: frasi corte, una cosa alla volta, i nomi
-     dei bottoni scritti come compaiono nell'app. Le fotografie arrivano dopo
-     (si fanno sull'iPad vero): il testo deve reggere da solo. -->
+<!-- La guida per chi ha 11-12 anni: frasi corte, una cosa alla volta, i nomi dei
+     bottoni scritti come compaiono nell'app. Le fotografie sono schermate VERE del
+     demo «La carta» su un iPad sdraiato: si rifanno con tools/guida/campagna.js.
+     Tutto è locale (niente font o script da internet): l'app si apre anche senza rete. -->
 <style>
-  :root { --ink: #0f172a; --viola: #4f46e5; --verde: #15803d; --grigio: #475569; --carta: #f8fafc; }
+  :root { --ink: #0f172a; --viola: #4f46e5; --verde: #15803d; --arancio: #b45309; --blu: #1d4ed8; --grigio: #475569; --carta: #f8fafc; --giallo: #f2b705; }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 24px 22px 60px; background: #fff; color: var(--ink);
-         font-family: 'Atkinson Hyperlegible', 'TestMe Sans', 'Space Mono', ui-monospace, monospace;
-         font-size: 18px; line-height: 1.7; max-width: 760px; }
+  body { margin: 0 auto; padding: 24px 22px 60px; background: #fff; color: var(--ink);
+         font-family: 'Atkinson Hyperlegible', 'TestMe Sans', 'Space Mono', 'MappAI Emoji', 'Noto Color Emoji', ui-monospace, monospace;
+         font-size: 18px; line-height: 1.7; max-width: 900px; }
   h1 { font-size: 26px; margin: 0 0 6px; color: var(--viola); }
   .sotto { color: var(--grigio); margin: 0 0 22px; font-size: 15px; }
-  h2 { font-size: 20px; margin: 30px 0 8px; padding-top: 14px; border-top: 2px solid #e2e8f0; }
+  h2 { font-size: 21px; margin: 34px 0 8px; padding-top: 16px; border-top: 2px solid #e2e8f0; }
   h2 .n { display: inline-block; width: 30px; height: 30px; border-radius: 999px; background: var(--viola); color: #fff;
           text-align: center; line-height: 30px; font-size: 15px; margin-right: 10px; }
+  h3 { font-size: 18px; margin: 20px 0 4px; }
   p { margin: 8px 0; }
   ol, ul { padding-left: 24px; margin: 8px 0; }
   li { margin: 6px 0; }
   b.tasto { display: inline-block; padding: 1px 8px; border-radius: 8px; background: #eef2ff; color: var(--viola); font-weight: 700; }
   .box { background: var(--carta); border-left: 4px solid var(--verde); border-radius: 10px; padding: 10px 14px; margin: 12px 0; }
-  .box.att { border-left-color: #b45309; }
-  nav { background: var(--carta); border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; }
-  nav a { display: block; color: var(--viola); text-decoration: none; padding: 4px 0; }
+  .box.att { border-left-color: var(--arancio); }
+  nav { background: var(--carta); border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; columns: 2; column-gap: 24px; }
+  nav a { display: block; color: var(--viola); text-decoration: none; padding: 4px 0; break-inside: avoid; }
+  figure { margin: 14px 0 6px; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid #e2e8f0;
+               box-shadow: 0 2px 10px rgba(15,23,42,.08); cursor: zoom-in; }
+  figcaption { font-size: 14px; color: var(--grigio); margin-top: 6px; }
+  /* la legenda dei numeri gialli sulle foto */
+  ol.legenda { list-style: none; padding: 0; margin: 8px 0 14px; }
+  ol.legenda li { position: relative; padding-left: 34px; margin: 6px 0; }
+  ol.legenda li::before { content: attr(data-n); position: absolute; left: 0; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--giallo);
+                          color: #111; font-weight: 700; font-size: 14px; line-height: 24px; text-align: center; }
+  .due { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .due { grid-template-columns: 1fr; } nav { columns: 1; } body { font-size: 17px; } }
+  /* ingrandire una foto: un tocco apre, un tocco chiude */
+  #zoom { position: fixed; inset: 0; background: rgba(15,23,42,.92); display: none; align-items: center; justify-content: center; padding: 12px; z-index: 10; cursor: zoom-out; }
+  #zoom.on { display: flex; }
+  #zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; }
 </style>
 </head>
 <body>
 <h1>Come si usa MappAI studente</h1>
-<p class="sotto">Una guida corta. Leggi solo il pezzo che ti serve.</p>
+<p class="sotto">Una guida con le fotografie dell'app. Leggi solo il pezzo che ti serve. Tocca una foto per ingrandirla.</p>
 
 <nav>
   <a href="#mappe">1. Le tue mappe</a>
   <a href="#mappa">2. Guardare la mappa</a>
-  <a href="#materiali">3. I materiali</a>
-  <a href="#flashcard">4. Le flashcard</a>
-  <a href="#prova">5. Fare una prova</a>
-  <a href="#accanto">6. La mappa accanto alle domande</a>
-  <a href="#prove">7. Le tue prove e il PDF per il docente</a>
-  <a href="#docente">8. Il docente: ricevere e consegnare</a>
-  <a href="#aiuto">9. Se qualcosa non va</a>
+  <a href="#menu">3. Il menu della mappa</a>
+  <a href="#materiali">4. I materiali e la sintesi</a>
+  <a href="#flashcard">5. Le flashcard</a>
+  <a href="#prova">6. Studio attivo: le prove</a>
+  <a href="#scelta">7. Un quiz a scelta multipla</a>
+  <a href="#aperte">8. Domande aperte su misura</a>
+  <a href="#prove">9. Le tue prove</a>
+  <a href="#heatmap">10. La heat map</a>
+  <a href="#docente">11. Il docente</a>
+  <a href="#aiuto">12. La Cabina e se qualcosa non va</a>
 </nav>
 
+<!-- ─────────────────────────────────────────────────────────────── -->
 <h2 id="mappe"><span class="n">1</span>Le tue mappe</h2>
-<p>Il docente ti dà una <b>cartella</b> con dentro una mappa. Devi metterla nel posto giusto:</p>
-<ol>
-  <li>Apri l'app <b>File</b> dell'iPad.</li>
-  <li>Vai in <b>Sul mio iPad</b> e poi nella cartella <b>MappAI Studente</b>.</li>
-  <li>Trascina lì la cartella della mappa.</li>
+<p>Il docente ti dà una <b>cartella</b> con dentro una mappa. Puoi riceverla in due modi:</p>
+<ul>
+  <li>in classe, con il bottone <b class="tasto">Docente</b> (vedi il capitolo 11);</li>
+  <li>a mano: apri l'app <b>File</b> dell'iPad, vai in <b>Sul mio iPad › MappAI Studente</b> e mettici la cartella.</li>
+</ul>
+<p>Quando apri MappAI studente vedi la pagina <b>Studia</b>. Tocca una mappa nella colonna a sinistra:</p>
+<figure><img src="img/01-console.webp" alt="La pagina Studia con la mappa La carta scelta"></figure>
+<ol class="legenda">
+  <li data-n="1">Le tue mappe, divise per materia. Tocca quella che vuoi studiare.</li>
+  <li data-n="2">Cinque bottoni: <b class="tasto">Mappa</b>, <b class="tasto">Flashcard</b>, <b class="tasto">Prova</b>, <b class="tasto">Sintesi</b>, <b class="tasto">Docente</b>.</li>
+  <li data-n="3"><b>La scheda del docente</b>: il documento da cui è nata la lezione. Toccalo per leggerlo.</li>
+  <li data-n="4"><b>Sintesi</b>: il riassunto della mappa, da leggere o da ascoltare.</li>
+  <li data-n="5"><b>Le tue prove</b>: le prove che hai già fatto (vedi il capitolo 9).</li>
+  <li data-n="6">Il pallino apre la <b>Cabina</b>: il carattere dell'app e questa guida.</li>
 </ol>
-<p>Quando apri MappAI studente, la mappa compare nella colonna a sinistra, sotto la sua materia. Toccala.</p>
-<div class="box">Se non compare: controlla che dentro la cartella ci sia il file <b>index.yaml</b>. Se manca, chiedi al docente di mandarti di nuovo la cartella.</div>
+<div class="box">Se una mappa non compare: controlla che dentro la cartella ci sia il file <b>index.yaml</b>. Se manca, chiedi al docente di mandarti di nuovo la cartella.</div>
 
+<!-- ─────────────────────────────────────────────────────────────── -->
 <h2 id="mappa"><span class="n">2</span>Guardare la mappa</h2>
-<p>Tocca <b class="tasto">Mappa</b>. Con due dita puoi ingrandire e spostarti. Tocca un nodo per leggere che cosa dice.</p>
-<ul>
-  <li><b>Tieni premuto</b> un nodo: si apre un menu. Puoi farlo leggere ad alta voce, o segnarlo come «Da studiare», «Ripasso» o «Imparato».</li>
-  <li>In basso trovi <b class="tasto">Albero</b> per cambiare vista e un cursore per mostrare meno livelli.</li>
-  <li>Il bottone giallo in basso a sinistra apre il menu: <b class="tasto">Materiali</b>, <b class="tasto">Studio attivo</b>, <b class="tasto">Torna a STUDIA</b>.</li>
-</ul>
+<p>Tocca <b class="tasto">Mappa</b>. La mappa si apre come un <b>albero</b>: l'argomento in alto, i rami sotto.</p>
+<figure><img src="img/02-mappa.webp" alt="La mappa La carta nella vista Albero"></figure>
+<ol class="legenda">
+  <li data-n="1">Il <b>menu della mappa</b> (capitolo 3).</li>
+  <li data-n="2">La <b>vista</b>. Dice quella che stai guardando: tocca per passare da <b>MAPPA</b> ad <b>ALBERO</b>, <b>FASCI</b> e <b>DAG</b>.</li>
+  <li data-n="3">Le <b>parole sulle frecce</b>: tocca per averle <b>INTERE</b>, <b>BREVI</b> o per toglierle (<b>NO</b>).</li>
+  <li data-n="4"><b>Mostra fino al livello</b>: trascina il pallino a sinistra per vedere meno livelli, a destra per vederli <b>tutti</b>.</li>
+</ol>
+<p>Con <b>due dita</b> ingrandisci, rimpicciolisci e sposti la mappa.</p>
 
-<h2 id="materiali"><span class="n">3</span>I materiali</h2>
-<p>Nel menu della mappa tocca <b class="tasto">Materiali</b>. Si apre un pannello di fianco con i documenti del docente: la sintesi (a volte con la voce che la legge), i PDF delle domande e dei quiz.</p>
-<p>Tocca un documento per leggerlo accanto alla mappa. In fondo alla lista puoi anche stampare la mappa, il foglio dei nodi o la catena dei perché.</p>
-
-<h2 id="flashcard"><span class="n">4</span>Le flashcard</h2>
-<p>Tocca <b class="tasto">Flashcard</b>. Leggi la domanda, <b>rispondi nella tua testa</b>, poi tocca la carta: appare la risposta. Dì all'app se la sapevi.</p>
-
-<h2 id="prova"><span class="n">5</span>Fare una prova</h2>
-<p>Tocca <b class="tasto">Prova</b>. Nella colonna a sinistra scegli che cosa fare:</p>
-<ul>
-  <li><b>Un set pronto a scelta multipla</b>: domande con tre risposte. L'app ti dice subito se è giusta.</li>
-  <li><b>Un foglio pronto di domande aperte</b>: domande a cui rispondi scrivendo.</li>
-  <li><b>Domande aperte su misura</b>: scegli tu. Tutta la mappa o un ramo solo. Tutti gli angoli o uno solo.</li>
-</ul>
-<div class="box">
-  <b>Che cosa sono gli angoli?</b> Sono modi diversi di fare la stessa domanda: la definizione, la causa, la conseguenza, un esempio, un confronto, un'eccezione, un'applicazione.
-  Con <b>tutti gli angoli</b> leggi prima la stessa domanda in tutti i modi. Per ognuna scegli un colore: <span style="color:#15803d;font-weight:700">verde</span> = ho capito cosa rispondere ·
-  <span style="color:#b45309;font-weight:700">arancione</span> = non so la risposta · <span style="color:#1d4ed8;font-weight:700">blu</span> = non ho capito la domanda.
-  Poi tocchi <b class="tasto">Comincia a rispondere</b> e rispondi solo alle verdi. Non devi rispondere a tutte.
+<h3>Leggere che cosa dice un nodo</h3>
+<p><b>Tieni premuto</b> il dito su un nodo per un attimo. Si apre un menu:</p>
+<div class="due">
+  <figure><img src="img/03-menu-nodo.webp" alt="Il menu che si apre tenendo premuto un nodo"><figcaption>Tieni premuto «Papiro»: il menu.</figcaption></figure>
+  <figure><img src="img/04-descrizione.webp" alt="La descrizione del nodo Papiro"><figcaption>Tocca «Descrizione»: il testo del nodo.</figcaption></figure>
 </div>
-<p>Alla fine tocca <b class="tasto">Consegna</b>.</p>
-
-<h2 id="accanto"><span class="n">6</span>La mappa accanto alle domande</h2>
-<p>Prima di avviare una prova puoi accendere <b>«Rispondi con la mappa accanto»</b>. Le domande stanno in un pannello e la mappa resta visibile.</p>
 <ul>
-  <li>iPad <b>sdraiato</b>: mappa a sinistra, domande a destra.</li>
-  <li>iPad <b>in piedi</b>: mappa sopra, domande sotto.</li>
-  <li>La <b>linea</b> tra i due si può trascinare col dito per fare più spazio a una parte o all'altra.</li>
+  <li><b>Descrizione</b>: il testo del nodo, con le fonti.</li>
+  <li><b>Focus: vicini diretti</b> e <b>Focus: parentela</b>: la mappa mostra solo quel nodo e quelli collegati. Per uscire tocca <b class="tasto">Chiudi il focus</b>.</li>
+  <li><b>Copia etichetta</b>: copia il nome del nodo.</li>
+</ul>
+<div class="box att">Nella vista <b>ALBERO</b> un tocco solo su un nodo non apre niente: tieni premuto.</div>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="menu"><span class="n">3</span>Il menu della mappa</h2>
+<p>Il bottone giallo in basso a sinistra apre tre comandi:</p>
+<figure><img src="img/05-azioni.webp" alt="Il menu della mappa aperto"></figure>
+<ul>
+  <li><b class="tasto">Materiali</b>: i documenti accanto alla mappa (capitolo 4).</li>
+  <li><b class="tasto">Studio attivo</b>: le prove, la heat map e i tuoi progressi (capitolo 6).</li>
+  <li><b class="tasto">Torna a STUDIA</b>: torni alla pagina delle tue mappe.</li>
+</ul>
+<p>Tocca di nuovo il bottone giallo per chiudere il menu.</p>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="materiali"><span class="n">4</span>I materiali e la sintesi</h2>
+<p>Tocca <b class="tasto">Materiali</b>. A destra si apre un pannello; la mappa resta a sinistra.</p>
+<figure><img src="img/06-materiali.webp" alt="Il pannello dei materiali accanto alla mappa"></figure>
+<ul>
+  <li>In alto ci sono i documenti del docente: la <b>Sintesi</b> e <b>La scheda del docente</b>.</li>
+  <li>Sotto, in <b>Stampa dalla mappa</b>, puoi farti tu il <b>PDF della mappa</b>, il <b>Foglio dei nodi</b> e la <b>Catena dei perché</b>.</li>
+</ul>
+<p>Tocca la <b>Sintesi</b>: la leggi accanto alla mappa.</p>
+<figure><img src="img/07-sintesi.webp" alt="La sintesi aperta accanto alla mappa"></figure>
+<ol class="legenda">
+  <li data-n="1"><b>Ascolta</b>: l'app legge la sintesi ad alta voce. Accanto ci sono i tasti per tornare indietro o andare avanti di qualche secondo.</li>
+  <li data-n="2"><b>Aa x1</b>: il testo più grande. Un tocco per 1,5 volte, un altro per 2 volte, un terzo per tornare normale.</li>
+  <li data-n="3"><b>Evidenzia</b>: mentre ascolti, la frase letta si colora e la pagina la segue.</li>
+  <li data-n="4"><b>Riga</b>: oscura la pagina tranne una striscia, per non perdere il rigo. Un tocco la fa <b>stretta</b>, poi <b>media</b>, poi <b>larga</b>, poi la spegne.</li>
+</ol>
+<p>La <b>×</b> in alto a destra chiude il pannello.</p>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="flashcard"><span class="n">5</span>Le flashcard</h2>
+<p>Nella pagina Studia tocca <b class="tasto">Flashcard</b>.</p>
+<div class="due">
+  <figure><img src="img/08-flashcard-fronte.webp" alt="Una flashcard: la domanda"><figcaption>La domanda. Rispondi nella tua testa, poi tocca la carta.</figcaption></figure>
+  <figure><img src="img/09-flashcard-retro.webp" alt="Una flashcard girata: la risposta e i tre bottoni"><figcaption>La risposta. Di' all'app come è andata.</figcaption></figure>
+</div>
+<ol>
+  <li>Leggi la domanda e <b>rispondi nella tua testa</b>.</li>
+  <li>Tocca la carta: appare la risposta.</li>
+  <li>Scegli con sincerità: <b>Non conoscevo</b>, <b>Non ricordavo</b> oppure <b>Sapevo e ricordavo</b>. Poi arriva la carta dopo.</li>
+</ol>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="prova"><span class="n">6</span>Studio attivo: le prove</h2>
+<p>Nella pagina Studia tocca <b class="tasto">Prova</b> (oppure, dalla mappa, <b>menu › Studio attivo</b>). Nella colonna a sinistra scegli che cosa fare:</p>
+<figure><img src="img/10-studio-attivo.webp" alt="La pagina Studio attivo"></figure>
+<ol class="legenda">
+  <li data-n="1"><b>Autotest</b>: <b>Un set pronto a scelta multipla</b>, <b>Un foglio pronto di domande aperte</b>, <b>Domande aperte su misura</b>.</li>
+  <li data-n="2"><b>Viste ed esercizi rapidi</b>: la <b>Heat map padronanza</b> (capitolo 10) e la <b>Mappa lavoro</b>. Un tocco le accende, un altro le spegne.</li>
+  <li data-n="3"><b>Strumenti</b>: <b>Cosa studiare ora</b> e <b>I tuoi progressi nel tempo</b>.</li>
+</ol>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="scelta"><span class="n">7</span>Un quiz a scelta multipla</h2>
+<p>Tocca <b>Un set pronto a scelta multipla</b> e scegli un set.</p>
+<figure><img src="img/11-set-mc.webp" alt="La scelta del set a scelta multipla"></figure>
+<p>Se accendi <b>«Rispondi con la mappa accanto (schermo diviso)»</b>, le domande stanno a destra e la mappa resta a sinistra, così puoi guardarla. Poi tocca <b class="tasto">Avvia</b>.</p>
+<figure><img src="img/12-mc-verdetto.webp" alt="Una domanda a scelta multipla con la risposta corretta"></figure>
+<ul>
+  <li>Tocca la risposta che scegli. L'app ti dice subito <b>Giusto</b> o <b>Sbagliato</b>, qual è la risposta <b>corretta</b> e perché.</li>
+  <li>Con <b>‹</b> e <b>›</b> passi da una domanda all'altra.</li>
+  <li>Quando hai finito tocca <b class="tasto">Consegna</b>.</li>
+</ul>
+<div class="box"><b>Lo schermo diviso</b> segue l'iPad: <b>sdraiato</b>, mappa a sinistra e domande a destra; <b>in piedi</b>, mappa sopra e domande sotto. La <b>linea</b> tra le due parti si trascina col dito.</div>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="aperte"><span class="n">8</span>Domande aperte su misura</h2>
+<p>Qui rispondi scrivendo. Tocca <b>Domande aperte su misura</b> e scegli:</p>
+<figure><img src="img/13-su-misura.webp" alt="Le scelte delle domande aperte su misura"></figure>
+<ol class="legenda">
+  <li data-n="1"><b>Tutta la mappa</b> oppure <b>Un ramo</b> solo (e quale).</li>
+  <li data-n="2"><b>Tutti gli angoli</b> oppure <b>Un angolo solo</b> (e quale).</li>
+  <li data-n="3"><b>Rispondi con la mappa accanto</b>: lo schermo diviso.</li>
+  <li data-n="4"><b class="tasto">Avvia</b>.</li>
+</ol>
+<div class="box">
+  <b>Che cosa sono gli angoli?</b> Sono modi diversi di chiedere: la <b>definizione</b>, la <b>causa</b>, la <b>conseguenza</b>, un <b>esempio</b>, un <b>confronto</b>, un'<b>eccezione</b>, un'<b>applicazione</b>.
+</div>
+
+<h3>Con «Tutti gli angoli»: prima leggi, poi scegli</h3>
+<p>Leggi le domande di un ramo in tutti i modi. Tocca una domanda: sotto <b>Perché:</b> scegli un colore.</p>
+<figure><img src="img/14-tre-colori.webp" alt="Le domande con i tre colori"></figure>
+<ul>
+  <li><span style="color:var(--verde);font-weight:700">verde</span> = <b>ho capito cosa rispondere</b>. La domanda diventa tua (compare la spunta).</li>
+  <li><span style="color:var(--arancio);font-weight:700">arancione</span> = <b>non so la risposta</b>.</li>
+  <li><span style="color:var(--blu);font-weight:700">blu</span> = <b>non ho capito la domanda</b>.</li>
+  <li>Se vuoi, scrivi il perché con parole tue.</li>
+</ul>
+<p>Non devi rispondere a tutte. Quando sei pronto tocca <b class="tasto">Comincia a rispondere</b>.</p>
+
+<h3>Rispondere</h3>
+<figure><img src="img/15-rispondi.webp" alt="La risposta scritta a una domanda aperta"></figure>
+<ul>
+  <li>Scrivi la risposta nella casella.</li>
+  <li>Poi di' quanto ti senti sicuro: <b>sicuro</b>, <b>così così</b> o <b>ho tirato a indovinare</b>.</li>
+  <li>Se il docente ha scritto i <b>criteri</b>, al loro posto c'è il bottone <b class="tasto">Ho risposto: controlla coi criteri</b>. Dopo averlo toccato la risposta non si cambia più: spunta i criteri che hai davvero scritto.</li>
+  <li>Alla fine tocca <b class="tasto">Consegna</b>.</li>
+</ul>
+<figure><img src="img/16-consegnato.webp" alt="Il messaggio dopo la consegna"><figcaption>Dopo la consegna: «Foglio delle risposte salvato».</figcaption></figure>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="prove"><span class="n">9</span>Le tue prove</h2>
+<p>Ogni prova consegnata compare nella pagina Studia, nella tabella <b>Le tue prove</b>.</p>
+<figure><img src="img/17-le-tue-prove.webp" alt="La tabella Le tue prove con una prova"></figure>
+<ol class="legenda">
+  <li data-n="1"><b>Consegna al docente</b> (l'aeroplanino): manda la prova al computer del docente (capitolo 11).</li>
+  <li data-n="2"><b>Apri nei File</b> (la cartella): da lì puoi mandarla con Mail o AirDrop, o salvarla.</li>
+</ol>
+<ul>
+  <li>Per le <b>domande aperte</b> l'app scrive un <b>PDF con le tue risposte</b>.</li>
+  <li>Per i <b>quiz a scelta multipla</b> scrive un <b>report</b> con le risposte giuste e sbagliate.</li>
+  <li>Nell'app File li trovi in <b>MappAI Studente › la tua mappa › Studio Attivo › Prove</b>.</li>
 </ul>
 
-<h2 id="prove"><span class="n">7</span>Le tue prove e il PDF per il docente</h2>
-<p>Quando consegni una prova di domande aperte, l'app scrive un <b>PDF con le tue risposte</b>. Lo trovi in due posti:</p>
-<ul>
-  <li>Nella pagina della mappa, nella tabella <b>Le tue prove</b>: tocca l'icona della cartella per mandarlo al docente (Mail, AirDrop, Salva su File).</li>
-  <li>Nell'app File: <b>MappAI Studente › la tua mappa › Studio Attivo › Prove</b>.</li>
-</ul>
-<p>Per i quiz a scelta multipla l'app salva un <b>report</b> con le risposte giuste e sbagliate.</p>
-<p>Le prove fatte si vedono anche in <b class="tasto">Studio attivo</b>: la <b>heat map</b> colora i rami che sai meglio, <b>Cosa studiare ora</b> ti dice da dove ripartire, <b>I tuoi progressi</b> mostra come vai nel tempo.</p>
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="heatmap"><span class="n">10</span>La heat map</h2>
+<p>In <b>Studio attivo</b> tocca <b>Heat map padronanza</b>: la scritta diventa «Vista ATTIVA». Apri la mappa: in basso a sinistra compare la legenda <b>Padronanza</b>.</p>
+<figure><img src="img/18-heatmap.webp" alt="La mappa con la legenda della heat map"></figure>
+<p>I colori dicono quanto sai ogni parte della mappa: <b>Fluente</b>, <b>Acquisito</b>, <b>In corso</b>, <b>Da studiare</b>. Si riempiono man mano che fai le prove. Per spegnerla tocca di nuovo <b>Heat map padronanza</b>.</p>
 
-<h2 id="docente"><span class="n">8</span>Il docente: ricevere e consegnare</h2>
-<p>Nella pagina della mappa c'è il bottone <b class="tasto">Docente</b>. Serve quando sei in classe, sulla stessa rete Wi-Fi del computer del docente.</p>
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="docente"><span class="n">11</span>Il docente: ricevere e consegnare</h2>
+<p>Nella pagina Studia tocca <b class="tasto">Docente</b>. Serve in classe, quando sei sulla <b>stessa rete Wi-Fi</b> del computer del docente.</p>
+<figure><img src="img/20-docente.webp" alt="La finestra Docente"></figure>
 <ul>
-  <li><b>La prima volta</b> ti chiede il tuo <b>numero personale</b> (quello del registro) e la <b>classe</b>, per esempio 2B. Li scrivi una volta sola: così il docente trova sempre i tuoi file nella tua cartella.</li>
-  <li><b>Ricevere una mappa</b>: il docente mostra un codice QR sullo schermo. Tocca <b class="tasto">Inquadra il QR del docente</b> e punta la fotocamera sul codice. Se la fotocamera non va, tocca <b class="tasto">Scrivi l'indirizzo</b> e copia quello scritto sotto il QR. La mappa arriva nella colonna a sinistra.</li>
-  <li><b>Consegnare una prova</b>: nella tabella <b>Le tue prove</b> tocca l'icona dell'aeroplanino, oppure apri <b class="tasto">Docente</b> e scegli la prova. Parte il PDF delle risposte. Puoi aggiungere il report e i tuoi record di studio con le due spunte.</li>
+  <li><b>Chi sei</b>: la prima volta scrivi il tuo <b>numero personale</b> (quello del registro) e la <b>classe</b>, per esempio 2B. Poi tocca <b class="tasto">Salva</b>. Lo fai una volta sola: così il docente trova sempre i tuoi file.</li>
+  <li><b>Ricevi dal docente</b>: il docente mostra un codice QR. Tocca <b class="tasto">Inquadra il QR del docente</b> e punta la fotocamera. Se la fotocamera non va, tocca <b class="tasto">Scrivi l'indirizzo</b> e copia quello scritto sotto il QR. La mappa arriva nella pagina Studia.</li>
+  <li><b>Consegna al docente</b>: tocca la prova da consegnare. Con le spunte puoi aggiungere anche il report e i tuoi record di studio. Poi tocca <b class="tasto">Consegna</b>.</li>
 </ul>
-<div class="box">Se l'app dice «Non raggiungo il computer del docente», controlla di essere sul Wi-Fi della classe. Se dice «Il QR è scaduto», chiedi al docente di mostrarlo di nuovo.</div>
+<figure><img src="img/21-chi-sei.webp" alt="La finestra Chi sei con numero personale e classe"><figcaption>«Chi sei»: numero personale e classe.</figcaption></figure>
+<div class="box att">Se l'app dice che non raggiunge il computer del docente, controlla di essere sul Wi-Fi della classe. Se il QR è scaduto, chiedi al docente di mostrarlo di nuovo.</div>
 
-<h2 id="aiuto"><span class="n">9</span>Se qualcosa non va</h2>
+<!-- ─────────────────────────────────────────────────────────────── -->
+<h2 id="aiuto"><span class="n">12</span>La Cabina e se qualcosa non va</h2>
+<p>Il <b>pallino</b> in alto a sinistra della pagina Studia apre la <b>Cabina</b>.</p>
+<figure><img src="img/22-cabina.webp" alt="La Cabina con il carattere e la guida"></figure>
 <ul>
-  <li><b>Leggere è faticoso?</b> Apri la Cabina (il pallino in alto a sinistra) e cambia carattere: TM Sans o Atkinson sono fatti per leggere meglio.</li>
+  <li><b>Carattere</b>: se leggere ti stanca, scegli <b>TM Sans</b> o <b>Atkinson</b> e tocca <b class="tasto">Applica</b>.</li>
+  <li><b>Aiuto</b>: <b>Come si usa MappAI studente</b> apre questa guida.</li>
+</ul>
+<ul>
   <li><b>«Prova» dice che non ci sono fogli?</b> La cartella del docente non ha le domande aperte. Chiedigli di salvarla di nuovo con MappAI.</li>
   <li><b>Vuoi tornare indietro?</b> In alto ci sono le briciole: <b>Studia › materia › mappa</b>. Tocca dove vuoi andare.</li>
+  <li><b>Toccando un nodo non succede niente?</b> Tieni premuto (capitolo 2).</li>
 </ul>
-<div class="box att">L'app non manda niente su internet. Le tue risposte restano nella cartella della mappa, sul tuo iPad.</div>
+<div class="box">L'app non manda niente su internet. Le tue risposte restano nella cartella della mappa, sul tuo iPad, finché non le consegni tu.</div>
+
+<div id="zoom" role="dialog" aria-label="Foto ingrandita"><img alt=""></div>
+<script>
+  (function () {
+    var z = document.getElementById('zoom'), zi = z.querySelector('img');
+    document.querySelectorAll('figure img').forEach(function (im) {
+      im.addEventListener('click', function () { zi.src = im.src; zi.alt = im.alt; z.classList.add('on'); });
+    });
+    z.addEventListener('click', function () { z.classList.remove('on'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') z.classList.remove('on'); });
+  })();
+</script>
 </body>
 </html>

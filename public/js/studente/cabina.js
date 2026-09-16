@@ -61,7 +61,7 @@
             suApertura: function (box) {
                 host = box.querySelector('[data-sez="g"] .mm-sez__c'); if (!host) return;
                 host.style.height = '74vh'; host.style.padding = '0';
-                host.innerHTML = '<iframe src="guida/index.html" title="' + esc(t('cb_guida', 'Come si usa MappAI studente')) + '" style="width:100%;height:100%;border:0;display:block;background:#fff"></iframe>';
+                host.innerHTML = '<iframe src="guida/index.html?v=g2" title="' + esc(t('cb_guida', 'Come si usa MappAI studente')) + '" style="width:100%;height:100%;border:0;display:block;background:#fff"></iframe>';
             }
         });
     }
