@@ -813,6 +813,8 @@
                 <div class="w-px h-6 bg-slate-200 mx-1"></div>
                 <button id="btn-text-zoom-modal" onclick="window.cycleTextZoom()" class="tts-button"
                     title="Zoom Testo"><i data-lucide="zoom-in"></i></button>
+                <button id="btn-modal-tts" onclick="window.MappAITTS && window.MappAITTS.playSlotNear(this)" class="tts-button"
+                    title="Leggi ad alta voce" aria-label="Leggi ad alta voce" data-i18n-title="tt_read_aloud"><i data-lucide="volume-2"></i></button>
                 <span class="mai-tts-slot" data-tts-body="#source-modal-body"></span>
             </div>
 
@@ -1459,8 +1461,8 @@
     </div>
 
     <!-- ══ MAPPAI STUDENTE — gli script, nell'ordine di MappAI (l'ordine di caricamento è una dipendenza) ══ -->
-    <script src="traduzioni/it_translations.js?v=sync-20260916"></script>
-    <script src="traduzioni/en_translations.js?v=sync-20260916b"></script>
+    <script src="traduzioni/it_translations.js?v=tts1"></script>
+    <script src="traduzioni/en_translations.js?v=tts1"></script>
     <script src="traduzioni/i18n-helper.js"></script>
     <!-- la controfigura di electronAPI dello studente: PRIMA di ogni modulo (app.js la legge al caricamento) -->
     <script src="js/studente/adapter.js?v=st35"></script>
@@ -1480,7 +1482,7 @@
     <script src="js/mappai-teach-core.js?v=st1"></script>
     <script src="js/mappai-storage-lang.js?v=sync-20260916"></script>
     <script src="js/mappai-d3-render.js?v=st1"></script>
-    <script src="js/mappai-ui-canvas.js?v=sync-20260916"></script>
+    <script src="js/mappai-ui-canvas.js?v=tts1"></script>
     <script src="js/mappai-latex.js?v=sync-20260916"></script>
     <script src="js/mappai-timeline-core.js?v=st1"></script>
     <script src="js/mappai-timeline.js?v=st1"></script>
@@ -1528,7 +1530,7 @@
     <script src="js/mappai-flashcards-sr.js?v=sync-20260916"></script>
     <script src="js/mappai-study-session.js?v=sync-20260916"></script>
     <script src="js/mappai-a11y.js?v=sync-20260916"></script>
-    <script src="js/mappai-tts-reader.js?v=sync-20260916"></script>
+    <script src="js/mappai-tts-reader.js?v=tts1"></script>
     <script>
         window.toggleSidebar = function () {
             const mapView = document.getElementById('map-view');
