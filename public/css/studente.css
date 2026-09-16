@@ -135,7 +135,7 @@ html.studente .mn-bento-area .mn-cmd { min-height: 112px; gap: 6px; padding: 10p
 html.studente .mn-bento-area .mn-cmd > svg { width: 38px; height: 38px; opacity: 1 !important; transition: none; }
 html.studente .mn-bento-area .mn-cmd > span {
   position: static; opacity: 1 !important; transform: none; transition: none;
-  font-size: 13px !important; line-height: 1.15; white-space: normal;
+  font-size: 15px !important; line-height: 1.15; white-space: normal;
 }
 html.studente .mn-bento-area .mn-card[data-mod="mappa-azioni"] { min-height: 0; }
 
@@ -170,3 +170,41 @@ html.studente #studente-dock.sd--senza-testa .sd-testa { display: none; }
    comandi del documento che porta dentro comincerebbe sotto l'orologio. */
 html.studente #studente-dock.sd--destra { padding-top: env(safe-area-inset-top, 0px); }
 html.studente #studente-dock.sd--destra .sd-man { top: env(safe-area-inset-top, 0px); }
+
+/* ── la console più leggibile sull'iPad (17/9) ───────────────────────────
+   I corpi del motore dei modali sono pensati per un monitor a 60 cm; l'iPad
+   si tiene in mano. Solo nella console (i token valgono dentro la scatola):
+   gli altri modali restano come sono. La colonna segue lo schermo: 272 px
+   in piedi, fino a 360 sdraiato. */
+html.studente .mm-box--console {
+  --mm-console-side: clamp(272px, 30vw, 360px);
+  --mm-btn-fs: 15px;
+  --mm-icona: 22px;
+}
+html.studente .mm-box--console > .mm-head .mm-subtitle { font-size: 14px; }
+html.studente .mm-box--console .mm-nav__g,
+html.studente .mm-box--console .mm-nav__g--tog,
+html.studente .mm-box--console .mm-nav__gn { font-size: 12px; }
+html.studente .mm-box--console .mm-nav__s { font-size: 13px; }
+html.studente .mm-box--console .mm-tabg__t { font-size: 13px; }
+html.studente .mm-box--console .mm-tab { font-size: 15px; }
+html.studente .mm-box--console .mm-tab th { font-size: 12px; }
+
+/* ── la lettura veloce (studente/lettura-veloce.js) ──────────────────────
+   Il pannello e la parola sono quelli del lettore ad alta voce; qui solo ciò
+   che è suo: la parola più grande e trascinabile, la frase, la velocità. */
+#mai-rsvp-float .lv-titolo { font-size: 14px; font-weight: 800; color: #4338ca; margin: 0 30px 8px 0; }
+#mai-rsvp-float .lv-parola {
+  font-size: 46px; min-height: 2.1em; cursor: ew-resize; touch-action: none;
+  user-select: none; -webkit-user-select: none; outline-offset: 3px;
+}
+#mai-rsvp-float .lv-frase { font-size: 15px; line-height: 1.8; color: #64748b; margin: 0 0 12px; max-height: 5.4em; overflow: auto; }
+#mai-rsvp-float .lv-frase span { cursor: pointer; border-radius: 4px; padding: 1px 2px; }
+#mai-rsvp-float .lv-frase span.is-ora { color: #0f172a; background: #fde68a; }
+#mai-rsvp-float .lv-vel { flex: 1 1 180px; min-width: 120px; height: 36px; accent-color: #4f46e5; }
+#mai-rsvp-float .lv-ppm { min-width: 86px; }
+@media (prefers-color-scheme: dark) {
+  #mai-rsvp-float .lv-titolo { color: #c7d2fe; }
+  #mai-rsvp-float .lv-frase { color: #94a3b8; }
+  #mai-rsvp-float .lv-frase span.is-ora { color: #0f172a; }
+}
