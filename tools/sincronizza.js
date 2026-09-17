@@ -64,7 +64,7 @@ const FILES = [
   'js/mappai-vault-manager.js', 'js/mappai-vault-io.js',
   'js/mappai-print-dossier.js', 'js/mappai-context-menu.js',
   'js/mappai-flashcards-sr.js', 'js/mappai-study-session.js',
-  'js/mappai-a11y.js', 'js/mappai-rsvp-core.js', 'js/mappai-tts-reader.js', 'js/mappai-lettura-veloce.js'
+  'js/mappai-a11y.js', 'js/mappai-rsvp-core.js', 'js/mappai-pronuncia-core.js', 'js/mappai-tts-reader.js', 'js/mappai-lettura-veloce.js'
 ];
 /* cartelle copiate per intero (caratteri) */
 const CARTELLE = ['fonts', 'js/vendor/katex-fonts'];
