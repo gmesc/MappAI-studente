@@ -221,3 +221,8 @@ html.studente .mm-box--console .mm-tab th { font-size: 12px; }
    Pezzi e veste sono quelli di `MappAITTS.fila` (mappai-tts-reader.js), gli stessi
    della scheda del nodo e del pannello sulla mappa: qui solo il posto nella testata. */
 #studente-dock .sd-fila { display: flex; flex: 1 1 auto; min-width: 0; }
+
+/* «Ricevi dal docente» al centro della console senza mappa scelta (17/9) */
+html.studente .mm-console__area:has(> .mn-bento-area [data-mod="ricevi"]) { display: flex; flex-direction: column; justify-content: center; }
+html.studente .mn-card[data-mod="ricevi"] { max-width: 420px; width: 100%; margin: 0 auto; }
+html.studente .mn-card[data-mod="ricevi"] .mn-cmd { font-size: 18px; }

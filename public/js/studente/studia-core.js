@@ -154,10 +154,17 @@
                 { id: 'apri-cartella', etichetta: t('st_apri_cartella', 'Apri una cartella'), icona: 'folder-open', chiude: false }
             ]
         };
-        /* «Ricevi dal docente» sempre in fondo alla console (Giacomo, 17/9): il bottone
-           «Docente» sta nel bento di una mappa, e senza mappe scelte — il primo giorno —
-           non c'era nessuna strada per il QR */
-        if (o.scambio !== false) s.azioni.push({ id: 'docente', etichetta: t('st_ricevi', 'Ricevi dal docente'), icona: 'qr-code', chiude: false });
+        /* senza una mappa scelta, al centro della console un solo grande «Ricevi dal
+           docente» (Giacomo, 17/9): è il primo gesto dell'allievo, e in fondo non si vedeva */
+        if (!prog && o.scambio !== false) {
+            s.bento = [{
+                id: 'ricevi', nuda: true, span: 4, altezza: 220,
+                stile: { bg: 'transparent', testo: '#404040', bordoPx: 0 },
+                bottoni: { bg: '#f1f4f8', testo: '#404040', hoverBg: '#41e6aa', hoverTesto: '#0b0b0b' },
+                layout: { colonneVoci: 1 },
+                voci: [{ id: 'docente', et: t('st_ricevi', 'Ricevi dal docente'), forma: 'azione', icona: 'qr-code', chiude: false, aiuto: t('st_tip_ricevi', 'Inquadra il QR del docente: la mappa arriva qui.') }]
+            }];
+        }
         if (o.ipad) s.nota = t('st_nota_ipad', 'Le mappe si mettono in File › Sul mio iPad › MappAI Studente: compaiono qui da sole.');
         if (prog) {
             /* l'area a BENTO, identica a quella di una mappa in INSEGNA (`_consBentoMappa`

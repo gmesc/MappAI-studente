@@ -13,6 +13,13 @@ test('nomePdfMappa: giorno col trattino, primo numero libero da 00', () => {
     assert.strictEqual(C.nomePdfMappa('A/B', d, []), 'mappa-A-B-07-09-2026-00.pdf');
 });
 
+test('schema senza mappa scelta: al centro «Ricevi dal docente»', () => {
+    const s = C.schema({ vaults: VAULTS, ipad: true });
+    assert.deepStrictEqual(Core.validaSchema(s).errori, []);
+    assert.deepStrictEqual(s.bento[0].voci.map(v => v.id), ['docente']);
+    assert.ok(!C.schema({ vaults: VAULTS, ipad: true, scambio: false }).bento);
+});
+
 const VAULTS = [
     { folderName: 'Elettricità - MM', fullPath: 'Documents/4R/Scienze/Elettricità - MM', classDir: '4R', discDir: 'Scienze', rootNodeLabel: 'Elettricità', classeDichiarata: '4R', materiaDichiarata: 'Scienze', lastUpdated: '2026-09-04T14:16:09Z' },
     { folderName: 'Clima', fullPath: 'Documents/Clima', rootNodeLabel: 'Il Clima', classeDichiarata: '', materiaDichiarata: 'Geografia', lastUpdated: '2026-08-01' },
@@ -51,8 +58,7 @@ test('schema: sull\'iPad niente «Apri una cartella», ma la nota; le celle Invi
     const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', ipad: true, sessioni: [{ id: 'p1', nome: 'x', tipo: 'Domande aperte', data: '2026-09-06', pdf: 'risposte.pdf' }] });
     const e = Core.validaSchema(s);
     assert.deepStrictEqual(e.errori, [], JSON.stringify(e.errori));
-    assert.deepStrictEqual(s.azioni.map(a => a.id), ['docente'], 'sull\'iPad resta solo «Ricevi dal docente», anche senza una mappa scelta');
-    assert.strictEqual(C.schema({ vaults: VAULTS, ipad: true, scambio: false }).azioni.length, 0);
+    assert.strictEqual(s.azioni.length, 0);
     assert.ok(/File/.test(s.nota));
     assert.deepStrictEqual(s.tabelle.filter(x => x.id === 'sessioni')[0].righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['invia', 'cartella']);
 });
