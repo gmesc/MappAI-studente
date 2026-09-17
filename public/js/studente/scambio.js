@@ -75,9 +75,17 @@
     /* ── RICEVI ────────────────────────────────────────────────────────────── */
     function inquadra() {
         var p = FS().plugin('CapacitorBarcodeScanner');
-        return p.scanBarcode({ hint: 0 /* QR_CODE */, scanInstructions: t('sc_scan_hint', 'Inquadra il QR sullo schermo del docente'), cameraDirection: 1 })
+        /* ⚠️ Il plugin nativo PRETENDE tutti i campi (scanButton, scanText, scanOrientation):
+           il wrapper JS del pacchetto li riempie, ma qui si chiama il nativo diretto — senza,
+           rifiutava con «Scanning parameters are invalid» e si finiva nel modale a mano
+           (iPad, 17/9). Un errore vero ora si dice; l'annullo (codice …0006) resta muto. */
+        return p.scanBarcode({ hint: 0 /* QR_CODE */, scanInstructions: t('sc_scan_hint', 'Inquadra il QR sullo schermo del docente'),
+            scanButton: false, scanText: ' ', cameraDirection: 1 /* BACK */, scanOrientation: 3 /* ADAPTIVE */ })
             .then(function (r) { return r && r.ScanResult ? String(r.ScanResult) : ''; })
-            .catch(function () { return ''; });
+            .catch(function (e) {
+                if (!/0006/.test(String(e && e.code))) toast(t('sc_scan_ko', 'La fotocamera non si è avviata:') + ' ' + (e && e.message || e), 'error');
+                return '';
+            });
     }
     function scrivi(valore) {
         return MM().open(SC().schemaIndirizzo({ t: window.t, valore: valore || '' })).then(function (r) {
