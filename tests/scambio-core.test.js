@@ -63,11 +63,11 @@ test('erroreTesto: 403 QR scaduto, 404 mappa, 413 grande, 400 identità, altro r
 test('schemi: Docente (con e senza camera, con e senza prove), Chi sei, Indirizzo, Invia passano validaSchema', () => {
     const id = FC.identitaStudente('4517', '1a');
     const d1 = ok(S.schemaDocente({ identita: id, camera: true, prove: [{ id: 'p1', nome: 'Domande · Clima · 00', tipo: 'Domande aperte', pdf: 'risposte.pdf', data: '06/09/2026' }], vault: 'Il Clima' }), 'docente');
-    assert.deepStrictEqual(d1.sezioni[1].voci.map(v => v.id), ['inquadra', 'scrivi']);
+    assert.deepStrictEqual(d1.sezioni[0].voci.map(v => v.id), ['inquadra', 'scrivi'], 'ricevere viene per primo');
     assert.strictEqual(d1.sezioni[2].voci[0].id, 'invia:p1');
-    assert.ok(/1A/.test(d1.sezioni[0].voci[0].etichetta) && /4517/.test(d1.sezioni[0].voci[0].etichetta));
+    assert.ok(/1A/.test(d1.sezioni[1].voci[0].etichetta) && /4517/.test(d1.sezioni[1].voci[0].etichetta));
     const d2 = ok(S.schemaDocente({ identita: null, camera: false, prove: [] }), 'docente senza');
-    assert.deepStrictEqual(d2.sezioni[1].voci.map(v => v.id), ['scrivi'], 'senza camera resta l\'indirizzo');
+    assert.deepStrictEqual(d2.sezioni[0].voci.map(v => v.id), ['scrivi'], 'senza camera resta l\'indirizzo');
     assert.ok(d2.sezioni[2].testo, 'senza prove lo dice');
     ok(S.schemaIdentita({ identita: id }), 'chi sei');
     ok(S.schemaIndirizzo({}), 'indirizzo');

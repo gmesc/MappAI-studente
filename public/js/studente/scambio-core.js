@@ -95,19 +95,20 @@
         var t = o.t || function (k, f) { return f; };
         var id = o.identita;
         var riceve = [];
-        if (o.camera) riceve.push({ id: 'inquadra', etichetta: t('sc_inquadra', 'Inquadra il QR del docente'), sotto: t('sc_inquadra_sotto', 'la fotocamera legge il codice sullo schermo del computer'), icona: 'qr-code' });
-        riceve.push({ id: 'scrivi', etichetta: t('sc_scrivi', 'Scrivi l\'indirizzo'), sotto: t('sc_scrivi_sotto', 'quello sotto il QR, o «ip:porta codice»'), icona: 'keyboard' });
+        /* i testi per chi ha 11-12 anni (Giacomo, 17/9): che cosa fare, in parole di tutti i giorni */
+        if (o.camera) riceve.push({ id: 'inquadra', etichetta: t('sc_inquadra', 'Inquadra il QR'), sotto: t('sc_inquadra_sotto', 'Punta la fotocamera sul quadratino che il docente ti mostra'), icona: 'camera' });
+        riceve.push({ id: 'scrivi', etichetta: o.camera ? t('sc_scrivi_alt', 'La fotocamera non va? Scrivi il codice') : t('sc_scrivi', 'Scrivi il codice'), sotto: t('sc_scrivi_sotto', 'Copia le lettere scritte sotto il QR'), icona: 'keyboard' });
         var invia = (o.prove || []).filter(function (p) { return p.pdf || p.html; }).map(function (p) {
             return { id: 'invia:' + p.id, etichetta: p.nome || p.id, sotto: (p.tipo || '') + (p.data ? ' · ' + p.data : ''), icona: 'send' };
         });
         var sez = [
-            { id: 'chi', titolo: t('sc_chi_t', 'Chi sei'), voci: [{ id: 'identita', etichetta: id ? (t('sc_classe', 'Classe') + ' ' + id.classe + ' · ' + t('sc_numero', 'n.') + ' ' + id.numero) : t('sc_identita_manca', 'Numero personale e classe'), sotto: id ? t('sc_identita_cambia', 'tocca per cambiare') : t('sc_identita_sotto', 'servono per consegnare: il docente ti ritrova sempre nella stessa cartella'), icona: 'user' }] },
-            { id: 'ricevi', titolo: t('sc_ricevi_t', 'Ricevi dal docente'), voci: riceve }
+            { id: 'sc-ricevi', titolo: t('sc_ricevi_t', 'Ricevi una mappa'), voci: riceve },
+            { id: 'sc-chi', titolo: t('sc_chi_t', 'Chi sei'), voci: [{ id: 'identita', etichetta: id ? (t('sc_classe', 'Classe') + ' ' + id.classe + ' · ' + t('sc_numero', 'numero') + ' ' + id.numero) : t('sc_identita_manca', 'Scrivi il tuo numero e la classe'), sotto: id ? t('sc_identita_cambia', 'Tocca qui se devi cambiarli') : t('sc_identita_sotto', 'Servono solo per consegnare le prove'), icona: 'user' }] }
         ];
-        if (invia.length) sez.push({ id: 'invia', titolo: t('sc_invia_t', 'Consegna al docente'), voci: invia });
-        else sez.push({ id: 'invia', titolo: t('sc_invia_t', 'Consegna al docente'), testo: t('sc_invia_vuoto', 'Nessuna prova da consegnare: fai una prova, poi torna qui.') });
+        if (invia.length) sez.push({ id: 'sc-invia', titolo: t('sc_invia_t', 'Consegna una prova'), voci: invia });
+        else sez.push({ id: 'sc-invia', titolo: t('sc_invia_t', 'Consegna una prova'), testo: t('sc_invia_vuoto', 'Non hai ancora prove da consegnare. Fai una prova, poi torna qui.') });
         return {
-            id: 'scambio', titolo: t('sc_titolo', 'Docente'), sottotitolo: o.vault ? o.vault : t('sc_sub', 'Ricevere la mappa, consegnare le prove'),
+            id: 'scambio', titolo: t('sc_titolo', 'Il tuo docente'), sottotitolo: t('sc_sub', 'Ricevi le mappe e consegna le prove'),
             icona: 'qr-code', taglia: 'm', veloChiude: true,
             sezioni: sez,
             azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'quieto' }]
@@ -118,11 +119,11 @@
         var t = o.t || function (k, f) { return f; };
         var id = o.identita || {};
         return {
-            id: 'identita', titolo: t('sc_chi_t', 'Chi sei'), sottotitolo: t('sc_chi_sub', 'Il docente ti ritrova con questi due dati'),
+            id: 'identita', titolo: t('sc_chi_t', 'Chi sei'), sottotitolo: t('sc_chi_sub', 'Così il docente sa di chi è la prova'),
             icona: 'user', taglia: 's', invio: true,
-            sezioni: [{ id: 'c', campi: [
-                { id: 'numero', tipo: 'testo', etichetta: t('sc_numero_et', 'Numero personale'), segnaposto: '4517', valore: id.numero || '', aiuto: t('sc_numero_aiuto', 'Quello del registro scolastico: solo cifre.') },
-                { id: 'classe', tipo: 'testo', etichetta: t('sc_classe_et', 'Classe'), segnaposto: '1A', valore: id.classe || '', aiuto: t('sc_classe_aiuto', 'Una cifra da 1 a 4 e una lettera, per esempio 2B.') }
+            sezioni: [{ id: 'sc-campi', campi: [
+                { id: 'numero', tipo: 'testo', etichetta: t('sc_numero_et', 'Il tuo numero'), segnaposto: '4517', valore: id.numero || '', aiuto: t('sc_numero_aiuto', 'Te lo dà il docente. Solo numeri.') },
+                { id: 'classe', tipo: 'testo', etichetta: t('sc_classe_et', 'La tua classe'), segnaposto: '1A', valore: id.classe || '', aiuto: t('sc_classe_aiuto', 'Un numero e una lettera, per esempio 1A.') }
             ] }],
             azioni: [
                 { id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' },
@@ -134,14 +135,14 @@
         o = o || {};
         var t = o.t || function (k, f) { return f; };
         return {
-            id: 'indirizzo', titolo: t('sc_scrivi', 'Scrivi l\'indirizzo'), sottotitolo: t('sc_scrivi_sub', 'È scritto sotto il QR, sullo schermo del docente'),
+            id: 'indirizzo', titolo: t('sc_scrivi', 'Scrivi il codice'), sottotitolo: t('sc_scrivi_sub', 'Lo trovi scritto sotto il QR, sullo schermo del docente'),
             icona: 'keyboard', taglia: 's', invio: true,
-            sezioni: [{ id: 'c', campi: [
-                { id: 'indirizzo', tipo: 'testo', etichetta: t('sc_indirizzo_et', 'Indirizzo'), segnaposto: 'http://192.168.1.23:8768/…?s=abc123', valore: o.valore || '' }
+            sezioni: [{ id: 'sc-campi', campi: [
+                { id: 'indirizzo', tipo: 'testo', etichetta: t('sc_indirizzo_et', 'Codice'), segnaposto: 'http://192.168.1.23:8768/…?s=abc123', valore: o.valore || '' }
             ] }],
             azioni: [
                 { id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' },
-                { id: 'ok', etichetta: t('sc_ricevi', 'Ricevi'), ruolo: 'primario' }
+                { id: 'ok', etichetta: t('sc_ricevi', 'Ricevi la mappa'), ruolo: 'primario' }
             ]
         };
     }
@@ -153,8 +154,8 @@
         var campi = [];
         if (p.html && p.html !== 'risposte.html') campi.push({ id: 'report', tipo: 'spunta', etichetta: t('sc_con_report', 'Anche il report (report.html)'), valore: false });
         if (o.jsonl) campi.push({ id: 'jsonl', tipo: 'spunta', etichetta: t('sc_con_jsonl', 'Anche i miei record di studio (sessioni.jsonl)'), valore: false });
-        var sez = [{ id: 'cosa', testo: t('sc_invio_testo', 'Consegni') + ': ' + (p.pdf || p.html || '') + ' — ' + (p.nome || p.id || '') }];
-        if (campi.length) sez.push({ id: 'extra', titolo: t('sc_extra_t', 'In più'), campi: campi });
+        var sez = [{ id: 'sc-cosa', testo: t('sc_invio_testo', 'Consegni') + ': ' + (p.pdf || p.html || '') + ' — ' + (p.nome || p.id || '') }];
+        if (campi.length) sez.push({ id: 'sc-extra', titolo: t('sc_extra_t', 'In più'), campi: campi });
         return {
             id: 'invio', titolo: t('sc_invia_t', 'Consegna al docente'), sottotitolo: o.identita ? (t('sc_classe', 'Classe') + ' ' + o.identita.classe + ' · ' + t('sc_numero', 'n.') + ' ' + o.identita.numero) : '',
             icona: 'send', taglia: 's', invio: true,

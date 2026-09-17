@@ -226,3 +226,29 @@ html.studente .mm-box--console .mm-tab th { font-size: 12px; }
 html.studente .mm-console__area:has(> .mn-bento-area [data-mod="ricevi"]) { display: flex; flex-direction: column; justify-content: center; }
 html.studente .mn-card[data-mod="ricevi"] { max-width: 420px; width: 100%; margin: 0 auto; }
 html.studente .mn-card[data-mod="ricevi"] .mn-cmd { font-size: 18px; }
+
+/* ── i modali dello scambio col docente, per chi ha 11-12 anni (17/9) ──────
+   Riconosciuti dalle sezioni `sc-*` (scambio-core): caratteri più grandi,
+   bersagli alti, l'azione principale in evidenza. */
+html.studente .mm-box:has([data-sez^="sc-"]) { width: min(560px, 94vw); max-width: none; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-title { font-size: 24px; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-subtitle { font-size: 16px; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-sez__t { font-size: 14px; letter-spacing: .04em; margin-bottom: 8px; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-voce { font-size: 20px; min-height: 76px; padding: 14px 18px; border-radius: 16px; gap: 16px; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-voce__i svg { width: 30px; height: 30px; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-voce__n { font-size: 20px; font-weight: 700; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-voce__s { font-size: 15px; margin-top: 4px; line-height: 1.35; white-space: normal; }
+html.studente .mm-box:has([data-sez^="sc-"]) [data-sez="sc-ricevi"] .mm-voce:first-of-type { background: #41e6aa; border-color: #41e6aa; color: #0b0b0b; min-height: 96px; }
+html.studente .mm-box:has([data-sez^="sc-"]) [data-sez="sc-ricevi"] .mm-voce:first-of-type .mm-voce__s { color: #1f3b30; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-sez p, html.studente .mm-box:has([data-sez^="sc-"]) .mm-testo { font-size: 16px; line-height: 1.45; }
+html.studente .mm-box:has([data-sez^="sc-"]) label, html.studente .mm-box:has([data-sez^="sc-"]) .mm-campo__e { font-size: 17px; }
+html.studente .mm-box:has([data-sez^="sc-"]) input[type="text"], html.studente .mm-box:has([data-sez^="sc-"]) input:not([type]) { font-size: 22px; min-height: 56px; }
+html.studente .mm-box:has([data-sez^="sc-"]) .mm-foot .mm-btn { font-size: 18px; min-height: 52px; padding: 0 22px; }
+#sc-velo .sc-velo__t { font-size: 22px; }
+#sc-velo .sc-velo__s { font-size: 16px; }
+#sc-velo .sc-velo__b { height: 14px; }
+#sc-velo .sc-velo__x { font-size: 17px; min-height: 48px; }
+
+/* la sidebar della console: i nomi dei progetti +25% (15 → 19 px), 17/9 */
+html.studente .mm-box--console .mm-nav__t { font-size: 19px; }
+html.studente .mm-box--console .mm-nav__s { font-size: 14px; }
