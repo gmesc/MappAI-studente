@@ -154,6 +154,10 @@
                 { id: 'apri-cartella', etichetta: t('st_apri_cartella', 'Apri una cartella'), icona: 'folder-open', chiude: false }
             ]
         };
+        /* «Ricevi dal docente» sempre in fondo alla console (Giacomo, 17/9): il bottone
+           «Docente» sta nel bento di una mappa, e senza mappe scelte — il primo giorno —
+           non c'era nessuna strada per il QR */
+        if (o.scambio !== false) s.azioni.push({ id: 'docente', etichetta: t('st_ricevi', 'Ricevi dal docente'), icona: 'qr-code', chiude: false });
         if (o.ipad) s.nota = t('st_nota_ipad', 'Le mappe si mettono in File › Sul mio iPad › MappAI Studente: compaiono qui da sole.');
         if (prog) {
             /* l'area a BENTO, identica a quella di una mappa in INSEGNA (`_consBentoMappa`
@@ -215,6 +219,15 @@
         return s;
     }
 
+    /* il nome del PDF della mappa (Giacomo, 17/9): `mappa-<progetto>-GG-MM-AAAA-NN.pdf`,
+       NN il primo numero libero di quel giorno fra i file già in «MAPPE PDF» (da 00) */
+    function nomePdfMappa(progetto, data, esistenti) {
+        var d = data || new Date(), p2 = function (n) { return String(n).padStart(2, '0'); };
+        var base = 'mappa-' + String(progetto || 'mappa').replace(/[\\/:*?"<>|]+/g, '-').trim() + '-' + p2(d.getDate()) + '-' + p2(d.getMonth() + 1) + '-' + d.getFullYear() + '-';
+        var presi = {}; (esistenti || []).forEach(function (n) { presi[n] = true; });
+        for (var i = 0; ; i++) { var nome = base + p2(i) + '.pdf'; if (!presi[nome]) return nome; }
+    }
+
     /* le briciole: Studia › materia › mappa */
     function briciole(o) {
         var t = (o && o.t) || function (k, f) { return f; };
@@ -224,5 +237,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati };
+    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa };
 }));

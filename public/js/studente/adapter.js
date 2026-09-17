@@ -343,13 +343,14 @@
         if (!s.length || s.indexOf('..') >= 0) return null;
         if (s.length === 1 && s[0] === 'vista.json') return s.join('/');
         if (s[0] === 'Studio Attivo' && s.length <= 4) return s.join('/');
+        if (s[0] === 'MAPPE PDF' && s.length === 2 && /\.pdf$/i.test(s[1])) return s.join('/');
         return null;
     }
     function saveVaultFile(o) {
         o = o || {};
         var rel = relAmmesso(o.relPath);
         if (!o.vaultPath) return Promise.resolve({ ok: false, error: 'vault mancante' });
-        if (!rel) return Promise.resolve({ ok: false, error: 'MappAI studente scrive solo vista.json e Studio Attivo/: ' + o.relPath });
+        if (!rel) return Promise.resolve({ ok: false, error: 'MappAI studente scrive solo vista.json, Studio Attivo/ e MAPPE PDF/: ' + o.relPath });
         var p = o.vaultPath + '/' + rel;
         var b64 = o.base64 != null ? String(o.base64).replace(/^data:[^,]*,/, '') : (o.text != null ? textToB64(o.text) : null);
         if (b64 == null) return Promise.resolve({ ok: false, error: 'nessun contenuto' });

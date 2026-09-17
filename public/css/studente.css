@@ -22,10 +22,29 @@
    (iPad in piedi); bersaglio ≥ 44px sull'asse del trascinamento */
 #studente-dock .sd-man { position: absolute; touch-action: none; z-index: 2; }
 #studente-dock.sd--destra .sd-man { left: -12px; top: 0; bottom: 0; width: 24px; cursor: col-resize; }
-#studente-dock.sd--destra .sd-man::after { content: ''; position: absolute; left: 10px; top: 50%; width: 4px; height: 44px; margin-top: -22px; border-radius: 4px; background: #cbd5e1; }
+#studente-dock.sd--destra .sd-man::after { content: ''; position: absolute; left: 10px; top: 50%; width: 4px; height: 44px; margin-top: -22px; border-radius: 4px; background: #94a3b8; animation: mm-chip-nudge .45s ease-in-out .8s 2; }
 #studente-dock.sd--basso { top: auto; left: 0; right: 0; bottom: 0; border-left: 0; border-top: 1px solid #e2e8f0; box-shadow: 0 -8px 24px rgba(15, 23, 42, .08); }
 #studente-dock.sd--basso .sd-man { top: -12px; left: 0; right: 0; height: 24px; cursor: row-resize; }
-#studente-dock.sd--basso .sd-man::after { content: ''; position: absolute; top: 10px; left: 50%; height: 4px; width: 44px; margin-left: -22px; border-radius: 4px; background: #cbd5e1; }
+#studente-dock.sd--basso .sd-man::after { content: ''; position: absolute; top: 10px; left: 50%; height: 4px; width: 44px; margin-left: -22px; border-radius: 4px; background: #94a3b8; animation: mm-chip-nudge-h .45s ease-in-out .8s 2; }
+/* la linea sotto il dito diventa verde; oltre il 15% di un bordo il pannello che si
+   chiuderà sbiadisce; chiuso uno dei due resta la maniglia verde (come la revisione
+   di MappAI re, --mm-ok) con le tacche bianche: tocco = riapre, trascino = riapre lì */
+#studente-dock .sd-man:active::after { background: var(--mm-ok, #059669); }
+#studente-dock.sd--sta-chiudendo { opacity: .6; }
+#studente-dock.sd--senza-doc.sd--destra { transform: translateX(100%); }
+#studente-dock.sd--senza-doc.sd--basso { transform: translateY(100%); }
+#studente-dock.sd--senza-doc > :not(.sd-man) { visibility: hidden; }
+#studente-dock.sd--senza-doc, #studente-dock.sd--senza-mappa { box-shadow: none; }
+#studente-dock.sd--senza-doc .sd-man, #studente-dock.sd--senza-mappa .sd-man { background: var(--mm-ok, #059669); box-shadow: 0 1px 4px rgba(0, 0, 0, .2); }
+html.studente #studente-dock.sd--senza-doc.sd--destra .sd-man, #studente-dock.sd--senza-doc.sd--destra .sd-man { left: -22px; width: 22px; top: 50%; bottom: auto; height: 80px; margin-top: -40px; border-radius: 10px 0 0 10px; }
+html.studente #studente-dock.sd--senza-mappa.sd--destra .sd-man, #studente-dock.sd--senza-mappa.sd--destra .sd-man { left: 0; width: 22px; top: 50%; bottom: auto; height: 80px; margin-top: -40px; border-radius: 0 10px 10px 0; }
+#studente-dock.sd--senza-doc.sd--basso .sd-man { top: -22px; height: 22px; left: 50%; right: auto; width: 80px; margin-left: -40px; border-radius: 10px 10px 0 0; }
+#studente-dock.sd--senza-mappa.sd--basso .sd-man { top: 0; height: 22px; left: 50%; right: auto; width: 80px; margin-left: -40px; border-radius: 0 0 10px 10px; }
+#studente-dock.sd--senza-doc.sd--destra .sd-man::after, #studente-dock.sd--senza-mappa.sd--destra .sd-man::after { left: 8px; width: 6px; height: 40px; margin-top: -20px; border-radius: 0; background: repeating-linear-gradient(to bottom, #fff 0 2px, transparent 2px 5px); animation: none; }
+#studente-dock.sd--senza-doc.sd--basso .sd-man::after, #studente-dock.sd--senza-mappa.sd--basso .sd-man::after { top: 8px; height: 6px; width: 40px; margin-left: -20px; border-radius: 0; background: repeating-linear-gradient(to right, #fff 0 2px, transparent 2px 5px); animation: none; }
+#studente-dock.sd--senza-mappa.sd--basso { border-top: 0; }
+#studente-dock.sd--senza-mappa .sd-testa { padding-left: 34px; }
+@media (prefers-reduced-motion: reduce) { #studente-dock .sd-man::after { animation: none; } }
 #studente-dock .sd-corpo > .sc-wrap { height: 100%; }
 #studente-dock .sd-testa { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid #e2e8f0; min-height: 52px; }
 #studente-dock .sd-titolo { font-size: 13px; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

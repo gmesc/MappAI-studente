@@ -34,15 +34,27 @@
         if (mq) return mq.matches ? 'portrait' : 'landscape';
         return PC() ? PC().orientamento(window.innerWidth, window.innerHeight) : 'landscape';
     }
+    /* LO SPLIT SI CHIUDE DAI DUE BORDI (Giacomo, 17/9): la barra portata a meno del 15%
+       dal bordo della mappa chiude la MAPPA (il documento a tutto schermo), a meno del 15%
+       dal bordo del documento chiude il DOCUMENTO; resta una maniglia verde (i colori
+       della revisione di MappAI re) che con un tocco riapre alla misura di prima e
+       trascinata riapre fin dove la si lascia. `collasso`: null | 'mappa' | 'doc'. */
+    var SOGLIA = 0.15, collasso = null;
+    function asseDi(basso) {
+        var main = document.getElementById('main-content');
+        return basso ? (main ? main.clientHeight : window.innerHeight) : (main ? main.clientWidth : window.innerWidth);
+    }
     function misura(px) {
         var basso = orientamento() === 'portrait';
-        var main = document.getElementById('main-content');
-        var asse = basso ? (main ? main.clientHeight : window.innerHeight) : (main ? main.clientWidth : window.innerWidth);
+        var asse = asseDi(basso);
         var min = basso ? MIN_H : MIN_W;
         var v = PC() ? PC().clampSplit(px, asse, min, 0.7) : Math.max(min, Math.min(Math.floor(asse * 0.7), px));
         dock.classList.toggle('sd--basso', basso); dock.classList.toggle('sd--destra', !basso);
+        dock.classList.toggle('sd--senza-mappa', collasso === 'mappa'); dock.classList.toggle('sd--senza-doc', collasso === 'doc');
+        if (collasso === 'mappa') v = asse;
         if (basso) { dock.style.width = ''; dock.style.height = v + 'px'; }
         else { dock.style.height = ''; dock.style.width = v + 'px'; }
+        if (collasso === 'doc') v = 0;
         ingombro(basso ? 0 : v, basso ? v : 0);
         if (corpo && corpo.__risistema) { try { corpo.__risistema(); } catch (e) { } }
         /* girando l'iPad lo split cambia asse: il disegno della mappa lo segue */
@@ -79,21 +91,32 @@
         misura(memoria());
         var man = dock.querySelector('.sd-man'), drag = null;
         man.addEventListener('pointerdown', function (e) {
-            drag = { x: e.clientX, y: e.clientY, w: dock.offsetWidth, h: dock.offsetHeight, basso: orientamento() === 'portrait' };
+            drag = { x: e.clientX, y: e.clientY, basso: orientamento() === 'portrait', mosso: false, verso: null };
             man.setPointerCapture(e.pointerId); e.preventDefault();
         });
-        man.addEventListener('pointermove', function (e) {
+        window.addEventListener('pointermove', function (e) {   // sulla finestra: il dito esce subito dalla maniglia
             if (!drag) return;
-            misura(drag.basso ? drag.h + (drag.y - e.clientY) : drag.w + (drag.x - e.clientX));
+            if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) drag.mosso = true;
+            if (!drag.mosso) return;
+            /* la misura dal puntatore, non dallo scarto: dalla maniglia di un pannello
+               chiuso la misura di partenza non è quella che si vede */
+            var b = document.getElementById('main-content').getBoundingClientRect();
+            var px = drag.basso ? b.bottom - e.clientY : b.right - e.clientX, asse = drag.basso ? b.height : b.width;
+            drag.verso = px < asse * SOGLIA ? 'doc' : px > asse * (1 - SOGLIA) ? 'mappa' : null;
+            dock.classList.toggle('sd--sta-chiudendo', !!drag.verso);
+            if (!drag.verso) { collasso = null; misura(px); }
         });
-        man.addEventListener('pointerup', function () {
-            if (drag) {
-                ricorda(drag.basso ? dock.offsetHeight : dock.offsetWidth);
-                window.dispatchEvent(new Event('resize'));
-                if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
-            }
-            drag = null;
-        });
+        var lascia = function () {
+            if (!drag) return;
+            var d = drag; drag = null;
+            dock.classList.remove('sd--sta-chiudendo');
+            if (!d.mosso) { if (!collasso) return; collasso = null; misura(memoria()); }   // tocco: riapre la maniglia
+            else if (d.verso) { collasso = d.verso; misura(memoria()); }                  // si riapre alla misura di prima
+            else ricorda(d.basso ? dock.offsetHeight : dock.offsetWidth);
+            window.dispatchEvent(new Event('resize'));
+            if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
+        };
+        ['pointerup', 'pointercancel'].forEach(function (n) { window.addEventListener(n, lascia); });
         var risistema = function () { if (!dock.hidden) { misura(memoria()); window.dispatchEvent(new Event('resize')); } };
         window.addEventListener('resize', function () { if (!dock.hidden) misura(orientamento() === 'portrait' ? dock.offsetHeight : dock.offsetWidth); });
         if (mq && mq.addEventListener) mq.addEventListener('change', risistema);
@@ -127,7 +150,7 @@
         libera();
         titolo.textContent = o.titolo || '';
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
-        misura(memoria());
+        collasso = null; misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
             f.addEventListener('load', function () { vesti(f); });
@@ -263,7 +286,7 @@
     }
     function chiudi() {
         if (!dock || dock.hidden) return;
-        dock.hidden = true; libera(); ingombro(0, 0);
+        dock.hidden = true; libera(); collasso = null; ingombro(0, 0);
         window.dispatchEvent(new Event('resize'));
         /* il canvas torna largo quanto lo schermo: la mappa si rimette nel riquadro */
         if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
@@ -360,7 +383,6 @@
                     '<i data-lucide="' + g.icona + '"></i><span class="sd-riga__t"><b>' + esc(g.et) + '</b><small>' + esc(f.name) + '</small></span></button>';
             });
             html += '<h4 class="sd-h">' + esc(t('st_stampa_mappa', 'Stampa dalla mappa')) + '</h4>' +
-                '<button type="button" class="sd-riga" data-fn="exportPDFVista"><i data-lucide="file-down"></i><span class="sd-riga__t"><b>' + esc(t('st_pdf_mappa', 'PDF della mappa')) + '</b></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="openNodeLabelsPrintModal"><i data-lucide="scissors"></i><span class="sd-riga__t"><b>' + esc(t('st_foglio_nodi', 'Foglio dei nodi')) + '</b></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="sintesi"><i data-lucide="sparkles"></i><span class="sd-riga__t"><b>' + esc(t('st_sintesi', 'Sintesi')) + '</b><small>' + esc(sintesi ? sintesi.name : t('st_sintesi_manca', 'questa mappa non ha una sintesi')) + '</small></span></button>' +
                 '<button type="button" class="sd-riga" data-fn="catena"><i data-lucide="git-branch"></i><span class="sd-riga__t"><b>' + esc(t('st_catena', 'Catena dei perché')) + '</b></span></button>';
@@ -433,6 +455,23 @@
             }).catch(function (e) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + ' ' + (e && e.message), 'error'); });
         }
     }
+
+    /* ── SALVA MAPPA IN PDF (Giacomo, 17/9) ──────────────────────────────────
+       Su iPad `jsPDF.save` non scrive niente e l'avviso verde mentiva. I moduli di
+       MappAI chiamano questo gancio al posto di `save`: il PDF va nella cartella
+       «MAPPE PDF» del progetto, col nome di `studia-core.nomePdfMappa`. */
+    window.MappAISalvaPdf = function (doc) {
+        var s = S(), vp = s && s.activeVaultPath, C = window.MappAIStudiaCore, api = window.electronAPI;
+        if (!vp) { toast(t('st_no_vault', 'Apri prima una mappa.'), 'warning'); return Promise.resolve(); }
+        var FSx = window.MappAIStudenteFS;
+        return (FSx ? FSx.lista(vp + '/MAPPE PDF') : Promise.resolve([])).catch(function () { return []; }).then(function (figli) {
+            var nome = C.nomePdfMappa(vp.split('/').pop(), new Date(), (figli || []).map(function (f) { return f.name; }));
+            return api.saveVaultFile({ vaultPath: vp, relPath: 'MAPPE PDF/' + nome, base64: doc.output('datauristring') }).then(function (r) {
+                if (r && r.ok) toast(t('st_pdf_salvato', 'Mappa salvata in MAPPE PDF: ') + nome, 'success');
+                else toast(t('st_pdf_ko', 'Non riesco a salvare il PDF.') + (r && r.error ? ' ' + r.error : ''), 'error');
+            });
+        });
+    };
 
     window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());
