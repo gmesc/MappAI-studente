@@ -82,18 +82,37 @@ Testo per la pagina privacy sul sito (breve):
 
 > L'app è pensata per allievi che ricevono le mappe dal docente tramite MappAI (app desktop). Per la revisione non serve nessun account né alcun dispositivo esterno: al primo avvio l'app installa una mappa di prova, «La carta», visibile nella colonna di sinistra sotto «Storia». Da lì si possono provare Mappa, Flashcard, Prova (quiz a scelta multipla e domande aperte) e Materiali. Le funzioni «Docente › Ricevi» e «Consegna» richiedono il computer di un docente con MappAI sulla stessa rete Wi-Fi e non sono verificabili in revisione; senza, mostrano un messaggio chiaro e non bloccano nulla.
 
-## Screenshot (da fare insieme, iPad 13" e 11")
+## Screenshot (fatti il 17/9/26 — iPad 13", orizzontale e verticale)
 
-Apple chiede almeno una serie per iPad; le dimensioni accettate sono quelle degli iPad Pro 13" (2064×2752 o 2752×2064) e 11". Le sei fotografie, nell'ordine in cui compaiono:
+In `resources/app-store/orizzontale/` (2752×2064) e `resources/app-store/verticale/` (2064×2752),
+le due misure che App Store Connect accetta per l'iPad 13" (valgono anche per gli iPad più piccoli).
+Screenshot puri, senza didascalie; le foto non stanno in git. Nell'ordine:
 
-1. Console STUDIA con la mappa «La carta» scelta: i comandi Mappa · Flashcard · Prova · Docente e i materiali per tipologia.
-2. La mappa in vista Albero, con il menu del nodo aperto (tocco lungo).
-3. Un materiale nel pannello accanto alla mappa (la sintesi).
-4. Le flashcard: una carta girata.
-5. La prova su misura a tutti gli angoli: le righe «Domanda 1» con i chip verde/arancione/blu.
-6. La prova con la mappa accanto (split), iPad sdraiato.
+1. `01-console` — la console STUDIA con «La carta» scelta, «Svizzera e 2a GM» nella colonna.
+2. `02-mappa` — «Svizzera e 2a GM» in vista Fasci: 48 nodi, i rami colorati.
+3. `03-menu-nodo` — il menu del nodo (tocco lungo): Descrizione, Leggi ad alta voce, Lettura veloce, Focus…
+4. `04-scheda-voce` — la scheda del nodo mentre la voce legge: frase evidenziata, parola sottolineata.
+5. `05-lettura-veloce` — la lettura veloce al posto del testo: una parola, la lettera di fuoco in rosso.
+6. `06-sintesi` — «La carta»: la sintesi accanto alla mappa, con la fila di lettura.
+7. `07-flashcard` — una carta girata.
+8. `08-prova` — le domande aperte su misura con i tre colori del «Perché».
+9. `09-split` — la risposta scritta con la mappa accanto.
 
-Didascalie brevi sopra ogni foto, se le vogliamo: «Le mappe del docente, sul tuo iPad» · «Leggi, ascolta, segna» · «I materiali accanto alla mappa» · «Ripassa con le flashcard» · «Capisci che cosa hai capito» · «Rispondi con la mappa davanti».
+**Come si rifanno** (l'app web del bundle, in Chrome headless, pilotata via CDP — la stessa strada
+della guida; il simulatore restava inaccessibile agli strumenti di questo Mac):
+
+```bash
+# il pacchetto con le due mappe: la demo + «Svizzera e 2a GM» nella copia per l'allievo
+node tools/vault-json.js "<cartella della copia per l'allievo>/Svizzera e 2a GM" "4R/Storia" /tmp/sv.json
+node -e "const f=require('fs');f.mkdirSync('public/dev',{recursive:true});f.writeFileSync('public/dev/vault.json',JSON.stringify(JSON.parse(f.readFileSync('public/demo/vault.json')).concat(JSON.parse(f.readFileSync('/tmp/sv.json')))))"
+python3 -m http.server 8766 -d public
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --remote-debugging-port=9377 --user-data-dir=/tmp/chrome-as --hide-scrollbars about:blank
+node tools/appstore/campagna.js orizzontale      # poi: verticale
+```
+
+Differenze dal dispositivo vero: niente barra di stato iOS e i cursori con la veste di Chrome.
+La campagna annulla `scrollbar-gutter` (Chrome riserverebbe 6 px a destra, l'iPad no) e rende
+muta la voce (il karaoke avanza sul tempo).
 
 Servono anche l'**icona 1024×1024** (c'è: `resources/icona-1024.png`) e, facoltativa, una **anteprima video** di 15-30 s.
 
