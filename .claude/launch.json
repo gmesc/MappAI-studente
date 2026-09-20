@@ -4,8 +4,26 @@
     {
       "name": "mappai-re-public",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8766", "-d", "/Users/giacomomeschini/Claude/MappAI reader/public"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "-d",
+        "/Users/giacomomeschini/Claude/MappAI reader/public"
+      ],
       "port": 8766
+    },
+    {
+      "name": "sito-insegnai",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8799",
+        "-d",
+        "/Users/giacomomeschini/Claude/MappAI reader/docs/sito"
+      ],
+      "port": 8799
     }
   ]
 }
