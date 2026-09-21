@@ -154,7 +154,7 @@ html.studente .mn-bento-area .mn-cmd { min-height: 112px; gap: 6px; padding: 10p
 html.studente .mn-bento-area .mn-cmd > svg { width: 38px; height: 38px; opacity: 1 !important; transition: none; }
 html.studente .mn-bento-area .mn-cmd > span {
   position: static; opacity: 1 !important; transform: none; transition: none;
-  font-size: 15px !important; line-height: 1.15; white-space: normal;
+  font-size: 17px !important; line-height: 1.15; white-space: normal;
 }
 html.studente .mn-bento-area .mn-card[data-mod="mappa-azioni"] { min-height: 0; }
 
@@ -197,22 +197,21 @@ html.studente #studente-dock.sd--destra .sd-man { top: env(safe-area-inset-top, 
    in piedi, fino a 360 sdraiato. */
 html.studente .mm-box--console {
   --mm-console-side: clamp(272px, 30vw, 360px);
-  --mm-btn-fs: 15px;
-  --mm-icona: 22px;
+  --mm-btn-fs: 17px;
+  --mm-icona: 24px;
 }
-html.studente .mm-box--console > .mm-head .mm-subtitle { font-size: 14px; }
+html.studente .mm-box--console > .mm-head .mm-subtitle { font-size: 16px; }
 html.studente .mm-box--console .mm-nav__g,
 html.studente .mm-box--console .mm-nav__g--tog,
-html.studente .mm-box--console .mm-nav__gn { font-size: 12px; }
-html.studente .mm-box--console .mm-nav__s { font-size: 13px; }
-html.studente .mm-box--console .mm-tabg__t { font-size: 13px; }
-html.studente .mm-box--console .mm-tab { font-size: 15px; }
-html.studente .mm-box--console .mm-tab th { font-size: 12px; }
+html.studente .mm-box--console .mm-nav__gn { font-size: 13px; }
+html.studente .mm-box--console .mm-tabg__t { font-size: 15px; }
+html.studente .mm-box--console .mm-tab { font-size: 17px; }
+html.studente .mm-box--console .mm-tab th { font-size: 14px; }
 /* iPad in piedi (768 px): con la colonna a 272 all'area restano ~500 px e a 15 px
    «Flashcard» usciva dal suo riquadro. Sotto i 900 px un gradino in meno. */
 @media (max-width: 900px) {
-  html.studente .mm-box--console { --mm-btn-fs: 14px; }
-  html.studente .mn-bento-area .mn-cmd > span { font-size: 12px !important; }
+  html.studente .mm-box--console { --mm-btn-fs: 16px; }
+  html.studente .mn-bento-area .mn-cmd > span { font-size: 14px !important; }
   html.studente .mm-box--console .mm-tab { font-size: 14px; }
   html.studente .mm-box--console .mm-tab th { font-size: 11px; }
 }
@@ -222,10 +221,22 @@ html.studente .mm-box--console .mm-tab th { font-size: 12px; }
    della scheda del nodo e del pannello sulla mappa: qui solo il posto nella testata. */
 #studente-dock .sd-fila { display: flex; flex: 1 1 auto; min-width: 0; }
 
-/* «Ricevi dal docente» al centro della console senza mappa scelta (17/9) */
+/* «Ricevi dal docente» al centro della console senza mappa scelta (17/9).
+   Dal 21/9 è un CERCHIO grande: è il primo e unico gesto di chi apre l'app la
+   prima volta, e un bersaglio tondo al centro dello schermo non si confonde
+   con i riquadri dei comandi. Sotto, centrata, la nota che dice dove finiscono
+   le mappe ricevute (due righe: la misura del testo è tarata su quello). */
 html.studente .mm-console__area:has(> .mn-bento-area [data-mod="ricevi"]) { display: flex; flex-direction: column; justify-content: center; }
-html.studente .mn-card[data-mod="ricevi"] { max-width: 420px; width: 100%; margin: 0 auto; }
-html.studente .mn-card[data-mod="ricevi"] .mn-cmd { font-size: 18px; }
+html.studente .mn-card[data-mod="ricevi"] { max-width: 420px; width: 100%; margin: 0 auto; background: transparent; }
+html.studente .mn-card[data-mod="ricevi"] .mn-cmd {
+  width: 268px; height: 268px; min-height: 0; margin: 0 auto; padding: 18px;
+  border-radius: 50%; gap: 12px; font-size: 18px;
+}
+html.studente .mn-card[data-mod="ricevi"] .mn-cmd > svg { width: 76px; height: 76px; }
+html.studente .mn-card[data-mod="ricevi"] .mn-cmd > span { font-size: 18px !important; }
+html.studente .mm-console__area:has(> .mn-bento-area [data-mod="ricevi"]) > .mm-piede-nota {
+  max-width: 660px; margin: 20px auto 0; text-align: center; text-wrap: balance;
+}
 
 /* ── i modali dello scambio col docente, per chi ha 11-12 anni (17/9) ──────
    Riconosciuti dalle sezioni `sc-*` (scambio-core): caratteri più grandi,
@@ -249,6 +260,28 @@ html.studente .mm-box:has([data-sez^="sc-"]) .mm-foot .mm-btn { font-size: 18px;
 #sc-velo .sc-velo__b { height: 14px; }
 #sc-velo .sc-velo__x { font-size: 17px; min-height: 48px; }
 
-/* la sidebar della console: i nomi dei progetti +25% (15 → 19 px), 17/9 */
-html.studente .mm-box--console .mm-nav__t { font-size: 19px; }
-html.studente .mm-box--console .mm-nav__s { font-size: 14px; }
+/* la sidebar della console: i nomi dei progetti 15 → 19 px (17/9) → 21 px (21/9) */
+html.studente .mm-box--console .mm-nav__t { font-size: 21px; }
+html.studente .mm-box--console .mm-nav__s { font-size: 15px; }
+
+/* ── la scala dei TESTI in tutti i modali (21/9) ──────────────────────────
+   Non solo la console: ogni modale dell'app è letto da un ragazzo di 11-13
+   anni su un iPad tenuto in mano. I corpi del motore salgono di un gradino,
+   qui e non nei token, perché di là valgono anche per MappAI del docente. */
+html.studente .mm-box { --mm-btn-fs: 16px; }
+html.studente .mm-box .mm-title { font-size: 20px; }
+html.studente .mm-box .mm-subtitle { font-size: 15px; }
+html.studente .mm-box .mm-sez__t { font-size: 12px; }
+html.studente .mm-box .mm-voce__n { font-size: 17px; }
+html.studente .mm-box .mm-voce__s { font-size: 14px; }
+html.studente .mm-box .mm-testo,
+html.studente .mm-box .mm-sez p { font-size: 16px; line-height: 1.5; }
+html.studente .mm-box .mm-nota,
+html.studente .mm-box .mm-piede-nota { font-size: 14px; }
+html.studente .mm-box .mm-campo__e,
+html.studente .mm-box label { font-size: 15px; }
+html.studente .mm-box input[type="text"],
+html.studente .mm-box input:not([type]),
+html.studente .mm-box textarea,
+html.studente .mm-box select { font-size: 18px; }
+html.studente .mm-box .mm-foot .mm-btn { font-size: 16px; }

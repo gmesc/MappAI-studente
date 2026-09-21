@@ -133,6 +133,15 @@ async function daCapo() {
   await L.pausa(7000);
   await aspettaTesto('Svizzera e 2a GM', 20000);
 
+  /* la casa dello studente APPENA APERTA (21/9): nessuna mappa scelta, il cerchio
+     «Ricevi dal docente» al centro e sotto la nota che dice dove finiscono i file */
+  await passo('00-landing', async () => {
+    await daCapo();
+    await L.finoA(`!!document.querySelector('.mn-card[data-mod="ricevi"]')`, 8000);
+    await L.pausa(1200);
+    await foto('00-landing');
+  });
+
   await passo('01-console', async () => {
     await toccaTesto('La carta2A', { sel: 'button' });
     await aspettaTesto('Le tue prove');

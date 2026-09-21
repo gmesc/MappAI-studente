@@ -158,14 +158,14 @@
            docente» (Giacomo, 17/9): è il primo gesto dell'allievo, e in fondo non si vedeva */
         if (!prog && o.scambio !== false) {
             s.bento = [{
-                id: 'ricevi', nuda: true, span: 4, altezza: 220,
+                id: 'ricevi', nuda: true, span: 4, altezza: 300,
                 stile: { bg: 'transparent', testo: '#404040', bordoPx: 0 },
                 bottoni: { bg: '#f1f4f8', testo: '#404040', hoverBg: '#41e6aa', hoverTesto: '#0b0b0b' },
                 layout: { colonneVoci: 1 },
                 voci: [{ id: 'docente', et: t('st_ricevi', 'Ricevi dal docente'), forma: 'azione', icona: 'qr-code', chiude: false, aiuto: t('st_tip_ricevi', 'Inquadra il QR del docente: la mappa arriva qui.') }]
             }];
         }
-        if (o.ipad) s.nota = t('st_nota_ipad', 'Le mappe si mettono in File › Sul mio iPad › MappAI Studente: compaiono qui da sole.');
+        if (o.ipad) s.nota = t('st_nota_ipad', 'I progetti ricevuti dal docente si salvano automaticamente in File › Sul mio iPad › MappAI Studente. Appariranno nell\'app senza che tu debba fare nulla.');
         if (prog) {
             /* l'area a BENTO, identica a quella di una mappa in INSEGNA (`_consBentoMappa`
                di mappai-landing-teach.js): il riquadro dei comandi con gli stessi colori e
