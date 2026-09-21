@@ -285,3 +285,8 @@ html.studente .mm-box input:not([type]),
 html.studente .mm-box textarea,
 html.studente .mm-box select { font-size: 18px; }
 html.studente .mm-box .mm-foot .mm-btn { font-size: 16px; }
+
+/* La riga «nessuna prova ancora» va a capo (21/9): `.mm-tab td` impone
+   `white-space: nowrap` e vince su `.mm-tab__vuota` per specificità — coi testi
+   più grandi la frase finiva troncata con l'ellissi. Qui, non nella copia. */
+html.studente .mm-tab td.mm-tab__vuota { white-space: normal; }

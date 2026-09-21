@@ -82,21 +82,23 @@ Testo per la pagina privacy sul sito (breve):
 
 > L'app è pensata per allievi che ricevono le mappe dal docente tramite MappAI (app desktop). Per la revisione non serve nessun account né alcun dispositivo esterno: al primo avvio l'app installa una mappa di prova, «La carta», visibile nella colonna di sinistra sotto «Storia». Da lì si possono provare Mappa, Flashcard, Prova (quiz a scelta multipla e domande aperte) e Materiali. Le funzioni «Docente › Ricevi» e «Consegna» richiedono il computer di un docente con MappAI sulla stessa rete Wi-Fi e non sono verificabili in revisione; senza, mostrano un messaggio chiaro e non bloccano nulla.
 
-## Screenshot (fatti il 17/9/26 — iPad 13", orizzontale e verticale)
+## Screenshot (rifatti il 21/9/26 — iPad 13", orizzontale e verticale)
 
 In `resources/app-store/orizzontale/` (2752×2064) e `resources/app-store/verticale/` (2064×2752),
 le due misure che App Store Connect accetta per l'iPad 13" (valgono anche per gli iPad più piccoli).
+Sono DIECI per orientamento, il massimo che App Store Connect accetta.
 Screenshot puri, senza didascalie; le foto non stanno in git. Nell'ordine:
 
-1. `01-console` — la console STUDIA con «La carta» scelta, «Svizzera e 2a GM» nella colonna.
-2. `02-mappa` — «Svizzera e 2a GM» in vista Fasci: 48 nodi, i rami colorati.
-3. `03-menu-nodo` — il menu del nodo (tocco lungo): Descrizione, Leggi ad alta voce, Lettura veloce, Focus…
-4. `04-scheda-voce` — la scheda del nodo mentre la voce legge: frase evidenziata, parola sottolineata.
-5. `05-lettura-veloce` — la lettura veloce al posto del testo: una parola, la lettera di fuoco in rosso.
-6. `06-sintesi` — «La carta»: la sintesi accanto alla mappa, con la fila di lettura.
-7. `07-flashcard` — una carta girata.
-8. `08-prova` — le domande aperte su misura con i tre colori del «Perché».
-9. `09-split` — la risposta scritta con la mappa accanto.
+1. `00-landing` — la casa appena aperta: il cerchio «Ricevi dal docente» al centro e la nota che dice dove finiscono i progetti ricevuti.
+2. `01-console` — la console STUDIA con «La carta» scelta, «Svizzera e 2a GM» nella colonna.
+3. `02-mappa` — «Svizzera e 2a GM» in vista Fasci: 48 nodi, i rami colorati.
+4. `03-menu-nodo` — il menu del nodo (tocco lungo): Descrizione, Leggi ad alta voce, Lettura veloce, Focus…
+5. `04-scheda-voce` — la scheda del nodo mentre la voce legge: frase evidenziata, parola sottolineata.
+6. `05-lettura-veloce` — la lettura veloce al posto del testo: una parola, la lettera di fuoco in rosso.
+7. `06-sintesi` — «La carta»: la sintesi accanto alla mappa, con la fila di lettura.
+8. `07-flashcard` — una carta girata.
+9. `08-prova` — le domande aperte su misura con i tre colori del «Perché».
+10. `09-split` — la risposta scritta con la mappa accanto.
 
 **Come si rifanno** (l'app web del bundle, in Chrome headless, pilotata via CDP — la stessa strada
 della guida; il simulatore restava inaccessibile agli strumenti di questo Mac):
