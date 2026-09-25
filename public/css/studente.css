@@ -67,6 +67,11 @@ html.studente #study-player-regen,
 html.studente #study-sets-container [onclick*="regenerateStudySet"],
 html.studente #study-sets-container [onclick*="deleteStudySet"],
 html.studente #study-sets-container [onclick*="MappAILive"],
+/* dal 25/9 (ramo «rinforzo» del docente) i bottoni dei set non hanno più `onclick`:
+   portano `data-set-azione`. I selettori sopra restano per i file non ancora sincronizzati. */
+html.studente #study-sets-container [data-set-azione="rigenera"],
+html.studente #study-sets-container [data-set-azione="elimina"],
+html.studente #study-sets-container [data-set-azione="live"],
 html.studente #source-modal [onclick*="editCurrentSourceNode"],
 html.studente #sync-vault-btn,
 html.studente [onclick*="openCollabQrProjection"],
