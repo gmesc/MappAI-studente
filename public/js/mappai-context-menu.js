@@ -109,15 +109,24 @@ window.showContextMenu = function (e, type, data) {
     } else if (type === 'link') {
         // JIGSAW: ponte inter-area + docente (modalità OFF) → menu di ratifica.
         if (data.isBridge && window.MappAIJigsaw && !window.MappAIJigsaw.isEnabled()) {
+            /* Autore, stato e motivazione del ponte stanno nei link del vault e li
+               scrivono anche gli ALLIEVI (copie JIGSAW): autore e stato entravano
+               nel menu così com'erano, e al tasto destro del docente un
+               `<img src=x onerror=…>` girava con window.electronAPI in mano
+               (25/9/2026). Ora tutti e tre sono testo: il nucleo, o lo stesso
+               escape qui (il reader dell'iPad copia questo file senza il nucleo).
+               La motivazione perdeva solo `<` e `>`; ora si legge com'è scritta. */
+            const esc = v => (window.MappAIHtmlSicuro ? window.MappAIHtmlSicuro.esc(v)
+                : String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';'));
             menu.innerHTML =
                 '<div class="px-3 py-2" style="max-width:270px;"><div style="font-weight:700;color:#6366f1;font-size:12px;">Ponte inter-area</div>' +
-                '<div style="color:#64748b;font-size:11px;margin-top:2px;">Autore: ' + (data.bridgeAuthor || '?') + ' · stato: ' + (data.bridgeStatus || 'proposed') + '</div>' +
-                (data.justification ? '<div style="color:#475569;font-size:12px;margin-top:4px;font-style:italic;">"' + String(data.justification).replace(/[<>]/g, '') + '"</div>' : '') + '</div>' +
+                '<div style="color:#64748b;font-size:11px;margin-top:2px;">Autore: ' + esc(data.bridgeAuthor || '?') + ' · stato: ' + esc(data.bridgeStatus || 'proposed') + '</div>' +
+                (data.justification ? '<div style="color:#475569;font-size:12px;margin-top:4px;font-style:italic;">"' + esc(data.justification) + '"</div>' : '') + '</div>' +
                 '<hr class="my-1 border-slate-200">' +
                 '<div class="ctx-item text-emerald-600" onclick="window.ctxAction(\'ratify_bridge\')"><i data-lucide="check-circle"></i> ' + window.t('ctx_ratify_bridge', 'Ratifica ponte') + '</div>' +
                 '<div class="ctx-item danger" onclick="window.ctxAction(\'reject_bridge\')"><i data-lucide="x-circle"></i> ' + window.t('ctx_reject_bridge', 'Rifiuta ponte') + '</div>' +
                 '<hr class="my-1 border-slate-200">' +
-                '<div class="ctx-item" onclick="window.ctxAction(\'rename_link\')"><i data-lucide="type"></i> ' + window.t('ctx_rename_rel', 'Rinomina Relazione') + '</div>' +
+                '<div class="ctx-item" onclick="window.ctxAction(\'rename_link\')"><i data-lucide="type"></i> ' + window.t('le_title', 'Modifica collegamento') + '</div>' +
                 '<div class="ctx-item danger" onclick="window.ctxAction(\'delete_link\')"><i data-lucide="trash-2"></i> ' + window.t('ctx_delete_bridge', 'Elimina Ponte') + '</div>';
             window.safeCreateIcons();
             menu.classList.remove('hidden');
@@ -141,7 +150,7 @@ window.showContextMenu = function (e, type, data) {
                     `;
         } else {
             menu.innerHTML = `
-                        <div class="ctx-item" onclick="window.ctxAction('rename_link')"><i data-lucide="type"></i> ${window.t('ctx_rename_rel', "Rinomina Relazione")}</div>
+                        <div class="ctx-item" onclick="window.ctxAction('rename_link')"><i data-lucide="type"></i> ${window.t('le_title', "Modifica collegamento")}</div>
                         <hr class="my-1 border-slate-200">
                         <div class="ctx-item danger" onclick="window.ctxAction('delete_link')"><i data-lucide="trash-2"></i> ${window.t('ctx_delete_link', "Elimina Link")}</div>
                     `;
@@ -338,6 +347,7 @@ window.ctxAction = function (action) {
     }
     else if (action === 'rename_link') {
         if (window.MappAIJigsaw && !window.MappAIJigsaw.guardWriteLink(data, 'rinomina link')) return;
+        if (window.MappAILinkEditor && window.MappAILinkEditor.enabled()) return window.MappAILinkEditor.open(data);
         window.showPrompt("Etichetta relazione (lascia vuoto per nascondere la label):", data.rel || '', (newRel) => {
             data.rel = newRel; // stringa vuota = link senza label visibile
             renderGraph();

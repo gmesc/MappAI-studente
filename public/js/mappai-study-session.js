@@ -5,6 +5,23 @@
 // a runtime via scope lessicale globale condiviso.
 window.globalQuizQueue = [];
 
+/* ── IL TESTO DEI DATI ENTRA COME TESTO (25/9/2026) ──────────────────────────
+   Domande, risposte e spiegazioni le scrive un modello, e le pilota anche chi ha
+   scritto il materiale da cui nascono; i set di `Materiale Studio/*.json` si
+   passano fra colleghi; il titolo del set resta nello storico dei punteggi
+   (localStorage) e si ridisegna a ogni avvio. Qui ogni JavaScript ha in mano
+   `window.electronAPI`, cioè il disco del docente: una spiegazione con
+   `<img src=x onerror=…>` era codice alla prima risposta data. Nessuno di questi
+   campi porta HTML per disegno — i prompt chiedono testo, l'editor dei documenti
+   li salva da `innerText`, il player mostra la domanda con `innerText` — quindi
+   passano dall'escape; i grassetti delle etichette sono del template e restano.
+   Il reader dell'iPad copia questo file byte per byte e non carica il nucleo
+   (mappai-html-sicuro.js): il ripiego fa lo stesso escape. */
+function _escSessione(v) {
+    if (window.MappAIHtmlSicuro) return window.MappAIHtmlSicuro.esc(v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+}
+
 let pendingTopic = null;
 window.studyConfig = { mode: 'quiz', quantity: 15, timer: false, target: null, scope: 'all' };
 
@@ -208,19 +225,48 @@ window.openQuestionsAngleBlock = function (angleKey, opts) {
    per uguaglianza, una frase copiata solo a somiglianza (invariante 22). Senza
    identificatori — ogni altra superficie di studio, e l'app dello studente, che
    copia questo file e non conosce `MappAIEvidence` — resta la richiesta di
-   sempre, parola per parola. Chiamata senza argomenti: la forma di sempre. */
-window.quizEvidenceBlock = function (materiale) {
+   sempre, parola per parola. Chiamata senza argomenti: la forma di sempre.
+
+   ⚠️ DAL 21/9 IL BLOCCO È PARAMETRICO, e resta UNO (invariante 6): la richiesta
+   della prova la chiedono anche le flashcard e le domande aperte, e una seconda
+   copia scritta nel loro generatore divergerebbe dalla prima al primo ritocco.
+   Le leve sono tre, tutte con il default del quiz a scelta multipla:
+     · `opz.campo`  — il nome del campo nello schema (`evidenzaId`; `prove` per
+                      le domande aperte, che ne portano un array);
+     · `opz.unita`/`opz.unitaEn` — l'unità del foglio: «domanda» per un quiz,
+                      «carta» per una flashcard;
+     · `opz.quanti` — quanti identificatori si chiedono: 1, oppure 2 per le
+                      domande aperte, che nascono dal materiale di DUE rami e
+                      con una prova sola tradirebbero il disegno.
+   Chiamato come prima — senza argomenti, o col solo materiale — restituisce lo
+   stesso testo di prima, carattere per carattere: lo prova
+   `tests/prove-aperte-flashcard.test.js`, ed è la condizione che protegge le
+   chiamate dell'app dello studente, che copia questo file byte per byte. */
+window.quizEvidenceBlock = function (materiale, opz) {
+    var o = (opz && typeof opz === 'object') ? opz : {};
     var en = (typeof window.getPromptLanguage === 'function') && window.getPromptLanguage() === 'en';
+    var campo = o.campo || 'evidenzaId';
+    var quanti = (parseInt(o.quanti, 10) > 1) ? 2 : 1;
+    var unita = en ? (o.unitaEn || 'question') : (o.unita || 'domanda');
     var PC = window.MappAIPipelineCore;
     var ids = (PC && PC.idEvidenze) ? PC.idEvidenze(materiale) : [];
     if (ids.length) {
+        /* la richiesta del campo: è l'unico pezzo che cambia fra uno e due
+           identificatori (il verbo va al plurale, e il tetto è dichiarato) */
+        var chiedi = en
+            ? (quanti > 1
+                ? 'In the "' + campo + '" field write up to TWO of the identifiers listed there: those of the lines that make the expected answer true — one for each area the question draws on. Copy them exactly as they are, without the square brackets.'
+                : 'In the "' + campo + '" field write ONE of the identifiers listed there: the one of the line that makes the correct answer true. Copy it exactly as it is, without the square brackets.')
+            : (quanti > 1
+                ? 'Nel campo "' + campo + '" scrivi fino a DUE degli identificatori elencati lì: quelli delle righe che rendono vera la risposta attesa — uno per ogni area che la domanda chiama in causa. Copiali esatti come sono, senza le parentesi quadre.'
+                : 'Nel campo "' + campo + '" scrivi UNO degli identificatori elencati lì: quello della riga che rende vera la risposta esatta. Copialo esatto com\'è, senza le parentesi quadre.');
         return en
-            ? 'PROOF (mandatory for every question): every line of the MATERIAL below starts with its own identifier between double square brackets, in the form [[ev-…]]. In the "evidenzaId" field write ONE of the identifiers listed there: the one of the line that makes the correct answer true. Copy it exactly as it is, without the square brackets. Never invent an identifier, never write one that is not in the list, and do not copy the sentence instead. If no line of the material supports an answer, do NOT write that question: write one fewer.'
-            : 'LA PROVA (obbligatoria per ogni domanda): ogni riga del MATERIALE qui sotto comincia con il suo identificatore fra doppie parentesi quadre, nella forma [[ev-…]]. Nel campo "evidenzaId" scrivi UNO degli identificatori elencati lì: quello della riga che rende vera la risposta esatta. Copialo esatto com\'è, senza le parentesi quadre. Non inventare mai un identificatore, non scriverne uno che non sia nell\'elenco, e non copiare la frase al suo posto. Se nessuna riga del materiale sostiene una risposta, NON scrivere quella domanda: scrivine una in meno.';
+            ? 'PROOF (mandatory for every ' + unita + '): every line of the MATERIAL below starts with its own identifier between double square brackets, in the form [[ev-…]]. ' + chiedi + ' Never invent an identifier, never write one that is not in the list, and do not copy the sentence instead. If no line of the material supports an answer, do NOT write that ' + unita + ': write one fewer.'
+            : 'LA PROVA (obbligatoria per ogni ' + unita + '): ogni riga del MATERIALE qui sotto comincia con il suo identificatore fra doppie parentesi quadre, nella forma [[ev-…]]. ' + chiedi + ' Non inventare mai un identificatore, non scriverne uno che non sia nell\'elenco, e non copiare la frase al suo posto. Se nessuna riga del materiale sostiene una risposta, NON scrivere quella ' + unita + ': scrivine una in meno.';
     }
     return en
-        ? 'PROOF (mandatory for every question): in the "evidenza" field copy the sentence from the MATERIAL below that makes the correct answer true. Copy it from the material, do not rewrite it and do not summarise it. If no sentence in the material supports an answer, do NOT write that question: write one fewer.'
-        : 'LA PROVA (obbligatoria per ogni domanda): nel campo "evidenza" copia la frase del MATERIALE qui sotto che rende vera la risposta esatta. Copiala dal materiale, non riscriverla e non riassumerla. Se nessuna frase del materiale sostiene una risposta, NON scrivere quella domanda: scrivine una in meno.';
+        ? 'PROOF (mandatory for every ' + unita + '): in the "evidenza" field copy the sentence from the MATERIAL below that makes the correct answer true. Copy it from the material, do not rewrite it and do not summarise it. If no sentence in the material supports an answer, do NOT write that ' + unita + ': write one fewer.'
+        : 'LA PROVA (obbligatoria per ogni ' + unita + '): nel campo "evidenza" copia la frase del MATERIALE qui sotto che rende vera la risposta esatta. Copiala dal materiale, non riscriverla e non riassumerla. Se nessuna frase del materiale sostiene una risposta, NON scrivere quella ' + unita + ': scrivine una in meno.';
 };
 
 /* ── LA LUNGHEZZA DELLA RISPOSTA GIUSTA (12/9) ────────────────────────────────
@@ -252,12 +298,14 @@ window.quizLengthBlock = function () {
 // La taratura classe è iniettata come ovunque via injectClassTuning.
 window.generateDynamicQuiz = async function (opts) {
     opts = opts || {};
+    const giro = opts.giro;
+    const callModelAPI = giro ? payload => giro.chat('materiali', payload) : window.fetchModelAPI;
     const nodeLabel = opts.nodeLabel || 'Globale';
     const material = (opts.material || '').trim();
     const quizType = opts.quizType || 'Scelta Multipla';
     const quantity = opts.quantity || 3;
-    const apiKey = opts.apiKey || (window.getSystemKey && window.getSystemKey());
-    if (!apiKey || !material) return [];
+    const apiKey = opts.apiKey || (!giro && window.getSystemKey && window.getSystemKey());
+    if ((!apiKey && !giro) || !material) return [];
     if (window.MappAIUsage) {
         const qt = String(quizType).toLowerCase();
         window.MappAIUsage.setContext(opts.usageCat || 'study',
@@ -314,13 +362,13 @@ window.generateDynamicQuiz = async function (opts) {
         }
     };
     try {
-        const resp = await window.fetchModelAPI(window.injectClassTuning({
+        const resp = await callModelAPI(window.injectClassTuning({
             contents: [{ parts: [{ text: prompt + "\n\nMateriale:\n" + material }] }],
             /* budget largo: il numero di domande lo tiene `maxItems`, questo serve
                solo a non far troncare una risposta verbosa (misurato il 12/9 sulle
                domande aperte: un budget stretto ha perso metà del foglio). Le
                chiamate vere stanno sotto i 900 token. */
-            generationConfig: { temperature: opts.temperature || window.QUIZ_TEMPERATURE, maxOutputTokens: window.getMaxOutputTokens(_quante * 450 + 1200), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true }
+            generationConfig: { temperature: opts.temperature || window.QUIZ_TEMPERATURE, maxOutputTokens: window.getMaxOutputTokens(_quante * 450 + 1200, giro ? giro.fase('materiali') : undefined), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true }
         }), apiKey);
         const raw = resp && resp.candidates && resp.candidates[0] && resp.candidates[0].content.parts[0].text || '';
         let arr = window.salvageTruncatedJSON(raw.split('```json').join('').split('```').join('').trim());
@@ -351,6 +399,18 @@ window.generateDynamicQuiz = async function (opts) {
                 v.scartati.forEach(x => console.warn('   · «' + String(x.q).slice(0, 70) + '» → ' +
                     (x.motivo || 'prova-non-nel-materiale') + ' · ' + String(x.evidenza).slice(0, 90)));
             }
+            /* ── LA MISURA (21/9, passo 6) ────────────────────────────────────
+               Questo è l'unico punto che sa insieme che cosa il modello ha
+               mandato e che cosa è entrato nel foglio: il conto lo prende di
+               qui e lo scrive su disco la cucitura, che non c'è nell'app dello
+               studente (questo file è copiato là byte per byte) e fuori da
+               Electron non fa niente. Nessun numero si ricalcola qui. */
+            if (window.MappAIMisuraEvidenze) {
+                window.MappAIMisuraEvidenze.foglio({
+                    area: nodeLabel, tipo: quizType, angolo: opts.angle || 'auto',
+                    materiale: material, ricevute: arr, tenute: v.items, scartati: v.scartati, ai: resp._mappaiAI
+                });
+            }
             arr = v.items;
             const seme = opts.seme || (nodeLabel + '|' + quizType + '|' + (opts.angle || 'auto') + '|' + nonce);
             arr = PC.mescolaOpzioni(arr, seme);
@@ -364,7 +424,7 @@ window.generateDynamicQuiz = async function (opts) {
             }
         }
         return arr;
-    } catch (e) { console.warn('[generateDynamicQuiz]', e && e.message); return []; }
+    } catch (e) { if (giro) giro.verifica(); console.warn('[generateDynamicQuiz]', e && e.message); return []; }
 };
 
 window.startStudySession = async function () {
@@ -667,7 +727,7 @@ window.checkQuizAnswer = function (selected, item) {
         feedbackTitle.className = "font-black mb-3 uppercase tracking-wider text-sm flex items-center justify-center gap-2 text-red-600";
     }
 
-    feedbackDesc.innerHTML = `<strong>Risposta corretta:</strong> ${item.correct}<br><br><strong>Spiegazione:</strong> ${item.explanation}`;
+    feedbackDesc.innerHTML = `<strong>Risposta corretta:</strong> ${_escSessione(item.correct)}<br><br><strong>Spiegazione:</strong> ${_escSessione(item.explanation)}`;
     document.getElementById('study-quiz-feedback').classList.remove('hidden');
     document.getElementById('study-quiz-options').classList.add('hidden');
     window.safeCreateIcons();
@@ -685,7 +745,7 @@ window.checkOpenAnswer = function () {
 
     feedbackTitle.innerHTML = '<i data-lucide="info" class="text-indigo-500 w-5 h-5"></i> Verifica la tua risposta';
     feedbackTitle.className = "font-black mb-3 uppercase tracking-wider text-sm flex items-center justify-center gap-2 text-indigo-600";
-    feedbackDesc.innerHTML = `<strong>Risposta di riferimento:</strong> ${item.correct}<br><br><strong>Spiegazione:</strong> ${item.explanation}`;
+    feedbackDesc.innerHTML = `<strong>Risposta di riferimento:</strong> ${_escSessione(item.correct)}<br><br><strong>Spiegazione:</strong> ${_escSessione(item.explanation)}`;
 
     document.getElementById('study-quiz-feedback').classList.remove('hidden');
 
@@ -812,15 +872,15 @@ window.updateStudyScoresDisplay = function () {
             div.className = `p-2.5 rounded-lg border text-xs flex flex-col gap-1.5 bg-white shadow-sm`;
             div.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <div class="font-bold text-slate-800 truncate max-w-[140px]" title="${s.title}">${s.title}</div>
-                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${bgClass}">${s.correct}/${s.total} (${percent}%)</span>
+                    <div class="font-bold text-slate-800 truncate max-w-[140px]" title="${_escSessione(s.title)}">${_escSessione(s.title)}</div>
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${bgClass}">${_escSessione(s.correct)}/${_escSessione(s.total)} (${percent}%)</span>
                 </div>
                 <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
                     <div class="h-full ${progressColor}" style="width: ${percent}%"></div>
                 </div>
                 <div class="flex justify-between items-center text-[9px] text-slate-400">
-                    <span>${s.type}</span>
-                    <span>${dateStr}</span>
+                    <span>${_escSessione(s.type)}</span>
+                    <span>${_escSessione(dateStr)}</span>
                 </div>
             `;
             container.appendChild(div);
@@ -963,9 +1023,9 @@ window.showStudySummary = function () {
             const div = document.createElement('div');
             div.className = "p-3 bg-white border border-slate-200 rounded-xl shadow-sm";
             div.innerHTML = `
-                <p class="text-xs font-black text-slate-800 mb-1">${m.q}</p>
-                <p class="text-[10px] text-red-500 mb-2"><b>Risposta Corretta:</b> ${m.correctAnswer}</p>
-                ${m.explanation ? `<p class="text-[9px] text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">${m.explanation}</p>` : ''}
+                <p class="text-xs font-black text-slate-800 mb-1">${_escSessione(m.q)}</p>
+                <p class="text-[10px] text-red-500 mb-2"><b>Risposta Corretta:</b> ${_escSessione(m.correctAnswer)}</p>
+                ${m.explanation ? `<p class="text-[9px] text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">${_escSessione(m.explanation)}</p>` : ''}
             `;
             mistakesContainer.appendChild(div);
         });

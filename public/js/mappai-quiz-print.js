@@ -161,13 +161,12 @@ const QP_PRINT_BAR = (accentColor, label) => {
 
 // ── STAMPA QUIZ ──────────────────────────────────────────
 
-// Risoluzione nome mappa (comportamento storico preservato: legge appState.nodes,
-// undefined → 'MappAI'; la pipeline passa opts.mapName esplicito).
+// Risoluzione nome mappa quando il chiamante non passa opts.mapName (la stampa
+// dalla sidebar): l'etichetta del ROOT, 'MappAI' solo senza mappa in memoria.
+// ⚠️ Leggeva `appState.nodes`, che non esiste (invariante 2: i nodi stanno in
+// `appState.db.nodes`) — ogni foglio stampato senza mapName si intitolava «MappAI».
 function _qpMapName() {
-    try {
-        const rootNode = appState?.nodes?.find(n => n.level === 0);
-        return rootNode ? cleanLabel(rootNode.label) : 'MappAI';
-    } catch (e) { return 'MappAI'; }
+    return _qpRootLabel() || 'MappAI';
 }
 
 // ── TESTATA DELLA CARTA (root + macro-area) ──────────────
@@ -180,8 +179,8 @@ function _qpClean(s) {
     catch (e) { return String(s || ''); }
 }
 
-// Etichetta del nodo ROOT (L0). _qpMapName resta com'è: è storico e legge
-// appState.nodes, che di norma è undefined → 'MappAI'.
+// Etichetta del nodo ROOT (L0); '' senza mappa in memoria. È anche il nome della
+// mappa di ripiego (_qpMapName).
 function _qpRootLabel() {
     try {
         const st = (typeof appState !== 'undefined') ? appState : window.appState;

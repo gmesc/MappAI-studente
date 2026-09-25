@@ -59,7 +59,17 @@
   // ─────────────────────────── LAYER BROWSER ───────────────────────────
   function S() { try { return (typeof appState !== 'undefined') ? appState : window.appState; } catch (e) { return window.appState; } }
   function clean(s) { return window.cleanLabel ? window.cleanLabel(s) : String(s || '').trim(); }
-  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  /* L'escape passava dal DOM (textContent → innerHTML), che protegge `<` e `&`
+     ma NON le virgolette: in `data-id="${esc(id)}"` un id di nodo
+     `x" onmouseover="…` usciva dall'attributo e diventava un gestore, con
+     `window.electronAPI` in mano. Gli id e le etichette vengono dal vault, che
+     si passa fra colleghi (25/9/2026). Ora i cinque caratteri: il nucleo
+     (mappai-html-sicuro.js) o, dove non c'è (il reader dell'iPad copia questo
+     file byte per byte), lo stesso escape qui. */
+  function esc(s) {
+    if (window.MappAIHtmlSicuro) return window.MappAIHtmlSicuro.esc(s);
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+  }
   function toast(m) { try { if (window.showToast) return window.showToast(m, 'info'); } catch (e) {} }
 
   function masteryFn(id) {

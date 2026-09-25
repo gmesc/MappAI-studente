@@ -188,9 +188,14 @@ window.startEditingTitle = function () {
             }
         }
 
-        // Forza il salvataggio del progetto con il nuovo nome nel LocalStorage e nel Vault
-        if (window.StorageManager && typeof window.StorageManager.saveCurrentProject === 'function') {
-            window.StorageManager.saveCurrentProject();
+        /* Salva il progetto col nome nuovo (localStorage + copia JSON; il vault lo
+           riscrive l'uscita dalla mappa). ⚠️ Qui c'era `window.StorageManager`:
+           il nostro è una `const` lessicale e NON sta su window (invariante 3),
+           mentre `window.StorageManager` in Chromium è la classe NATIVA del
+           browser, che `saveCurrentProject` non ce l'ha. Il toast diceva
+           «salvato» e non si salvava niente. */
+        if (typeof StorageManager !== 'undefined' && StorageManager && typeof StorageManager.saveCurrentProject === 'function') {
+            StorageManager.saveCurrentProject();
         }
 
         window.showToast(window.t('tst_title_saved', "Titolo aggiornato e salvato"), "success");
@@ -320,6 +325,53 @@ window.zoomToNode = function (nodeId) {
 
 window.ignoreNextNodeClick = false;
 
+/* ── IL TESTO DEI DATI ENTRA COME TESTO (25/9/2026) ──────────────────────────
+   La scheda del nodo e la scheda Focus componevano l'HTML con etichette, desc,
+   frasi della fonte e link COSÌ COM'ERANO: un vault ricevuto da un collega con
+   `label: <img src=x onerror=…>` eseguiva codice al primo clic sul nodo — e qui
+   dentro ogni codice ha `window.electronAPI`, cioè il disco del docente.
+   L'escape, l'evidenziazione e la lista dei link apribili stanno nel nucleo puro
+   `mappai-html-sicuro.js`, caricato PRIMA di questo file. Se una copia non lo
+   carica ancora (il reader dell'iPad copia questo file byte per byte) si ripiega
+   sulla via più severa: tutto è testo, e si aprono soltanto le pagine web e la
+   posta (riconosciute da `new URL`, senza rischi); `file:` e il resto no. Prima
+   (25/9, dalla revisione del ramo) non si apriva nessun link, neanche https. */
+function _htmlSicuroScheda() {
+    if (window.MappAIHtmlSicuro) return window.MappAIHtmlSicuro;
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+    return {
+        esc: esc,
+        evidenzia: t => esc(t),
+        togliEvidenziazioniVecchie: t => String(t == null ? '' : t),
+        valutaLink: u => {
+            try {
+                const url = new URL(String(u == null ? '' : u).trim());
+                if (url.protocol === 'http:' || url.protocol === 'https:') return { ok: true, tipo: 'web', url: url.href };
+                if (url.protocol === 'mailto:') return { ok: true, tipo: 'posta', url: url.href };
+            } catch (e) { /* non è un URL */ }
+            return { ok: false, motivo: 'nucleo-assente' };
+        }
+    };
+}
+
+/* I clic della scheda portavano il loro valore dentro `onclick="…('${u}')"`,
+   protetto dal solo apice: un `"` usciva dall'attributo, un `\'` o un `&#39;`
+   chiudeva la stringa, e il resto diventava codice. Ora il valore sta in un
+   attributo `data-*` (con l'escape) e lo legge, come DATO, un ascolto solo. */
+if (!window._mappaiSchedaClicDelegati) {
+    window._mappaiSchedaClicDelegati = true;
+    document.addEventListener('click', function (e) {
+        const el = e.target && e.target.closest ? e.target : null;
+        if (!el) return;
+        const link = el.closest('[data-mappai-link]');
+        if (link) { window.openCustomLink(link.getAttribute('data-mappai-link')); return; }
+        const img = el.closest('img[data-mappai-lightbox]');
+        if (img) { if (window.openLightbox) window.openLightbox(img.getAttribute('src')); return; }
+        const fonti = el.closest('[data-mappai-fonti]');
+        if (fonti) window.openSourceModal(fonti.getAttribute('data-mappai-fonti'));
+    });
+}
+
 window.handleNodeClick = function (event, d, preventZoom = false, preventModal = false) {
     if (window.ignoreNextNodeClick) {
         window.ignoreNextNodeClick = false;
@@ -395,7 +447,9 @@ window.handleNodeClick = function (event, d, preventZoom = false, preventModal =
             }
         }
 
-        let imgHtml = d.image ? `<img src="${d.image}" class="w-full rounded-lg mb-4 border border-slate-200 cursor-pointer" onclick="window.openLightbox('${d.image}')" onerror="this.style.display='none'">` : '';
+        // ogni valore del nodo entra con l'escape; immagini, link e «Fonti» si aprono dall'ascolto delegato
+        const esc = _htmlSicuroScheda().esc;
+        let imgHtml = d.image ? `<img src="${esc(d.image)}" class="w-full rounded-lg mb-4 border border-slate-200 cursor-pointer" data-mappai-lightbox onerror="this.style.display='none'">` : '';
 
         let statusChip = '';
         if (d.studyStatus === 'done') statusChip = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded ml-2 border border-emerald-300">IMPARATO</span>`;
@@ -407,32 +461,34 @@ window.handleNodeClick = function (event, d, preventZoom = false, preventModal =
         const html = `
                 <div class="animate-fade-in">
                     <div class="flex items-center mb-1">
-                        <span class="text-xs font-bold text-indigo-400 uppercase">Livello ${d.level}</span>
+                        <span class="text-xs font-bold text-indigo-400 uppercase">Livello ${esc(d.level)}</span>
                         ${statusChip}
                     </div>
-                    <h2 class="text-xl font-bold text-slate-800 mb-4">${cleanLabel(d.label)}</h2>
+                    <h2 class="text-xl font-bold text-slate-800 mb-4">${esc(cleanLabel(d.label))}</h2>
                     ${imgHtml}
                     
                     <!-- Multiple Images in Details -->
                     ${(d.images && d.images.length > 1) ? `
                         <div class="grid grid-cols-2 gap-2 mb-4">
                             ${d.images.slice(1).map(img => `
-                                <img src="${img}" class="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer" onclick="window.openLightbox('${img}')" onerror="this.style.display='none'">
+                                <img src="${esc(img)}" class="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer" data-mappai-lightbox onerror="this.style.display='none'">
                             `).join('')}
                         </div>
                     ` : ''}
 
-                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 leading-relaxed mb-6 whitespace-pre-wrap">${cleanLabel(d.desc || d.content) || "Nessuna descrizione."}</div>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 leading-relaxed mb-6 whitespace-pre-wrap">${esc(cleanLabel(d.desc || d.content)) || "Nessuna descrizione."}</div>
                     
                     <!-- Links in Details -->
                     ${(d.urls && d.urls.length > 0) || d.url ? `
                         <div class="space-y-2 mb-6">
-                            ${(d.urls || (d.url ? [d.url] : [])).map(u => {
+                            ${(d.urls || (d.url ? [d.url] : [])).map(link => {
+            const u = String(link == null ? '' : link);
             const isLocal = u.startsWith('file://');
+            // si tronca PRIMA dell'escape: tagliare dopo spezzerebbe un `&amp;`
             const displayUrl = u.length > 40 ? u.substring(0, 40) + "..." : u;
             return `
-                                    <span class="flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer text-xs text-indigo-600 font-bold shadow-sm" onclick="window.openCustomLink('${u.replace(/'/g, "\\'")}')">
-                                        <i data-lucide="${isLocal ? 'database' : 'link'}" class="w-3.5 h-3.5"></i> ${isLocal ? 'File' : 'Link'}: <span class="font-normal underline ml-1">${displayUrl}</span>
+                                    <span class="flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer text-xs text-indigo-600 font-bold shadow-sm" data-mappai-link="${esc(u)}">
+                                        <i data-lucide="${isLocal ? 'database' : 'link'}" class="w-3.5 h-3.5"></i> ${isLocal ? 'File' : 'Link'}: <span class="font-normal underline ml-1">${esc(displayUrl)}</span>
                                     </span>
                                 `;
         }).join('')}
@@ -440,7 +496,7 @@ window.handleNodeClick = function (event, d, preventZoom = false, preventModal =
                     ` : ''}
 
                     ${inheritedNotes.length > 0 ? `
-                        <button onclick="window.openSourceModal('${d.id.replace(/'/g, "\\'")}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold p-3 rounded-lg flex justify-between items-center transition mb-6 border border-slate-300">
+                        <button data-mappai-fonti="${esc(d.id)}" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold p-3 rounded-lg flex justify-between items-center transition mb-6 border border-slate-300">
                             <span class="flex items-center gap-2"><i data-lucide="library" class="w-4 h-4 text-indigo-500"></i> Fonti e Note Approfondite</span>
                             <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">${inheritedNotes.length}</span>
                         </button>
@@ -481,6 +537,8 @@ window.openSourceModal = function (nodeId) {
     try {
         const d = appState.db.nodes.find(n => n.id === nodeId);
         if (!d) return;
+        // etichette, desc, frasi della fonte e link: tutto passa dall'escape (vedi _htmlSicuroScheda)
+        const HS = _htmlSicuroScheda(), esc = HS.esc;
 
         const color = (appState.db.customColors && appState.db.customColors[d.group])
             ? appState.db.customColors[d.group]
@@ -526,7 +584,7 @@ window.openSourceModal = function (nodeId) {
                 visited.add(sid);
                 const parentNode = appState.db.nodes.find(n => n.id === sid);
                 if (parentNode) {
-                    pPath.unshift(`<span class="opacity-60">L${parentNode.level}:</span> ${cleanLabel(parentNode.label)}`);
+                    pPath.unshift(`<span class="opacity-60">L${esc(parentNode.level)}:</span> ${esc(cleanLabel(parentNode.label))}`);
                     current = parentNode;
                 } else break;
             } else break;
@@ -565,15 +623,19 @@ window.openSourceModal = function (nodeId) {
         sourceModalTitle.textContent = cleanLabel(d.label);
         sourceModalSubtitle.textContent = `Scheda Focus - Livello ${d.level}`;
 
-        let descStr = cleanLabel(d.desc || d.content) || "Nessuna descrizione.";
+        /* Si evidenzia sul testo GREZZO (l'escape lo fa `evidenzia`), POI si va a
+           capo: prima la ricerca girava sull'HTML già composto, e cercando «br» la
+           <mark> finiva dentro i `<br>`. Le formule restano testo: KaTeX
+           (mappai-latex.js) le trova nei nodi di testo come prima. */
+        let descStr = HS.evidenzia(cleanLabel(d.desc || d.content) || "Nessuna descrizione.", appState.searchQuery);
         descStr = descStr.replace(/\n/g, '<br>');
-        descStr = window.highlightQuery ? window.highlightQuery(descStr, appState.searchQuery) : descStr;
         let html = `<p class="text-slate-800 desc-text rich-desc mb-6 leading-relaxed">${descStr}</p>`;
 
         const urls = d.urls || (d.url ? [d.url] : []);
         if (urls.length > 0) {
             html += `<div class="space-y-2 mb-6">`;
-            urls.forEach(u => {
+            urls.forEach(link => {
+                const u = String(link == null ? '' : link);
                 const isLocal = u.startsWith('file://');
                 let displayUrl = u;
                 if (isLocal) {
@@ -585,8 +647,8 @@ window.openSourceModal = function (nodeId) {
                 const icon = isLocal ? 'database' : 'link';
                 const label = isLocal ? 'File Locale' : 'Collegamento Esterno';
                 html += `
-                        <span class="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-sm text-indigo-600 font-bold shadow-sm" onclick="window.openCustomLink('${u.replace(/'/g, "\\'")}')">
-                            <i data-lucide="${icon}" class="w-4 h-4"></i> ${label}: <span class="font-normal underline">${displayUrl}</span>
+                        <span class="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-sm text-indigo-600 font-bold shadow-sm" data-mappai-link="${esc(u)}">
+                            <i data-lucide="${icon}" class="w-4 h-4"></i> ${label}: <span class="font-normal underline">${esc(displayUrl)}</span>
                         </span>
                     `;
             });
@@ -597,7 +659,7 @@ window.openSourceModal = function (nodeId) {
         if (imgs.length > 0) {
             html += `<div class="grid grid-cols-2 gap-4 mb-6">`;
             imgs.forEach(img => {
-                html += `<img src="${img}" class="w-full rounded-lg border border-slate-200 cursor-pointer shadow-sm hover:shadow-md transition-shadow" onclick="window.openLightbox('${img}')" onerror="this.style.display='none'">`;
+                html += `<img src="${esc(img)}" class="w-full rounded-lg border border-slate-200 cursor-pointer shadow-sm hover:shadow-md transition-shadow" data-mappai-lightbox onerror="this.style.display='none'">`;
             });
             html += `</div>`;
         }
@@ -626,15 +688,18 @@ window.openSourceModal = function (nodeId) {
                             <div id="sources-list-container" class="${q ? '' : 'hidden'}">`;
 
             inheritedNotes.forEach((db, idx) => {
-                let sourceText = db.source ? db.source : "Documento";
-                let titleText = db.title ? db.title : "Estratto Fonte";
-                const isMatch = q && (db.text + titleText + sourceText).toLowerCase().includes(q);
-
-                if (window.highlightQuery && q) {
-                    sourceText = window.highlightQuery(sourceText, q);
-                    titleText = window.highlightQuery(titleText, q);
-                    db.text = window.highlightQuery(db.text, q);
-                }
+                /* ⚠️ `db` è la nota VERA di `sourcesDict` (getInheritedDatabase non
+                   copia): qui prima si scriveva `db.text = highlightQuery(…)`, e la
+                   frase verbatim della fonte si portava la <mark> nel progetto e
+                   nel vault, una in più a ogni apertura. Ora si compone solo l'HTML
+                   da mostrare; le <mark> già finite nei dati si tolgono a schermo. */
+                const testoNota = HS.togliEvidenziazioniVecchie(db.text);
+                const sourceRaw = db.source ? db.source : "Documento";
+                const titleRaw = db.title ? db.title : "Estratto Fonte";
+                const isMatch = q && (testoNota + titleRaw + sourceRaw).toLowerCase().includes(q);
+                const sourceText = HS.evidenzia(sourceRaw, q);
+                const titleText = HS.evidenzia(titleRaw, q);
+                const noteText = HS.evidenzia(testoNota, q);
 
                 html += `
                         <div class="note-entry bg-slate-50 border ${isMatch ? 'border-indigo-300 ring-2 ring-indigo-50 bg-indigo-50/30' : 'border-slate-200'} rounded-lg p-4 mb-3 shadow-sm hover:shadow transition-shadow flex items-start gap-3">
@@ -643,7 +708,7 @@ window.openSourceModal = function (nodeId) {
                                 <p class="text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider border-b border-slate-200 pb-1 flex justify-between items-center">
                                     <span><i data-lucide="link" class="w-3 h-3 inline text-indigo-500"></i> ${titleText} <span class="mx-1 text-slate-300">|</span> <span class="font-normal text-indigo-500 hover:underline cursor-pointer lowercase">${sourceText}</span></span>
                                 </p>
-                                <p class="text-slate-700 note-text rich-desc italic">"${db.text}"</p>
+                                <p class="text-slate-700 note-text rich-desc italic">"${noteText}"</p>
                             </div>
                         </div>`;
             });
@@ -735,17 +800,31 @@ window.openSourceModal = function (nodeId) {
     }
 }
 
+/* Un link del nodo esce dall'app solo se `valutaLink` (mappai-html-sicuro.js) lo
+   riconosce: pagina web, posta, o un DOCUMENTO sul computer. `openExternal` in
+   main.js consegna qualunque cosa al sistema operativo, e un `file:` verso un
+   .app o un .command, o un `smb:`, lanciano programmi. Chi arriva qui (la scheda,
+   la modifica del nodo) passa sempre di qui. */
 window.openCustomLink = function (url) {
     if (!url) return;
+    const v = _htmlSicuroScheda().valutaLink(url);
+    if (!v.ok) {
+        console.warn('[MappAI] link non aperto (' + v.motivo + '):', String(url).slice(0, 200));
+        if (window.showToast) window.showToast(v.motivo === 'file-tipo'
+            ? window.t('tst_link_file_bloccato', "Questo file non si apre da MappAI: si aprono solo documenti, immagini, audio e video, mai programmi o script.")
+            : window.t('tst_link_bloccato', "Collegamento non aperto: da MappAI si aprono solo pagine web (http/https), indirizzi email e documenti sul computer."), 'error');
+        return;
+    }
     try {
         if (window.electronAPI && window.electronAPI.openExternal) {
-            window.electronAPI.openExternal(url);
+            window.electronAPI.openExternal(v.url);
         } else {
-            window.open(url, '_blank');
+            window.open(v.url, '_blank', 'noopener');
         }
     } catch (e) {
+        /* Niente più `window.open` di riserva dentro Electron: aprirebbe il link
+           in una finestra dell'app invece che nel browser di sistema. */
         console.error("Errore apertura link", e);
-        window.open(url, '_blank');
     }
 };
 
@@ -970,7 +1049,7 @@ window.addL1Input = function (defaultValue = "") {
     row.className = 'relative flex items-center l1-input-row w-full';
     const placeholder = document.getElementById('extraction-mode').value === 'mindmap' ? 'Nuovo argomento L1...' : 'Nuovo Super-Hub...';
     row.innerHTML = `
-                <input type="text" class="font-medium text-slate-700 input_text_step3 l1-topic-input w-full" placeholder="${placeholder}" value="${defaultValue}">
+                <input type="text" class="font-medium text-slate-700 input_text_step3 l1-topic-input w-full" placeholder="${placeholder}" value="${_htmlSicuroScheda().esc(defaultValue)}">
                 <button type="button" onclick="window.removeL1Input(this)" class="absolute right-4 text-red-400 hover:text-red-600 p-1 flex items-center justify-center"><i data-lucide="x" class="w-6 h-6"></i></button>
             `;
     container.appendChild(row);

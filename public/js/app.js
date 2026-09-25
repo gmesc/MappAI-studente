@@ -440,6 +440,7 @@ window.onModelSelectChange = function (selectedModel) {
 window.switchAIProvider = function (provider) {
     appState.aiProvider = provider;
     localStorage.setItem('ai_provider', provider);
+    if (window.MappAIModelliUI) window.MappAIModelliUI.render();
 
     // Ripristina il modello salvato per questo provider dal localStorage
     const modelSelect = document.getElementById('model-select');
@@ -667,18 +668,18 @@ window.aiProvidersAvailable = function () {
 // Restituisce il maxOutputTokens ottimale per il modello attivo.
 // Modelli verbosi (Qwen/Kimi su Infomaniak, Gemini 2.5/3.x) producono
 // output più lunghi — scala il budget per evitare troncamenti.
-window.getMaxOutputTokens = function (baseTokens) {
+window.getMaxOutputTokens = function (baseTokens, context) {
     // Guard: baseTokens undefined/NaN → NaN si serializza come null nel payload
     // → null = nessun limite → thinking illimitato su gemini-2.5. Default: 4096.
     if (!baseTokens || typeof baseTokens !== 'number' || isNaN(baseTokens)) baseTokens = 4096;
-    const provider = appState._reviewAIContext?.provider || appState.aiProvider;
+    const provider = context ? context.provider : (appState._reviewAIContext?.provider || appState.aiProvider);
     const modelEl = document.getElementById('model-select');
     // Fallback a localStorage: il DOM può essere null durante le fasi async
     // del multi-pass (loop rami, Phase4, Phase5) → il modello non viene rilevato
     // → moltiplicatori ignorati → budget troppo piccolo → troncamenti.
     // Stesso pattern già usato in fetchModelAPI.
     const storageKey = (provider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
-    const model = (appState._reviewAIContext?.model || (modelEl ? modelEl.value : '') || localStorage.getItem(storageKey) || '').toLowerCase();
+    const model = (context ? context.model : (appState._reviewAIContext?.model || (modelEl ? modelEl.value : '') || localStorage.getItem(storageKey) || '')).toLowerCase();
     if (provider === 'infomaniak') {
         if (model.includes('qwen') || model.includes('kimi') || model.includes('moonshot')) {
             return Math.max(baseTokens, 16384);
@@ -756,16 +757,35 @@ function _detectTruncation(response) {
     return { finishReason, truncated };
 }
 
-window.fetchModelAPI = async function (payload, apiKey) {
-    const provider = appState._reviewAIContext?.provider || appState.aiProvider;
-    const modelEl = document.getElementById('model-select');
-    let model = appState._reviewAIContext?.model || (modelEl ? modelEl.value : null);
-    if (!model) {
-        const storageKey = (provider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
-        model = localStorage.getItem(storageKey);
-    }
-    if (!model) {
-        model = (provider === 'google' ? 'gemini-2.0-flash' : 'mistral-small-4-119B-2603');
+window.fetchModelAPI = async function (payload, apiKey, context) {
+    const explicit = context !== undefined;
+    let requestContext = null;
+    let provider, model;
+    if (explicit) {
+        try {
+            requestContext = window.MappAIModelliCore.contesto(context, 'chat');
+        } catch (_) {
+            throw new Error('Contesto AI esplicito non valido o non disponibile.');
+        }
+        if (typeof apiKey !== 'string' || !apiKey.trim()) throw new Error('Chiave API mancante per il contesto esplicito.');
+        try {
+            payload = structuredClone(payload);
+        } catch (_) {
+            throw new Error('Payload AI esplicito non valido.');
+        }
+        provider = requestContext.provider;
+        model = requestContext.model;
+    } else {
+        provider = appState._reviewAIContext?.provider || appState.aiProvider;
+        const modelEl = document.getElementById('model-select');
+        model = appState._reviewAIContext?.model || (modelEl ? modelEl.value : null);
+        if (!model) {
+            const storageKey = (provider === 'infomaniak') ? 'infomaniak_selected_model' : 'gemini_selected_model';
+            model = localStorage.getItem(storageKey);
+        }
+        if (!model) {
+            model = (provider === 'google' ? 'gemini-2.0-flash' : 'mistral-small-4-119B-2603');
+        }
     }
 
     // ── Gemini 2.5+: disabilita il thinking per fasi con budget ridotto ─────────
@@ -823,18 +843,23 @@ window.fetchModelAPI = async function (payload, apiKey) {
 
     // Registro consumi: snapshot del contesto ALL'ENTRATA (non dopo l'await:
     // un altro flusso potrebbe cambiare il contesto mentre la risposta arriva)
-    const _usageCtx = (window.MappAIUsage && window.MappAIUsage.current()) || null;
+    const _usageCtx = explicit ? { cat: 'pipeline', sub: requestContext.phase }
+        : (window.MappAIUsage && window.MappAIUsage.current()) || null;
+    const usageTarget = appState.generationUsage || (appState.generationUsage = { promptTokens: 0, candidateTokens: 0, totalTokens: 0 });
 
     if (window.electronAPI) {
         try {
-            let response;
+            let response, actualModel = null, billingUsage = null;
             if (provider === 'infomaniak') {
-                const productId = document.getElementById('infomaniak-product-id')?.value || appState.infomaniakProductId;
+                const productId = explicit ? requestContext.productId
+                    : document.getElementById('infomaniak-product-id')?.value || appState.infomaniakProductId;
                 if (!productId) throw new Error("Inserisci il Product ID di Infomaniak nel Setup.");
 
                 // Salva Product ID per persistenza
-                localStorage.setItem('infomaniak_product_id', productId);
-                appState.infomaniakProductId = productId;
+                if (!explicit) {
+                    localStorage.setItem('infomaniak_product_id', productId);
+                    appState.infomaniakProductId = productId;
+                }
 
                 // Translate payload using bridge
                 const translatedPayload = window.InfomaniakBridge.translatePayload(payload, model);
@@ -842,6 +867,20 @@ window.fetchModelAPI = async function (payload, apiKey) {
 
                 // Translate back to Gemini format for app compatibility
                 response = window.InfomaniakBridge.translateResponse(rawResponse);
+                actualModel = typeof rawResponse?.model === 'string' && rawResponse.model.trim() ? rawResponse.model : null;
+                billingUsage = { promptTokenCount: rawResponse?.usage?.prompt_tokens, candidatesTokenCount: rawResponse?.usage?.completion_tokens };
+                if (explicit) {
+                    actualModel = typeof rawResponse?.model === 'string' && rawResponse.model.trim() ? rawResponse.model : null;
+                    // Il bridge legacy sintetizza zeri: il giro conserva solo i
+                    // conteggi effettivamente riportati, incluso uno zero reale.
+                    const usage = {};
+                    for (const [raw, name] of [['prompt_tokens', 'promptTokenCount'], ['completion_tokens', 'candidatesTokenCount'], ['total_tokens', 'totalTokenCount']]) {
+                        const count = rawResponse?.usage?.[raw];
+                        if (typeof count === 'number' && Number.isFinite(count) && count >= 0) usage[name] = count;
+                    }
+                    if (Object.keys(usage).length) response.usageMetadata = usage;
+                    else delete response.usageMetadata;
+                }
             } else {
                 // Rimuove i marker interni (_respectTemp e altri "_"-prefissi) da
                 // generationConfig prima dell'invio a Google: l'API Gemini rifiuta i campi
@@ -854,6 +893,17 @@ window.fetchModelAPI = async function (payload, apiKey) {
                     gPayload = { ...payload, generationConfig: gc };
                 }
                 response = await window.electronAPI.generateGemini({ apiKey, payload: gPayload, model });
+                actualModel = typeof response?.modelVersion === 'string' && response.modelVersion.trim() ? response.modelVersion : null;
+                billingUsage = response?.usageMetadata;
+            }
+
+            if (explicit && response?.usageMetadata) {
+                const usage = { ...response.usageMetadata };
+                for (const name of ['promptTokenCount', 'candidatesTokenCount', 'totalTokenCount', 'thoughtsTokenCount']) {
+                    if (typeof usage[name] !== 'number' || !Number.isFinite(usage[name]) || usage[name] < 0) delete usage[name];
+                }
+                if (Object.keys(usage).length) response.usageMetadata = usage;
+                else delete response.usageMetadata;
             }
 
             /* ⚠️ LA RILEVAZIONE DEL TRONCAMENTO SALE QUI (12/9), sopra il registro
@@ -866,11 +916,9 @@ window.fetchModelAPI = async function (payload, apiKey) {
 
             // Tracking Usage
             if (response && response.usageMetadata) {
-                if (!appState.generationUsage) appState.generationUsage = { promptTokens: 0, candidateTokens: 0, totalTokens: 0 };
-                appState.generationUsage.promptTokens += (response.usageMetadata.promptTokenCount || 0);
-                appState.generationUsage.candidateTokens += (response.usageMetadata.candidatesTokenCount || 0);
-                appState.generationUsage.totalTokens += (response.usageMetadata.totalTokenCount || 0);
-                window.updateCostDisplay();
+                usageTarget.promptTokens += (response.usageMetadata.promptTokenCount || 0);
+                usageTarget.candidateTokens += (response.usageMetadata.candidatesTokenCount || 0);
+                usageTarget.totalTokens += (response.usageMetadata.totalTokenCount || 0);
                 // Registro consumi AI (riga JSONL su disco, categoria dal contesto)
                 /* I QUATTRO CAMPI DEL 12/9. Il registro sapeva quanti token erano
                    usciti e nient'altro, e per questo la domanda «abbassare il
@@ -884,18 +932,22 @@ window.fetchModelAPI = async function (payload, apiKey) {
                    Sono tutti già calcolati poche righe più su: costano quattro
                    chiavi in più per riga e rendono ogni generazione leggibile
                    da sola, senza indovinare il troncamento dai valori ripetuti. */
-                if (window.MappAIUsage) window.MappAIUsage.record({
-                    provider: provider,
-                    model,
-                    inTok: response.usageMetadata.promptTokenCount || 0,
-                    outTok: response.usageMetadata.candidatesTokenCount || 0,
-                    thoughts: response.usageMetadata.thoughtsTokenCount || 0,
-                    n: chiesti,
-                    stop: finishReason,
-                    tetto: requestedMax,
-                    ctx: _usageCtx
-                });
             }
+            const hasUsage = [billingUsage?.promptTokenCount, billingUsage?.candidatesTokenCount]
+                .every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0);
+            const usageRecord = {
+                provider, model: actualModel || model, requestedModel: model, actualModel,
+                usageKnown: hasUsage,
+                inTok: hasUsage ? billingUsage.promptTokenCount : null,
+                outTok: hasUsage ? billingUsage.candidatesTokenCount : null,
+                thoughts: provider === 'google' && Number.isFinite(billingUsage?.thoughtsTokenCount) ? billingUsage.thoughtsTokenCount : 0,
+                n: chiesti, stop: finishReason, tetto: requestedMax, ctx: _usageCtx,
+                ...(explicit ? { project: requestContext.project, projectId: requestContext.projectId,
+                    phase: requestContext.phase, runId: requestContext.runId } : {})
+            };
+            (usageTarget.costRecords || (usageTarget.costRecords = [])).push(usageRecord);
+            if (window.MappAIUsage) window.MappAIUsage.record(usageRecord);
+            if (appState.generationUsage === usageTarget) window.updateCostDisplay();
 
             // Strategia 0 — troncamento (il verdetto è calcolato sopra)
             window.MappAITruncationTracker.record({
@@ -904,54 +956,60 @@ window.fetchModelAPI = async function (payload, apiKey) {
                 finishReason,
                 truncated,
                 requestedMax,
-                promptTokens: response?.usageMetadata?.promptTokenCount || 0,
-                candidateTokens: response?.usageMetadata?.candidatesTokenCount || 0
+                promptTokens: explicit ? (response?.usageMetadata?.promptTokenCount ?? null) : (response?.usageMetadata?.promptTokenCount || 0),
+                candidateTokens: explicit ? (response?.usageMetadata?.candidatesTokenCount ?? null) : (response?.usageMetadata?.candidatesTokenCount || 0)
             });
             // Annota il flag sulla response così salvageTruncatedJSON
             // può loggare con contesto se il parse fallisce.
             if (response && typeof response === 'object') {
                 response._mappaiTruncated = truncated;
                 response._mappaiFinishReason = finishReason;
+                if (explicit) response._mappaiAI = {
+                    provider, phase: requestContext.phase, requestedModel: model, actualModel,
+                    runId: requestContext.runId, vaultPath: requestContext.vaultPath,
+                    project: requestContext.project, projectId: requestContext.projectId
+                };
             }
 
             return response;
         } catch (error) {
-            throw new Error(`Errore Electron IPC API: ${error.message}`);
+            let message = explicit ? error?.message : error.message;
+            if (explicit) {
+                message = String(message || 'Richiesta AI non riuscita.');
+                const secrets = [apiKey, requestContext.productId].filter(Boolean);
+                secrets.slice().forEach(secret => {
+                    try { secrets.push(encodeURIComponent(secret), encodeURI(secret)); } catch (_) { /* mantieni il valore grezzo */ }
+                });
+                secrets.slice().forEach(secret => { secrets.push(secret.replace(/%[0-9A-F]{2}/g, code => code.toLowerCase())); });
+                secrets.sort((a, b) => b.length - a.length)
+                    .forEach(secret => { message = message.split(secret).join('«omesso»'); });
+            }
+            throw new Error(`Errore Electron IPC API: ${message}`);
         }
     } else {
         throw new Error("Electron API non disponibile. L'app non è avviata come Desktop App.");
     }
 }
 
+window.generationCostText = function () {
+    const records = appState.generationUsage?.costRecords;
+    if (!records || !records.length || !window.MappAIUsageCore) return window.t('usage_unavailable', 'Costo non disponibile');
+    const agg = window.MappAIUsageCore.aggregate(records, { kbLookup: (model, provider) => matchModelKB(model, provider),
+        usdChf: Number(localStorage.getItem('mappai_usd_chf_rate')) || 0.9 });
+    const total = agg.totals;
+    if (total.calls === total.unpriced) return window.t('usage_unavailable', 'Costo non disponibile');
+    return window.MappAIUsageCore.fmtChf(total.total) + (total.unpriced ? ' · ' + window.t('usage_partial', 'parziale') : '') +
+        (total.assumedModel ? ' · ' + window.t('usage_requested_model', 'modello richiesto') : '');
+};
+
 window.updateCostDisplay = function () {
     if (!appState.generationUsage) return;
 
-    const modelEl = document.getElementById('model-select');
-    const modelId = modelEl ? modelEl.value : '';
-    const kb = matchModelKB(modelId);
-
-    let promptPrice = 0.10 / 1000000;
-    let candidatePrice = 0.40 / 1000000;
-
-    if (kb) {
-        promptPrice = kb.inputCost / 1000000;
-        candidatePrice = kb.outputCost / 1000000;
-    }
-
-    const cost = (appState.generationUsage.promptTokens * promptPrice) + (appState.generationUsage.candidateTokens * candidatePrice);
-    const isInfomaniak = (appState.aiProvider === 'infomaniak');
-
+    const costText = window.generationCostText();
     const costEl = document.getElementById('total-cost-display');
     const tokenEl = document.getElementById('total-tokens-display');
 
-    if (costEl) {
-        if (isInfomaniak) {
-            costEl.textContent = cost.toFixed(4) + ' CHF';
-        } else {
-            const costInCents = cost * 100;
-            costEl.textContent = costInCents.toFixed(2) + ' ¢';
-        }
-    }
+    if (costEl) costEl.textContent = costText;
     if (tokenEl) tokenEl.textContent = appState.generationUsage.totalTokens.toLocaleString();
     const usedModelEl = document.getElementById('used-model-display');
     if (usedModelEl && appState.generationUsage.usedModel) usedModelEl.textContent = appState.generationUsage.usedModel;
@@ -970,7 +1028,10 @@ window.updateTokenCostEstimator = function () {
     const progressEl = document.getElementById('estimator-progress');
     if (!tokensValEl || !costValEl || !progressEl) return;
 
-    const selectedModel = modelSelect ? modelSelect.value : '';
+    let selectedModel = modelSelect ? modelSelect.value : '';
+    if (window.MappAIModelli?.acceso()) {
+        try { selectedModel = window.MappAIModelli.profiloSetup().modelli.mappa; } catch (_) { selectedModel = ''; }
+    }
     if (!selectedModel) {
         tokensValEl.textContent = '0 / -- token';
         costValEl.textContent = '--';
@@ -979,7 +1040,7 @@ window.updateTokenCostEstimator = function () {
     }
 
     // 1. Get model specs
-    const kb = matchModelKB(selectedModel) || { free: true, inputCost: 0, outputCost: 0 };
+    const kb = matchModelKB(selectedModel, appState.aiProvider) || { priceKnown: false, free: false };
 
     // Determine context window
     let maxContext = 1048576; // Default to 1M
@@ -1042,12 +1103,14 @@ window.updateTokenCostEstimator = function () {
 
     // 4. Calculate cost in cents
     let costDisplay = '';
-    const isFree = kb.free || (kb.inputCost === 0 && kb.outputCost === 0);
+    const isFree = kb.free === true;
     const lang = window.currentLanguage || 'it';
     const t = (lang === 'en' ? (typeof en_translations !== 'undefined' ? en_translations : {}) : (typeof it_translations !== 'undefined' ? it_translations : {}));
     const freeText = t.estimator_free || (lang === 'en' ? 'Free (Free Tier)' : 'Gratuito (Piano Free)');
 
-    if (isFree) {
+    if (kb.priceKnown === false) {
+        costDisplay = window.t('catalog_price_unknown', 'Prezzo non disponibile');
+    } else if (isFree) {
         costDisplay = freeText;
     } else {
         // Cost per 1M tokens * (tokens / 1M) -> cost in dollars * 100 -> cost in cents
@@ -1055,7 +1118,9 @@ window.updateTokenCostEstimator = function () {
         const outputCostDollars = (outputTokens / 1000000) * kb.outputCost;
         const totalCostCents = (inputCostDollars + outputCostDollars) * 100;
 
-        if (totalCostCents < 0.01) {
+        if (appState.aiProvider === 'infomaniak') {
+            costDisplay = (inputCostDollars + outputCostDollars).toFixed(4) + ' CHF';
+        } else if (totalCostCents < 0.01) {
             costDisplay = `<0.01 ¢`;
         } else {
             costDisplay = `${totalCostCents.toFixed(2)} ¢`;
@@ -1065,6 +1130,7 @@ window.updateTokenCostEstimator = function () {
     // 5. Update UI
     tokensValEl.textContent = `${inputTokens.toLocaleString()} / ${maxContext.toLocaleString()} token`;
     costValEl.textContent = costDisplay;
+    costValEl.title = window.t('catalog_map_estimate', 'Stima della sola mappa; materiali e revisione sono conteggiati nelle rispettive chiamate.');
 
     // Progress bar calculation
     const progressPercent = Math.min((inputTokens / maxContext) * 100, 100);
@@ -1327,13 +1393,19 @@ window.handleFileUpload = async function (input, type) {
     window.safeCreateIcons();
 }
 
-window.startGeneration = async function () {
+window.startGeneration = async function (options) {
     /* ⚠️ Una generazione alla volta (13/8). La pipeline dei materiali lavora
        con l'app navigabile: se da un'altra sezione partisse una seconda
        generazione, cambierebbe `appState` sotto i piedi della prima. Lo step A
        della pipeline passa di qui, ed è per questo che il lucchetto ha una
        chiave interna (`Pipeline._interno`). */
     if (window.mappaiOccupato && window.mappaiOccupato()) return;
+    let giro = options && options.giro;
+    try {
+        if (!giro && window.MappAIModelli) giro = window.MappAIModelli.avvia({ nuovo: true,
+            project: document.getElementById('root-node-name')?.value.trim() || 'Senza titolo',
+            giudice: !!((window.MappAIReview && window.MappAIReview.enabled()) || (window.isJudgeEnabled && window.isJudgeEnabled())) });
+    } catch (e) { window.showToast(e.message, 'error'); return; }
     // Contesto di generazione (29/7): classe + disciplina. Con una classe attiva
     // che insegna 2+ discipline il docente sceglie PRIMA di spendere token; con
     // una sola (o nessuna) la funzione risolve da sé e non mostra nulla.
@@ -1346,6 +1418,14 @@ window.startGeneration = async function () {
             appState.generationDiscipline = genCtx.discipline || '';
         }
     } catch (e) { console.warn('[Generation] contesto classe/disciplina non risolto:', e && e.message); }
+    if (giro) {
+        try {
+            giro.verifica();
+            const unsupported = (appState.sources || []).some(s => ['audio', 'video', 'youtube', 'image'].includes(s.type) ||
+                (s.type === 'doc' && s.file && !/\.(pdf|txt|docx)$/i.test(s.file.name)));
+            if (unsupported) throw new Error(window.t('modelli_text_only', 'Questo giro per fase accetta fonti testuali: usa un PDF con testo, un documento o testo incollato.'));
+        } catch (e) { window.showToast(e.message, 'error'); return; }
+    }
     // Toggle «Adatta al livello» (Costruisci): arma la riga livello per questa
     // generazione (e per i successivi Espandi/sotto-concetti della sessione).
     if (window.MappAITune) {
@@ -1361,13 +1441,13 @@ window.startGeneration = async function () {
     appState.generationPipeline = activePipeline;
     console.log(`[Generation Start] Pipeline: ${activePipeline} | Provider: ${appState.aiProvider} | Mode: ${appState.extractionMode}`);
 
-    const isInfomaniak = (appState.aiProvider === 'infomaniak');
+    const isInfomaniak = ((giro ? giro.fase('mappa').provider : appState.aiProvider) === 'infomaniak');
     const inputId = isInfomaniak ? 'infomaniak-api-key-input' : 'gemini-api-key-input';
     const storageKey = isInfomaniak ? 'infomaniak_api_key' : 'gemini_api_key';
 
     const inputKey = document.getElementById(inputId) ? document.getElementById(inputId).value.trim() : "";
 
-    if (inputKey !== "") {
+    if (!giro && inputKey !== "") {
         if (window.saveSecureKey) {
             window.saveSecureKey(storageKey, inputKey);
         } else {
@@ -1375,8 +1455,8 @@ window.startGeneration = async function () {
         }
     }
 
-    const apiKey = window.getSystemKey();
-    if (!apiKey) {
+    const apiKey = giro ? null : window.getSystemKey();
+    if (!apiKey && !giro) {
         window.showToast(window.t('tst_need_api_key', "Inserisci un'API Key AI per continuare."), "error"); return;
     }
     var rootName = document.getElementById('root-node-name')?.value.trim();
@@ -1442,7 +1522,10 @@ window.startGeneration = async function () {
     var fileParts = [];
     var hasSources = false;
 
-    appState.generationUsage = { promptTokens: 0, candidateTokens: 0, totalTokens: 0, usedModel: document.getElementById('model-select').value, usedProvider: appState.aiProvider };
+    appState.generationUsage = { promptTokens: 0, candidateTokens: 0, totalTokens: 0,
+        usedModel: giro ? giro.fase('mappa').model : document.getElementById('model-select').value,
+        usedProvider: giro ? giro.fase('mappa').provider : appState.aiProvider };
+    if (giro) appState.generationUsage.modelli = giro.profilo();
     // Strategia 0 — azzera il tracker troncamenti per la nuova generazione
     if (window.MappAITruncationTracker) window.MappAITruncationTracker.reset();
 
@@ -1617,6 +1700,7 @@ window.startGeneration = async function () {
         return;
     }
 
+    if (giro) giro.verifica();
     // Archive original text before cleaning it for generation. Text/URL/DOCX
     // inputs may live only in textParts, while the source UI stores just an ID.
     var _reviewSourceSnapshot = _pdfPagine.map(function (doc) {
@@ -1702,12 +1786,13 @@ window.startGeneration = async function () {
         // PRE-PASS TRIAGE (gated da mappai_mm_triage_enabled; null se OFF/fallito → zero
         // effetto). Legge la struttura della fonte e stima la profondità-essenziale;
         // consumata dal deepening (Fase 3.7) per non approfondire il contenuto tassonomico.
-        appState.mmTriage = window.runMindMapTriage ? await window.runMindMapTriage(textParts, apiKey) : null;
+        appState.mmTriage = window.runMindMapTriage ? await window.runMindMapTriage(textParts, apiKey, giro) : null;
+        if (giro) giro.verifica();
 
         if (appState.multiPassMode) {
-            await extractMindMapMultiPass(textParts, fileParts, apiKey);
+            await extractMindMapMultiPass(textParts, fileParts, apiKey, giro);
         } else {
-            await extractMindMapIterative(textParts, fileParts, apiKey);
+            await extractMindMapIterative(textParts, fileParts, apiKey, giro);
         }
     } else {
         // Routing KG:
@@ -1720,14 +1805,16 @@ window.startGeneration = async function () {
         const communityFlag = localStorage.getItem('mappai_kg_community_mode');
         const useCommunity = communityFlag === 'true';
         if (useCommunity) {
-            await extractKnowledgeGraphCommunity(textParts, fileParts, apiKey);
+            await extractKnowledgeGraphCommunity(textParts, fileParts, apiKey, giro);
         } else if (appState.multiPassMode) {
-            await extractKnowledgeGraphMultiPass(textParts, fileParts, apiKey);
+            await extractKnowledgeGraphMultiPass(textParts, fileParts, apiKey, giro);
         } else {
-            await extractKnowledgeGraphSinglePass(textParts, fileParts, apiKey);
+            await extractKnowledgeGraphSinglePass(textParts, fileParts, apiKey, giro);
         }
     }
-    if (window.MappAIReview && appState._reviewRequested && !(window.MappAIPipeline && window.MappAIPipeline._running)) await window.MappAIReview.finishMapOnly();
+    if (giro) giro.verifica();
+    if (window.MappAIReview && (appState._reviewRequested || giro) && !(window.MappAIPipeline && window.MappAIPipeline._running)) await window.MappAIReview.finishMapOnly(giro);
+    return giro || true;
     } finally {
         window.MappAIGen.fine();
         if (window.MappAITune && window.MappAITune.scongela) window.MappAITune.scongela();
@@ -2053,18 +2140,7 @@ window.showGenerationReport = function () {
     if (appState._reviewRequested && window.MappAIReview) return;
     if (!appState.generationUsage) return;
 
-    const modelEl = document.getElementById('model-select');
-    const modelId = modelEl ? modelEl.value : 'gemini-2.0-flash';
-    const kb = matchModelKB(modelId);
-
-    let totalCost = 0;
-    if (kb && !kb.free) {
-        totalCost = (appState.generationUsage.promptTokens / 1000000 * kb.inputCost) +
-            (appState.generationUsage.candidateTokens / 1000000 * kb.outputCost);
-    }
-
-    const isInfomaniak = (appState.aiProvider === 'infomaniak');
-    const costText = kb && kb.free ? "Gratuito (Piano Free)" : (isInfomaniak ? `${totalCost.toFixed(4)} CHF` : `$${totalCost.toFixed(4)}`);
+    const costText = window.generationCostText();
     const tokens = appState.generationUsage.totalTokens.toLocaleString();
 
     window.showToast(`${window.t('tst_gen_done', "Generazione completata!")} Token: ${tokens} | ${window.t('ui_cost', "Costo")}: ${costText}`, "success");
@@ -2363,4 +2439,3 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.updateStudyScoresDisplay) window.updateStudyScoresDisplay();
 
 });
-

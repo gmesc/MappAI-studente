@@ -102,6 +102,14 @@ window.generateFlashcardForNode = async function (node, silent = false, isBranch
     if (window.renderStudySets) window.renderStudySets();
 };
 
+/* Il testo dei dati entra come testo (25/9/2026): l'escape del nucleo puro
+   mappai-html-sicuro.js, o uno identico se una copia non lo carica ancora (il
+   reader dell'iPad copia questo file byte per byte). */
+function _escSetStudio(v) {
+    const H = window.MappAIHtmlSicuro;
+    return H ? H.esc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+}
+
 window.renderStudySets = function () {
     const container = document.getElementById('study-sets-container');
     const hint = document.getElementById('empty-sets-hint');
@@ -121,13 +129,34 @@ window.renderStudySets = function () {
     // Sort newest first
     const sortedSets = [...appState.db.studySets].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
+    /* L'elenco si ridisegna a ogni renderGraph, e i set arrivano anche dai file
+       `Materiale Studio/*.json` di un vault ricevuto: titolo, data e numero di
+       domande entravano nell'HTML così com'erano, e id e modo dentro
+       `onclick="…('${set.id}')"`, protetti dal solo apice. Ora ogni valore del set
+       passa dall'escape, e i bottoni portano solo il nome della loro azione:
+       l'id lo conosce la funzione qui sotto, non l'HTML. */
+    const esc = _escSetStudio;
     sortedSets.forEach(set => {
         const div = document.createElement('div');
         div.className = "flex justify-between items-center p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition cursor-pointer group shadow-sm mb-2";
-        div.onclick = () => window.loadStudySet(set.id);
+        const azioni = {
+            rigenera: () => window.regenerateStudySet(set.id),
+            elimina: () => window.deleteStudySet(set.id),
+            stampa: () => { if (set.mode === 'flashcard') window.printFlashcardSet(set.id); else window.printQuizSet(set.id); },
+            live: () => { if (window.MappAILive && window.MappAILive.launchFromSetPrompt) window.MappAILive.launchFromSetPrompt(set.id); }
+        };
+        // un clic su un bottone fa la sua azione e si ferma lì (era il suo
+        // `event.stopPropagation()`); altrove sulla riga apre il set, come prima
+        div.onclick = (e) => {
+            const b = (e && e.target && e.target.closest) ? e.target.closest('[data-set-azione]') : null;
+            const fa = b && azioni[b.getAttribute('data-set-azione')];
+            if (fa) { e.stopPropagation(); fa(); return; }
+            window.loadStudySet(set.id);
+        };
 
         let iconColor = set.mode === 'quiz' ? 'text-amber-500' : 'text-purple-500';
         let iconType = set.mode === 'quiz' ? 'help-circle' : 'brain-circuit';
+        const quante = Array.isArray(set.items) ? set.items.length : 0;
 
         div.innerHTML = `
             <div class="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
@@ -135,21 +164,21 @@ window.renderStudySets = function () {
                      <i data-lucide="${iconType}" class="w-4 h-4 ${iconColor}"></i>
                 </div>
                 <div class="flex flex-col min-w-0">
-                    <span class="text-xs font-bold text-slate-700 truncate leading-tight">${set.title}</span>
-                    <span class="text-[10px] text-slate-400">${set.items.length} domande &middot; ${new Date(set.date).toLocaleDateString()}</span>
+                    <span class="text-xs font-bold text-slate-700 truncate leading-tight">${esc(set.title)}</span>
+                    <span class="text-[10px] text-slate-400">${quante} domande &middot; ${esc(new Date(set.date).toLocaleDateString())}</span>
                 </div>
             </div>
             <div class="ml-3 shrink-0 flex items-center gap-1">
-                <button onclick="event.stopPropagation(); window.regenerateStudySet('${set.id}')" class="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition" title="${window.t('tt_regen_set', 'Genera domande nuove su questo materiale')}">
+                <button data-set-azione="rigenera" class="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition" title="${window.t('tt_regen_set', 'Genera domande nuove su questo materiale')}">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>${window.t('ui_regen', 'Rigenera')}</span>
                 </button>
-                <button onclick="event.stopPropagation(); window.deleteStudySet('${set.id}')" class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Elimina Set">
+                <button data-set-azione="elimina" class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Elimina Set">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
-                <button onclick="event.stopPropagation(); if('${set.mode}' === 'flashcard') { window.printFlashcardSet('${set.id}'); } else { window.printQuizSet('${set.id}'); }" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0" title="Stampa / Esporta PDF">
+                <button data-set-azione="stampa" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0" title="Stampa / Esporta PDF">
                     <i data-lucide="printer" class="w-4 h-4"></i>
                 </button>
-                ${set.mode === 'quiz' ? `<button onclick="event.stopPropagation(); window.MappAILive && window.MappAILive.launchFromSetPrompt && window.MappAILive.launchFromSetPrompt('${set.id}');" class="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 hover:text-emerald-700 transition-colors flex-shrink-0" title="${window.t('tt_launch_live', 'Avvia questo set come attività live (QR)')}">
+                ${set.mode === 'quiz' ? `<button data-set-azione="live" class="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 hover:text-emerald-700 transition-colors flex-shrink-0" title="${window.t('tt_launch_live', 'Avvia questo set come attività live (QR)')}">
                     <i data-lucide="qr-code" class="w-4 h-4"></i>
                 </button>` : ''}
                 <i data-lucide="play-circle" class="w-5 h-5 text-indigo-500 group-hover:text-indigo-700 transition"></i>

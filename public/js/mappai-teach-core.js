@@ -286,7 +286,7 @@
     var byte = 0;
     (projects || []).forEach(function (p) {
       if (!p || !viaSet[p.id]) return;
-      var k = nfc(p.vault || p.name || '');
+      var k = etichettaPotatura(p);
       perMappa[k] = (perMappa[k] || 0) + 1;
       if (pesoDi) { try { byte += pesoDi(p.id) || 0; } catch (e) { } }
     });
@@ -303,13 +303,28 @@
   // — che nessuna schermata sa aprire (chi apre passa dal match, che prende
   // sempre la più recente) — invece di fallire a metà. `protectedId` non si
   // tocca mai: è la voce che si sta salvando.
+  // ⚠️ La chiave è la POSIZIONE esatta della mappa, come il primo livello di
+  // progettoDelVault: vault + classe + disciplina (25/9/2026). Prima era
+  // `vault || name`, e `vault` è il NOME della cartella: due «La Carta» di
+  // classi diverse si contavano come una mappa sola, e una voce SENZA vault
+  // finiva raggruppata per nome — con «Mappa Senza Nome» o due omonime, la più
+  // vecchia spariva. Ma una voce senza vault è un progetto solo-localStorage,
+  // cioè l'UNICA copia: non è il doppione di niente, e non si pota mai.
+  function chiavePotatura(p) {
+    if (!p || !p.vault) return null;
+    return nfc(p.vault) + '\u0000' + nfc(p.classDir || '') + '\u0000' + nfc(p.discDir || '');
+  }
+  function etichettaPotatura(p) {
+    return [p.vault, p.classDir, p.discDir].filter(Boolean).map(nfc).join(' · ');
+  }
   function vociDaPotare(projects, keep, protectedId) {
     if (!Array.isArray(projects)) return [];
     var n = Math.max(1, keep || 1);
     var gruppi = {};
     projects.forEach(function (p) {
       if (!p || !p.id) return;
-      var k = nfc(p.vault || p.name || '');
+      var k = chiavePotatura(p);
+      if (k == null) return;
       (gruppi[k] = gruppi[k] || []).push(p);
     });
     var via = [];

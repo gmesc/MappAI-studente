@@ -9,6 +9,27 @@
    UTILITIES E UI MODALS CUSTOM (NO ALERT/PROMPT)
    ========================================== */
 
+/* ── IL TESTO DEI DATI ENTRA COME TESTO (25/9/2026) ──────────────────────────
+   Da qui passano etichette e id dei nodi (l'albero della barra laterale, la
+   domanda del collegamento), il colore scelto per un ramo e i messaggi degli
+   avvisi: dati che arrivano da un vault, cioè anche da un collega. Nella finestra
+   principale ogni JavaScript ha in mano window.electronAPI, il disco del docente.
+   L'escape sta nel nucleo puro mappai-html-sicuro.js; se una copia non lo carica
+   ancora (il reader dell'iPad copia questo file byte per byte) si ripiega su un
+   escape identico, qui. */
+function _escModali(v) {
+    const H = window.MappAIHtmlSicuro;
+    return H ? H.esc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+}
+
+/* Un colore che finisce in `style="background:…"`: solo #esadecimale o rgb()/rgba()
+   di soli numeri. Il selettore della scheda scrive sempre #rrggbb; un `"` che esce
+   dall'attributo o un `;background:url(…)` si scartano, e resta il colore di prima. */
+function _coloreModali(v) {
+    const s = String(v == null ? '' : v).trim();
+    return (/^#[0-9a-f]{3,8}$/i.test(s) || /^rgba?\([\d\s.,%]+\)$/i.test(s)) ? s : '';
+}
+
 window.showToast = function (message, type = 'error') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -18,8 +39,12 @@ window.showToast = function (message, type = 'error') {
     toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slideIn transition-opacity duration-300`;
     toast.innerHTML = `
                 <i data-lucide="${icon}" class="w-5 h-5 shrink-0"></i>
-                <span class="text-sm font-bold">${message}</span>
+                <span class="text-sm font-bold"></span>
             `;
+    /* Il messaggio è TESTO: nessuno dei ~280 chiamanti (né i loro `toast()` locali)
+       passa markup, e molti ci mettono un'etichetta di nodo, un nome di file o un
+       err.message (undo, fondi con…, cambia link). */
+    toast.querySelector('span').textContent = `${message}`;
     container.appendChild(toast);
     window.safeCreateIcons();
     setTimeout(() => {
@@ -147,7 +172,11 @@ window.showLinkFamilyPrompt = function (srcLabel, tgtLabel, onConfirm) {
     const btnCancel = document.getElementById('link-family-cancel');
     const btnOk = document.getElementById('link-family-ok');
 
-    question.innerHTML = window.t('lfm_question', `Che relazione c'è tra <strong>{a}</strong> e <strong>{b}</strong>?`).replace('{a}', srcLabel).replace('{b}', tgtLabel);
+    /* Il <strong> è del dizionario; le due etichette sono dei nodi (i tre chiamanti
+       passano cleanLabel(label), che non fa escape). Una sostituzione sola: un «{b}»
+       o un «$&» dentro la prima etichetta non vengono più riletti come segnaposto. */
+    question.innerHTML = window.t('lfm_question', `Che relazione c'è tra <strong>{a}</strong> e <strong>{b}</strong>?`)
+        .replace(/\{([ab])\}/g, (_, k) => _escModali(k === 'a' ? srcLabel : tgtLabel));
     input.value = '';
     grid.innerHTML = '';
     chipsDiv.innerHTML = '';
@@ -661,32 +690,42 @@ window.renderTreeView = function () {
         }
     }
 
+    /* L'albero si ridisegna a OGNI mappa aperta (initD3Visualization): etichette,
+       livelli e colori di un vault ricevuto finivano nell'HTML così com'erano, e
+       gli id dentro `onclick="…('${id}')"`, protetti dal solo apice — un `"` usciva
+       dall'attributo, un `\'` chiudeva la stringa e il resto diventava codice.
+       Ora ogni bottone porta solo un numero d'ordine nostro (`data-albero-*`):
+       l'id vero, col suo tipo, sta in `idsAlbero` e lo leggono i due ascolti
+       delegati in fondo, riassegnati a ogni disegno. */
+    const esc = _escModali;
+    const idsAlbero = [];
+    const segna = id => idsAlbero.push(id) - 1;
+
     let html = '';
     rootNodes.forEach(rn => {
         const isRootL1 = rn.level === 1;
-        const baseColor = (appState.db.customColors && appState.db.customColors[rn.group])
-            ? appState.db.customColors[rn.group]
-            : (colorScale[rn.group] || colorScale[rn.level !== undefined ? rn.level : 1] || '#4f46e5');
+        const baseColor = _coloreModali(appState.db.customColors && appState.db.customColors[rn.group])
+            || _coloreModali(colorScale[rn.group]) || _coloreModali(colorScale[rn.level !== undefined ? rn.level : 1]) || '#4f46e5';
         const mColor = (!isMindmap && !isRootL1) ? '#94a3b8' : baseColor; // slate-400 per hub non-L1 nel KG
-        const degreeInfo = !isMindmap ? ` <span class="text-[9px] ${isRootL1 ? 'text-indigo-400' : 'text-slate-400'}">(${rn.degree} conn.)</span>` : '';
+        const degreeInfo = !isMindmap ? ` <span class="text-[9px] ${isRootL1 ? 'text-indigo-400' : 'text-slate-400'}">(${esc(rn.degree)} conn.)</span>` : '';
 
         const hasKids = hasChildNodes(rn.id);
         const isCollapsed = window.collapsedTreeNodes.has(rn.id);
         const arrowIcon = isCollapsed ? 'chevron-right' : 'chevron-down';
 
-        const idEsc = rn.id.replace(/'/g, "\\'");
+        const k = segna(rn.id);
         // Pallino colorato GRAFICO: se il nodo ha figli è il toggle collassa/espandi
         // (segno bianco al centro: "+" collassato, "−" esteso); altrimenti dot statico.
         const sign = isCollapsed ? '+' : '−'; // + / − (minus U+2212)
         html += `<div class="mb-1 w-full">`;
         html += `<div class="w-full flex items-center gap-2 pl-1 pr-2 rounded-lg hover:bg-indigo-50/50 group transition">`;
         if (hasKids) {
-            html += `<button type="button" onclick="event.stopPropagation(); window.toggleTreeCollapse('${idEsc}')" class="tree-dot-toggle shrink-0" style="background:${mColor}" title="${treeCollapseTitle}" aria-label="${treeCollapseTitle}"><span class="tree-dot-sign">${sign}</span></button>`;
+            html += `<button type="button" data-albero-apri="${k}" class="tree-dot-toggle shrink-0" style="background:${mColor}" title="${esc(treeCollapseTitle)}" aria-label="${esc(treeCollapseTitle)}"><span class="tree-dot-sign">${sign}</span></button>`;
         } else {
             html += `<span class="tree-dot-static shrink-0" style="background:${mColor}"></span>`;
         }
-        html += `<button onclick="window.onSidebarNodeClick(event, '${idEsc}')" ondblclick="window.onSidebarNodeDblClick(event, '${idEsc}')" class="text-sm font-bold text-slate-700 hover:text-indigo-600 truncate flex-grow text-left py-1.5">`;
-        html += `${rn.label}${degreeInfo}`;
+        html += `<button data-albero-nodo="${k}" class="text-sm font-bold text-slate-700 hover:text-indigo-600 truncate flex-grow text-left py-1.5">`;
+        html += `${esc(rn.label)}${degreeInfo}`;
         html += `</button>`;
         html += `</div>`;
 
@@ -708,8 +747,8 @@ window.renderTreeView = function () {
                         html += `<div class="w-5 h-5 flex-shrink-0"></div>`; // no chevron button for flat child
                         html += `<div class="flex-grow py-1 pr-2 flex items-center gap-1.5 truncate text-left">`;
                         html += `<span class="tree-child-dot flex-shrink-0"></span>`;
-                        html += `<button onclick="window.onSidebarNodeClick(event, '${c.id.replace(/'/g, "\\'")}')" ondblclick="window.onSidebarNodeDblClick(event, '${c.id.replace(/'/g, "\\'")}')" class="text-xs text-slate-500 hover:text-indigo-500 truncate flex-grow text-left">`;
-                        html += `<span class="font-semibold text-indigo-400 mr-1">L${c.level}</span> ${c.label}`;
+                        html += `<button data-albero-nodo="${segna(c.id)}" class="text-xs text-slate-500 hover:text-indigo-500 truncate flex-grow text-left">`;
+                        html += `<span class="font-semibold text-indigo-400 mr-1">L${esc(c.level)}</span> ${esc(c.label)}`;
                         html += `</button>`;
                         html += `</div>`;
                         html += `</div>`;
@@ -731,9 +770,9 @@ window.renderTreeView = function () {
                 if (children.length > 0) {
                     html += `<div class="ml-5 pl-2 border-l border-slate-200/60 space-y-0.5">`;
                     children.forEach(c => {
-                        html += `<button onclick="window.onSidebarNodeClick(event, '${c.id.replace(/'/g, "\\'")}')" ondblclick="window.onSidebarNodeDblClick(event, '${c.id.replace(/'/g, "\\'")}')" class="w-full text-left py-1 px-2 rounded hover:bg-slate-50 transition flex items-center gap-1.5">`;
+                        html += `<button data-albero-nodo="${segna(c.id)}" class="w-full text-left py-1 px-2 rounded hover:bg-slate-50 transition flex items-center gap-1.5">`;
                         html += `<span class="tree-child-dot flex-shrink-0"></span>`;
-                        html += `<span class="text-xs text-slate-500 hover:text-indigo-500 truncate">${c.label}</span>`;
+                        html += `<span class="text-xs text-slate-500 hover:text-indigo-500 truncate">${esc(c.label)}</span>`;
                         html += `</button>`;
                     });
                     html += `</div>`;
@@ -744,6 +783,20 @@ window.renderTreeView = function () {
     });
 
     container.innerHTML = html;
+    /* Gli stessi gesti di prima: il pallino apre/chiude il ramo e il clic si ferma
+       lì (era il suo `event.stopPropagation()`); il nome risponde al clic e al
+       doppio clic con onSidebarNodeClick/DblClick, che il loro stop lo fanno da sé. */
+    const bersaglio = (e, attr) => (e && e.target && e.target.closest) ? e.target.closest('[' + attr + ']') : null;
+    container.onclick = function (e) {
+        const apri = bersaglio(e, 'data-albero-apri');
+        if (apri) { e.stopPropagation(); window.toggleTreeCollapse(idsAlbero[apri.getAttribute('data-albero-apri')]); return; }
+        const nodo = bersaglio(e, 'data-albero-nodo');
+        if (nodo) window.onSidebarNodeClick(e, idsAlbero[nodo.getAttribute('data-albero-nodo')]);
+    };
+    container.ondblclick = function (e) {
+        const nodo = bersaglio(e, 'data-albero-nodo');
+        if (nodo) window.onSidebarNodeDblClick(e, idsAlbero[nodo.getAttribute('data-albero-nodo')]);
+    };
     setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
 };
 
@@ -962,31 +1015,18 @@ const MODEL_KB = {
     'gemini-2.0-flash-lite': { tier: '📦 Legacy', caps: ['text', 'pdf', 'url', 'json'], inputCost: 0.05, outputCost: 0.20, free: true, deprecated: true, note: 'Discontinued — usa gemini-2.5-flash-lite' },
     'gemini-1.5-flash': { tier: '📦 Legacy', caps: ['text', 'pdf', 'url', 'audio', 'youtube', 'json'], inputCost: 0.075, outputCost: 0.30, free: true, deprecated: true, note: 'Legacy — usa gemini-3-flash' },
     'gemini-1.5-pro': { tier: '📦 Legacy', caps: ['text', 'pdf', 'url', 'audio', 'youtube', 'json'], inputCost: 1.25, outputCost: 5.00, free: false, deprecated: true, note: 'Legacy — usa gemini-2.5-pro' },
-    // ── Infomaniak ──
-    // Mistral Small — prefix matches mistral-small-4-119b-2603, mistralai/mistral-small-*, ecc.
-    'mistralai/mistral-small': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.10, outputCost: 0.30, free: false, note: 'Infomaniak · MM ottimo (58+ nodi), 200K ctx (test 2/6/26)' },
-    'mistral-small': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.10, outputCost: 0.30, free: false, note: 'Infomaniak · MM ottimo (58+ nodi), 200K ctx (test 2/6/26)' },
-    'ministral': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.10, outputCost: 0.30, free: false, note: 'Infomaniak · MM buono (49 nodi), leggero/veloce' },
-    'mistralai/ministral': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.10, outputCost: 0.30, free: false, note: 'Infomaniak · MM buono (49 nodi), leggero/veloce' },
-    'qwen': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.15, outputCost: 0.60, free: false, note: 'Infomaniak · 200K ctx · reasoning inadatto per MM/KG' },
-    'kimi': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.15, outputCost: 0.60, free: false, note: 'Infomaniak · 256K ctx · non testato' },
-    'moonshotai/kimi': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.15, outputCost: 0.60, free: false, note: 'Infomaniak · 256K ctx · non testato' },
-    'google/gemma-4': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.20, outputCost: 0.40, free: false, note: 'Infomaniak · KG density ~1.4 (ceiling), MM ok (test 2/6/26)' },
-    'google/gemma': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.20, outputCost: 0.40, free: false, deprecated: true, note: 'Usa google/gemma-4 (versione specifica)' },
-    'gemma-4': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.20, outputCost: 0.40, free: false, note: 'Infomaniak · KG density ~1.4 (ceiling), MM ok (test 2/6/26)' },
-    'gemma': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.20, outputCost: 0.40, free: false, deprecated: true, note: 'Usa gemma-4 (versione specifica)' },
-    'apertus': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.20, outputCost: 0.40, free: false, note: 'Infomaniak · solo MM (no KG), contesto 65K' },
-    'swiss-ai/apertus': { tier: '🇨🇭 Swiss Made', caps: ['text', 'json'], inputCost: 0.20, outputCost: 0.40, free: false, note: 'Infomaniak · solo MM (no KG), contesto 65K' },
+
 };
 
 // Match a model ID to its KB entry (best fuzzy match or dynamic fallback)
-function matchModelKB(modelId) {
+function matchModelKB(modelId, provider) {
     if (!modelId) return null;
     const id = modelId.toLowerCase().replace('models/', '');
+    const currentProvider = provider || (typeof appState !== 'undefined' ? appState.aiProvider : window.appState?.aiProvider);
+    if (currentProvider === 'infomaniak') return window.MappAICatalogo ? window.MappAICatalogo.kb(modelId) : null;
 
     // 1. Try to find in currently available models (stored in localStorage)
-    const isInfomaniak = (window.appState && window.appState.aiProvider === 'infomaniak');
-    const storageKey = isInfomaniak ? 'infomaniak_available_models' : 'gemini_available_models';
+    const storageKey = 'gemini_available_models';
     const savedModelsStr = localStorage.getItem(storageKey);
     if (savedModelsStr) {
         try {
@@ -1053,6 +1093,9 @@ const CAP_LABELS = {
 
 function renderModelSelect(models, selectEl, currentValue) {
     if (!selectEl) return;
+    const isInfo = typeof appState !== 'undefined' && appState.aiProvider === 'infomaniak';
+    if (isInfo && window.MappAICatalogo) models = window.MappAICatalogo.forPhase(models, 'mappa')
+        .map(m => ({ ...m, kb: window.MappAICatalogo.kb(m.id) }));
     selectEl.innerHTML = '';
 
     const tierOrder = ['🇨🇭 Swiss Made', '⚡ Veloce', '💎 Potente', '🟢 Economico', '📦 Legacy', 'Nuovi Modelli'];
@@ -1080,7 +1123,9 @@ function renderModelSelect(models, selectEl, currentValue) {
             opt.value = m.id;
             const kb = m.kb || { free: false, inputCost: 0, outputCost: 0, note: '', caps: ['text'] };
             let costStr = '';
-            if (kb.free) {
+            if (isInfo && window.MappAICatalogo) {
+                costStr = window.MappAICatalogo.priceLabel(m.id, window.t);
+            } else if (kb.free) {
                 costStr = '🆓 Gratis';
             } else if (kb.inputCost > 0) {
                 const mapCost = (kb.inputCost * 5 / 1000) + (kb.outputCost * 4 / 1000);
@@ -1089,7 +1134,7 @@ function renderModelSelect(models, selectEl, currentValue) {
                 costStr = 'Costo Variabile';
             }
             opt.textContent = `${m.displayName || m.id.replace('models/', '')} — ${costStr}`;
-            opt.title = `${kb.note} | Input: $${kb.inputCost}/1M tok | Output: $${kb.outputCost}/1M tok\nFormati: ${kb.caps.map(c => CAP_LABELS[c]?.split(' ')[1] || c).join(', ')}`;
+            opt.title = isInfo ? costStr + ' · ' + kb.priceDate : `${kb.note} | Input: $${kb.inputCost}/1M tok | Output: $${kb.outputCost}/1M tok\nFormati: ${kb.caps.map(c => CAP_LABELS[c]?.split(' ')[1] || c).join(', ')}`;
             optgroup.appendChild(opt);
         });
         selectEl.appendChild(optgroup);
@@ -1097,6 +1142,10 @@ function renderModelSelect(models, selectEl, currentValue) {
 
     if (currentValue && [...selectEl.options].some(o => o.value === currentValue)) {
         selectEl.value = currentValue;
+    } else if (isInfo && currentValue) {
+        const missing = document.createElement('option'); missing.value = currentValue;
+        missing.textContent = currentValue + ' — ' + window.t('catalog_not_available', 'Non disponibile nel catalogo aggiornato');
+        selectEl.appendChild(missing); selectEl.value = currentValue;
     } else if (selectEl.options.length > 0) {
         // Saved model not found in list (e.g. model removed from API): pick first available
         // but DON'T overwrite localStorage — the saved model might reappear next fetch
@@ -1158,20 +1207,19 @@ window.refreshGeminiModels = async function () {
 
         if (!rawModels || rawModels.error || !Array.isArray(rawModels)) {
             const errMsg = (rawModels && rawModels.error) ? rawModels.error : "Risposta non valida o errore di connessione.";
-            if (selectEl) selectEl.innerHTML = `<option value="">${window.t('opt_error', 'Errore')}: ${errMsg}</option>`;
+            // l'errore lo scrive il server del fornitore (o chi sta in mezzo): è testo
+            if (selectEl) selectEl.innerHTML = `<option value="">${window.t('opt_error', 'Errore')}: ${_escModali(errMsg)}</option>`;
             if (statusEl) statusEl.innerText = `Errore: ${errMsg}`;
             return;
         }
 
         let filteredModels = [];
         if (isInfomaniak) {
-            // Default (All Models): mostra tutto eccetto embed. Modalità BETA: solo Gemma/Apertus.
-            filteredModels = rawModels.filter(m => {
-                const id = m.id.toLowerCase();
-                if (id.includes('embed')) return false;
-                if (appState.infomaniakAllModels) return true;
-                return (id.includes('gemma') || id.includes('google') || id.includes('apertus'));
-            });
+            // Il deposito contiene TUTTO il catalogo; ciascun selettore filtra per funzione.
+            localStorage.setItem('infomaniak_available_models', JSON.stringify(rawModels));
+            localStorage.setItem('infomaniak_catalogue_state', JSON.stringify({ fetchedAt: new Date().toISOString(), stale: false }));
+            filteredModels = window.MappAICatalogo.forPhase(rawModels, 'mappa');
+            if (window.MappAIModelliUI) window.MappAIModelliUI.aggiornaCatalogo();
         } else {
             // Filter out unsupported models for Gemini
             const excludePatterns = ['tts', 'live', 'embed', 'image', 'nano-banana', 'veo', 'lyria', 'imagen', 'robotics', 'deep-research', 'computer-use'];
@@ -1197,7 +1245,7 @@ window.refreshGeminiModels = async function () {
         const tierOrder = ['⚡ Veloce', '💎 Potente', '🟢 Economico', '📦 Legacy', 'Nuovi Modelli'];
 
         filteredModels.forEach(m => {
-            const kb = matchModelKB(m.id);
+            const kb = matchModelKB(m.id, isInfomaniak ? 'infomaniak' : 'google');
             if (!kb) return;
             m.kb = kb;
             const tier = kb.tier;
@@ -1218,14 +1266,18 @@ window.refreshGeminiModels = async function () {
         if (selectEl) {
             renderModelSelect(filteredModels, selectEl, currentValue);
             const availableModelsKey = isInfomaniak ? 'infomaniak_available_models' : 'gemini_available_models';
-            localStorage.setItem(availableModelsKey, JSON.stringify(filteredModels.map(m => ({ id: m.id, displayName: m.displayName, kb: m.kb }))));
+            if (!isInfomaniak) localStorage.setItem(availableModelsKey, JSON.stringify(filteredModels.map(m => ({ id: m.id, displayName: m.displayName, kb: m.kb }))));
         }
 
         if (statusEl) { statusEl.innerText = `${filteredModels.length} modelli compatibili trovati.`; }
 
     } catch (err) {
-        console.error('Error fetching models:', err);
-        if (statusEl) { statusEl.innerText = "Errore nel caricamento. Usa i modelli preimpostati."; }
+        if (isInfomaniak) {
+            let old = {}; try { old = JSON.parse(localStorage.getItem('infomaniak_catalogue_state') || '{}'); } catch (_) { /* cache precedente */ }
+            localStorage.setItem('infomaniak_catalogue_state', JSON.stringify({ ...old, stale: true }));
+            if (window.MappAIModelliUI) window.MappAIModelliUI.aggiornaCatalogo();
+        }
+        if (statusEl) statusEl.innerText = window.t('catalog_refresh_failed', 'Catalogo non aggiornato. Le ultime scelte sono conservate.');
     } finally {
         if (refreshIcon) refreshIcon.style.animation = '';
     }
@@ -1246,7 +1298,9 @@ function updateModelCapabilities() {
         return;
     }
 
-    const costStr = kb.free
+    const costStr = (typeof appState !== 'undefined' && appState.aiProvider === 'infomaniak' && window.MappAICatalogo)
+        ? '<span class="text-violet-600 font-bold">' + window.MappAICatalogo.priceLabel(modelId, window.t) + '</span>'
+        : kb.free
         ? '<span class="text-emerald-600 font-bold">🆓 Gratuito (con limiti)</span>'
         : `<span class="text-violet-600 font-bold">💰 ~${((kb.inputCost * 5 / 1000 + kb.outputCost * 4 / 1000) * 100).toFixed(0)} cent/mappa</span>`;
 

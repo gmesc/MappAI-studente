@@ -94,7 +94,9 @@ MappAITimeline._db = function () {
 
 MappAITimeline._persist = function () {
     try {
-        if (window.StorageManager && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
+        // `typeof`, non `window.StorageManager`: quello è la classe nativa del browser
+        // (invariante 3) — la guardia era vera per caso.
+        if (typeof StorageManager !== 'undefined' && StorageManager.saveCurrentProject) StorageManager.saveCurrentProject();
     } catch (e) { console.warn('[Timeline] persist date manuali fallito:', e); }
 };
 
@@ -141,6 +143,31 @@ MappAITimeline._hl = function (context, dateRaw) {
 MappAITimeline._color = function (macroArea) {
     var core = _TLC();
     return core ? core.categoryColor(macroArea) : '#6366f1';
+};
+/* ── I DATI ENTRANO COME TESTO (25/9/2026) ──────────────────────────────────
+   La timeline si apre con `window.open('')` + `document.write` (stessa origine
+   della finestra principale: da lì `opener.electronAPI` è a portata di mano) e
+   le sue card finiscono anche nella proiezione della classe, dentro la finestra
+   principale (mappai-timeline-teacher.js). Le date manuali stanno in
+   `appState.db.timelineEvents`, cioè nel vault che si passa fra colleghi:
+   l'`id` di una data andava in `onclick="TL_del('…')"` protetto dal solo apice,
+   e `'),alert(1),('` ne usciva. Ora l'id entra come letterale JSON, con
+   l'escape dell'attributo sopra; il colore della card passa da un filtro (dentro
+   `style` un `red;background:url(javascript:…)` non ha bisogno di `<`). */
+MappAITimeline._coloreSicuro = function (c) {
+    var DE = window.MappAIDocEdit;
+    if (DE && DE.normColor) return DE.normColor(c) || '#6366f1';
+    var s = String(c == null ? '' : c).trim().toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(s) ? s : '#6366f1';
+};
+/* Il nome della mappa nel piè stampato è una stringa CSS DENTRO il <style>:
+   là il `</style>` di un nome chiude il foglio di stile e il resto diventa HTML
+   (l'escape della cornice protegge solo virgolette e barre). Senza `<` non c'è
+   tag che si chiuda. */
+MappAITimeline._perCss = function (s) {
+    /* il nome entra com'è: MappAIDocHead fa l'escape da sé (escCss/esc, 25/9);
+       prima il «<» diventava «‹» e il piè di «x < 3» diceva «x ‹ 3» */
+    return String(s == null ? '' : s);
 };
 MappAITimeline._key = function (e) {
     var core = _TLC();
@@ -189,16 +216,17 @@ MappAITimeline._cardHtml = function (e, idx, side, showContext) {
     var dateLabel = MappAITimeline._fmtDate(e);
     var ctxH = MappAITimeline._hl(esc(e.chunkText), esc(e.raw));
     var num = String(idx + 1).padStart(2, '0');
+    var col = MappAITimeline._coloreSicuro(e.macroColor);
     var delBtn = e._manual
-        ? '<button type="button" class="no-print" onclick="TL_del(\'' + e._id + '\')" title="Rimuovi data" ' +
+        ? '<button type="button" class="no-print" onclick="TL_del(' + esc(JSON.stringify(String(e._id))) + ')" title="Rimuovi data" ' +
           'style="background:rgba(255,255,255,.28);border:none;color:white;border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1;">✕</button>'
         : '';
     var originTag = e._origin === 'student' ? ' · 🎓 studente'
                   : e._origin === 'manual'  ? ' · ✏️ aggiunta' : '';
     return '<div class="tl-event tl-' + side + '">' +
-        '<div class="tl-connector"><div class="tl-dot" style="background:' + e.macroColor + ';"></div></div>' +
+        '<div class="tl-connector"><div class="tl-dot" style="background:' + col + ';"></div></div>' +
         '<div class="dossier-card tl-card' + (e._manual ? ' tl-card-manual' : '') + '">' +
-            '<div class="dossier-card-header" style="background:' + e.macroColor + ';color:white;">' +
+            '<div class="dossier-card-header" style="background:' + col + ';color:white;">' +
                 '<div class="dossier-card-header-main">' +
                     '<div class="tl-date-label">' + esc(dateLabel) + '</div>' +
                     '<h2 class="dossier-title">' + esc(e.nodeLabel) + '</h2>' +
@@ -211,7 +239,7 @@ MappAITimeline._cardHtml = function (e, idx, side, showContext) {
             (showContext && e.chunkText
                 ? '<div class="dossier-body">' +
                     '<span class="dossier-section-label">CONTESTO DALLA FONTE</span>' +
-                    '<div class="tl-chunk-source" style="color:' + e.macroColor + ';">' +
+                    '<div class="tl-chunk-source" style="color:' + col + ';">' +
                         '▌ ' + esc(e.chunkTitle) + ' — <em>' + esc(e.chunkSource) + '</em>' +
                     '</div>' +
                     '<p class="dossier-desc tl-context-text">“' + ctxH + '”</p>' +
@@ -369,7 +397,7 @@ window.openTimelineGeneratorModal = function () {
                     '</div>' +
                     '<div>' +
                         '<div class="pm-title">Crea Timeline</div>' +
-                        '<div class="pm-subtitle">' + mapName + '</div>' +
+                        '<div class="pm-subtitle">' + MappAITimeline._esc(mapName) + '</div>' +
                     '</div>' +
                 '</div>' +
 
@@ -959,7 +987,7 @@ window._renderTimeline = function (uniqueEvents, mapName, opts) {
     function _tlDH() { return (typeof window !== 'undefined' && window.MappAIDocHead) || null; }
     function _tlCornice(mapName) {
         var DH = _tlDH();
-        return DH ? DH.stile({ accento: '#4f46e5', mappa: mapName }) : '';
+        return DH ? DH.stile({ accento: '#4f46e5', mappa: window.MappAITimeline._perCss(mapName) }) : '';
     }
     function _tlTestata(mapName, now, eventCount) {
         var DH = _tlDH();

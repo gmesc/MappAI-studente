@@ -72,13 +72,26 @@
         try { var ml = window.getMapLanguage && window.getMapLanguage(); if (ml === 'en') return 'en-US'; } catch (e) {}
         return 'it-IT';
     }
+    /* LA VOCE LA SCEGLIE IL SISTEMA, NON NOI (Giacomo, 25/9/26).
+       Prendere la PRIMA voce della lingua scavalcava la voce che l'utente ha
+       scelto — su iPad in Impostazioni › Accessibilità › Contenuto letto › Voci,
+       dove si scarica anche quella di qualità migliore. Ora:
+       1) se c'è una voce dichiarata `default` per quella lingua, è quella (è il
+          modo in cui il browser dice «questa è la voce di sistema»);
+       2) altrimenti NON si assegna nessuna voce: lasciando `utterance.voice`
+          vuoto, iPadOS legge con la voce predefinita della lingua di `u.lang`.
+       Il ripiego sulla prima voce resta solo se la lingua chiesta non esiste
+       proprio (altrimenti l'utterance resterebbe muta). */
     function _pickVoice(lang) {
         if (!_voices.length) _refreshVoices();
         var pre = lang.slice(0, 2).toLowerCase();
-        var exact = _voices.filter(function (v) { return (v.lang || '').toLowerCase().replace('_', '-') === lang.toLowerCase(); });
-        if (exact.length) return exact[0];
-        var loose = _voices.filter(function (v) { return (v.lang || '').toLowerCase().indexOf(pre) === 0; });
-        return loose.length ? loose[0] : null;
+        var norm = function (v) { return (v.lang || '').toLowerCase().replace('_', '-'); };
+        var esatte = _voices.filter(function (v) { return norm(v) === lang.toLowerCase(); });
+        var dellaLingua = esatte.length ? esatte : _voices.filter(function (v) { return norm(v).indexOf(pre) === 0; });
+        if (!dellaLingua.length) return null;
+        var sistema = dellaLingua.filter(function (v) { return v.default; })[0];
+        if (sistema) return sistema;
+        return esatte.length ? null : dellaLingua[0];   // lingua presente: decide il sistema
     }
 
     // ── Highlight (CSS Custom Highlight API) ───────────────────────────────
