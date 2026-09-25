@@ -457,7 +457,16 @@
         saveStudyRecord: saveStudyRecord,
         readStudySessions: readStudySessions,
         pickFolder: pickFolder,
-        openExternal: function (url) { try { window.open(url, '_blank'); } catch (e) { } return Promise.resolve(true); },
+        /* Un collegamento `file:` porta a un documento sul computer del docente: sull'iPad non esiste e
+           iOS non lo apre. Col nucleo mappai-html-sicuro (25/9/26) il link passa il controllo della scheda,
+           quindi qui si dice perché non si apre, invece di non fare niente in silenzio. */
+        openExternal: function (url) {
+            if (/^file:/i.test(String(url || ''))) {
+                if (window.showToast) window.showToast('Questo collegamento porta a un documento sul computer del docente: sull\'iPad non si apre.', 'info');
+                return Promise.resolve(false);
+            }
+            try { window.open(url, '_blank'); } catch (e) { } return Promise.resolve(true);
+        },
         openSaveFolder: function () {
             if (window.showToast) window.showToast(PROV_CAP ? 'I tuoi file stanno in File › Sul mio iPad › MappAI Studente.' : 'Nel browser i file vivono in IndexedDB.', 'info');
             return Promise.resolve(true);

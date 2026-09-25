@@ -16,6 +16,22 @@
     window.tutorState = { sidebar: { history: [] }, nodes: {} };
     window.setTutorState = function () { window.tutorState.nodes = {}; window.tutorState.sidebar = { history: [] }; return window.tutorState; };
     window.systemPromptsConfig = window.systemPromptsConfig || {};
+    /* Altri tre nomi del docente che le copie chiamano senza controllo (censimento del 26/9/26,
+       statico sulle copie + `typeof` nel reader acceso; c'erano dal primo commit):
+       - `serializeTutorState` (mappai-ai-tutor.js), identificatore nudo in buildVaultMapData
+         (mappai-vault-io.js:95). Mancando, «Torna a STUDIA» (studente/console.js:194) inghiottiva
+         un ReferenceError e la mappa con la sua vista NON veniva mai salvata. Stesso corpo del docente.
+       - `openEditModal` (mappai-edit-modal.js), doppio clic su un nodo (mappai-d3-render.js:497):
+         l'allievo non modifica, quindi apre la scheda del nodo in sola lettura, come un clic.
+       - `updateUserNotesSidebar` (mappai-edit-modal.js), linguetta «Note» (mappai-ui-modals.js:565):
+         il pannello delle note del docente qui non c'è; resta vuoto, senza più lanciare. */
+    window.serializeTutorState = function (state) {
+        try { return JSON.parse(JSON.stringify(state)); } catch (e) { return { sidebar: { history: [] }, nodes: {} }; }
+    };
+    window.openEditModal = window.openEditModal || function (d) {
+        if (d && typeof window.handleNodeClick === 'function') window.handleNodeClick(null, d, true, false);
+    };
+    window.updateUserNotesSidebar = window.updateUserNotesSidebar || function () { };
     document.documentElement.classList.add('manifesto', 'mn-bento-app', 'studente');
     /* ── LA BARRA DI STATO DELL'iPAD NON STA PIÙ SOPRA L'APP (7/9) ────────────
        Con `viewport-fit=cover` la WKWebView arriva fin sotto l'orologio e la

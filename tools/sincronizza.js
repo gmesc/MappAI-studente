@@ -42,7 +42,9 @@ const FILES = [
   'js/mappai-console-bento.js',
   'js/mappai-bento-composizione.js',   /* MappAIBento: colori e disposizione dei riquadri bento (senza, la console resta nuda e scura) */
   'js/mappai-ui-modals.js', 'js/mappai-teach-core.js', 'js/mappai-storage-lang.js',
-  'js/mappai-d3-render.js', 'js/mappai-ui-canvas.js',
+  'js/mappai-d3-render.js',
+  'js/mappai-html-sicuro.js',          /* MappAIHtmlSicuro (25/9/26): escape, lista bianca del tutor, link apribili; PRIMA di ui-canvas */
+  'js/mappai-ui-canvas.js',
   'js/mappai-latex.js',
   'js/mappai-timeline-core.js', 'js/mappai-timeline.js',
   'js/mappai-print-layout.js', 'js/mappai-doc-bar.js', 'js/mappai-doc-head.js',
