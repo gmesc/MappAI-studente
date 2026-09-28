@@ -310,7 +310,8 @@ window.printAllNodeLabels = async function (opts) {
     var modal = document.getElementById('node-labels-print-modal');
     if (modal) modal.remove();
 
-    const allNodes = appState.db.nodes || [];
+    // `opts.nodes` (packet 0042): i nodi della vista della quarantena; senza, quelli della mappa
+    const allNodes = (Array.isArray(opts.nodes) ? opts.nodes : null) || appState.db.nodes || [];
     const nodes = editedCards ? [] : (maxLevel !== null
         ? allNodes.filter(function (n) { return (n.level || 0) <= maxLevel; })
         : allNodes);

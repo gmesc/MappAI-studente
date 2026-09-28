@@ -3,8 +3,10 @@
 // ==========================================
 // Motore di sintesi vocale RIUSABILE + controllo a chip (−10s / play-pausa /
 // +5s / velocità) con BARRA DI AVANZAMENTO scrubabile, EVIDENZIAZIONE karaoke
-// della frase letta e AVVIO PER SEZIONE. Attivato dal toggle "Ascolto testo"
-// nel pannello Strumenti Compensativi (localStorage `mappai_tts_tool_enabled`).
+// della frase letta e AVVIO PER SEZIONE. Nell'app del docente c'è sempre (la sua
+// pagina lo dichiara con `data-voce-sempre` su <html>, 26/9/2026, packet 0039);
+// altrove — l'app dell'allievo, che copia questo file — lo accende e lo spegne
+// `MappAITTS.toggle` (localStorage `mappai_tts_tool_enabled`).
 //
 // Ogni modale che espone uno slot `.mai-tts-slot` (con `data-tts-body="#sel"`)
 // riceve automaticamente il controllo. `data-tts-sections` sullo slot aggiunge
@@ -43,7 +45,13 @@
     function _t(k, f) { try { return (window.t ? window.t(k, f) : f) || f; } catch (e) { return f; } }
     function _icons() { try { if (window.safeCreateIcons) window.safeCreateIcons(); } catch (e) {} }
 
-    function isEnabled() { try { return localStorage.getItem(LS_ENABLED) === '1'; } catch (e) { return false; } }
+    /* Due app, una regola ciascuna (Giacomo, 26/9: «V2 per l'app docente e V1 per iPad»):
+       la pagina del docente dichiara `data-voce-sempre` e il lettore c'è sempre; il reader
+       copia questo file ma non il suo `index.html`, e lì vale l'interruttore. */
+    function isEnabled() {
+        try { if (document.documentElement.hasAttribute('data-voce-sempre')) return true; } catch (e) { }
+        try { return localStorage.getItem(LS_ENABLED) === '1'; } catch (e) { return false; }
+    }
     function _rateIdx() {
         try { var n = parseInt(localStorage.getItem(LS_RATE_IDX), 10); return (n >= 0 && n < SPEEDS.length) ? n : 1; }
         catch (e) { return 1; }
@@ -814,8 +822,8 @@
                     var r = document.getElementById('reading-ruler'), on = !!(r && r.classList.contains('active'));
                     return { t: on ? _t('tts_si', 'sì') : _t('tts_no', 'no'), on: on };
                 },
-                // accesa da qui → si spegne quando la scheda si chiude (closeSourceModal);
-                // accesa dal pannello degli strumenti resta: è una scelta per tutta l'app
+                // accesa da qui → si spegne quando la scheda si chiude (closeSourceModal)
+                // (il pannello degli strumenti che la accendeva per tutta l'app è stato tolto il 26/9)
                 premi: function () {
                     var r = document.getElementById('reading-ruler'); if (!r) return;
                     r.classList.toggle('active');

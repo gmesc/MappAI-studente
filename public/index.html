@@ -41,7 +41,7 @@
     <script src="js/vendor/spacemono-font.js"></script>
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="css/style.css?v=chip1">
+    <link rel="stylesheet" href="css/style.css?v=sync-20260928">
 
     <!-- Token dei modali (decisioni 29/7/26 — vedi public/dev/campionario-modali.html).
          Definisce le variabili --mm-* e le classi .mm-* del nuovo standard: finché un
@@ -336,7 +336,7 @@
     <div id="edit-node-modal" hidden></div>
 
 <!-- ═══ #toast-container (da MappAI re/public/index.html) ═══ -->
-<div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2"></div>
+<div id="toast-container" class="fixed top-4 right-4 flex flex-col gap-2" style="z-index: 2147482000"></div>
 
 <!-- ═══ #reading-ruler (da MappAI re/public/index.html) ═══ -->
 <div id="reading-ruler"></div>
@@ -1429,37 +1429,14 @@
         <img id="lightbox-img" src="" alt="Anteprima" onclick="event.stopPropagation()">
     </div>
 
-<!-- ═══ #a11y-panel (da MappAI re/public/index.html) ═══ -->
-<div id="a11y-panel" class="a11y-panel hidden-panel">
-        <button onclick="document.documentElement.classList.toggle('a11y-invert'); this.classList.toggle('active')"
-            class="btn_a11y_tool"><i data-lucide="sun-moon" class="w-4 h-4"></i> Inverti Colori</button>
-        <button
-            onclick="document.documentElement.classList.toggle('a11y-low-contrast'); this.classList.toggle('active')"
-            class="btn_a11y_tool"><i data-lucide="contrast" class="w-4 h-4"></i> Riduci Contrasti</button>
-        <button
-            onclick="document.documentElement.classList.toggle('a11y-high-contrast'); this.classList.toggle('active')"
-            class="btn_a11y_tool"><i data-lucide="circle-dashed" class="w-4 h-4"></i> Contrasti Elevati</button>
-        <button onclick="document.documentElement.classList.toggle('a11y-grayscale'); this.classList.toggle('active')"
-            class="btn_a11y_tool"><i data-lucide="palette" class="w-4 h-4"></i> Scala di Grigi</button>
-        <button id="btn-line-height" onclick="window.cycleLineHeight()" class="btn_a11y_tool"><i
-                data-lucide="move-vertical" class="w-4 h-4"></i> Interlinea Testo</button>
-        <button
-            onclick="document.getElementById('reading-ruler').classList.toggle('active'); this.classList.toggle('active')"
-            class="btn_a11y_tool"><i data-lucide="align-justify" class="w-4 h-4"></i> Riga di Lettura</button>
-        <button id="btn-text-zoom-panel" onclick="window.cycleTextZoom()" class="btn_a11y_tool"><i data-lucide="zoom-in"
-                class="w-4 h-4"></i> Testo x1</button>
-        <button id="btn-tts-tool" onclick="window.MappAITTS && window.MappAITTS.toggle(this)" class="btn_a11y_tool"
-            data-i18n="ui_tts_tool"><i data-lucide="volume-2" class="w-4 h-4"></i> Ascolto Testo</button>
-    </div>
-
 <!-- ═══ #magnifier-lens (da MappAI re/public/index.html) ═══ -->
 <div id="magnifier-lens">
         <div id="magnifier-content"></div>
     </div>
 
     <!-- ══ MAPPAI STUDENTE — gli script, nell'ordine di MappAI (l'ordine di caricamento è una dipendenza) ══ -->
-    <script src="traduzioni/it_translations.js?v=evidence-id-20260921"></script>
-    <script src="traduzioni/en_translations.js?v=evidence-id-20260921"></script>
+    <script src="traduzioni/it_translations.js?v=sync-20260928"></script>
+    <script src="traduzioni/en_translations.js?v=sync-20260928"></script>
     <script src="traduzioni/i18n-helper.js"></script>
     <!-- la controfigura di electronAPI dello studente: PRIMA di ogni modulo (app.js la legge al caricamento) -->
     <script src="js/studente/adapter.js?v=sync-20260925"></script>
@@ -1469,7 +1446,7 @@
     <script src="js/mappai-text-utils.js?v=st1"></script>
     <script src="js/mappai-math.js?v=st1"></script>
     <script src="js/mappai-relations.js?v=st1"></script>
-    <script src="js/app.js?v=sync-20260916"></script>
+    <script src="js/app.js?v=sync-20260928"></script>
     <script src="js/mappai-font-core.js?v=em1"></script>
     <script src="js/mappai-font.js?v=st1"></script>
     <script src="js/mappai-modal-core.js?v=st1"></script>
@@ -1481,7 +1458,7 @@
     <script src="js/mappai-storage-lang.js?v=evidence-id-20260921"></script>
     <script src="js/mappai-d3-render.js?v=pdf1"></script>
     <script src="js/mappai-html-sicuro.js?v=sync-20260925"></script>
-    <script src="js/mappai-ui-canvas.js?v=riga1"></script>
+    <script src="js/mappai-ui-canvas.js?v=sync-20260928"></script>
     <script src="js/mappai-latex.js?v=sync-20260916"></script>
     <script src="js/mappai-timeline-core.js?v=st1"></script>
     <script src="js/mappai-timeline.js?v=st1"></script>
@@ -1494,8 +1471,8 @@
     <script src="js/mappai-study-export-core.js?v=st1"></script>
     <script src="js/mappai-study-doc.js?v=st1"></script>
     <script src="js/mappai-causal-core.js?v=sync-20260916"></script>
-    <script src="js/mappai-causal-chains.js?v=st1"></script>
-    <script src="js/mappai-branch-synthesis.js?v=sync-20260916"></script>
+    <script src="js/mappai-causal-chains.js?v=sync-20260928"></script>
+    <script src="js/mappai-branch-synthesis.js?v=sync-20260928"></script>
     <script src="js/mappai-studio-layouts.js?v=st1"></script>
     <script src="js/mappai-studio-draw.js?v=st1"></script>
     <script src="js/mappai-studio-view.js?v=pdf1"></script>
@@ -1524,14 +1501,14 @@
     <script src="js/mappai-search-finder.js?v=st1"></script>
     <script src="js/mappai-vault-manager.js?v=sync-20260916"></script>
     <script src="js/mappai-vault-io.js?v=sync-20260916"></script>
-    <script src="js/mappai-print-dossier.js?v=sync-20260916"></script>
-    <script src="js/mappai-context-menu.js?v=lv1"></script>
+    <script src="js/mappai-print-dossier.js?v=sync-20260928"></script>
+    <script src="js/mappai-context-menu.js?v=sync-20260928"></script>
     <script src="js/mappai-flashcards-sr.js?v=sync-20260916"></script>
     <script src="js/mappai-study-session.js?v=evidence-id-20260921"></script>
-    <script src="js/mappai-a11y.js?v=sync-20260916"></script>
+    <script src="js/mappai-a11y.js?v=sync-20260928"></script>
     <script src="js/mappai-rsvp-core.js?v=rsvp1"></script>
     <script src="js/mappai-pronuncia-core.js?v=pr2"></script>
-    <script src="js/mappai-tts-reader.js?v=voce1"></script>
+    <script src="js/mappai-tts-reader.js?v=sync-20260928"></script>
     <script src="js/mappai-lettura-veloce.js?v=sposta1"></script>
     <script>
         window.toggleSidebar = function () {

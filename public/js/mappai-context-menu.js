@@ -108,7 +108,10 @@ window.showContextMenu = function (e, type, data) {
                 `;
     } else if (type === 'link') {
         // JIGSAW: ponte inter-area + docente (modalità OFF) → menu di ratifica.
-        if (data.isBridge && window.MappAIJigsaw && !window.MappAIJigsaw.isEnabled()) {
+        // Solo col set del lavoro a gruppi in vista (ADR 0007): parcheggiato, il
+        // ponte ha il menu dei collegamenti normali.
+        if (data.isBridge && window.MappAIJigsaw && !window.MappAIJigsaw.isEnabled()
+            && window.MappAISetGruppi && window.MappAISetGruppi.on()) {
             /* Autore, stato e motivazione del ponte stanno nei link del vault e li
                scrivono anche gli ALLIEVI (copie JIGSAW): autore e stato entravano
                nel menu così com'erano, e al tasto destro del docente un

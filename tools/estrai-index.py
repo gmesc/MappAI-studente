@@ -26,7 +26,7 @@ TIENI = [
     'map-view',
     'context-menu', 'source-modal', 'confirm-modal', 'user-profile-modal',
     'vault-manager-modal', 'dossier-print-modal', 'study-player-modal', 'quiz-modal',
-    'loading-overlay', 'image-lightbox', 'a11y-panel', 'magnifier-lens',
+    'loading-overlay', 'image-lightbox', 'magnifier-lens',
 ]
 # dentro i blocchi tenuti, i pezzi del docente che si tolgono
 TOGLI = [

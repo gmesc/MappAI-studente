@@ -100,14 +100,12 @@ window.showLoadingOverlay = function (show, text, mode = 'default', nome, onAnnu
     const el = document.getElementById('loading-overlay');
     const desc = document.getElementById('loading-desc');
     const title = document.getElementById('loading-title');
-    const a11yBtn = document.getElementById('a11y-panel-toggle');
 
     _veloAnnulla(show, onAnnulla);
 
     if (show) {
         window.currentLoadingMode = mode;
         el.classList.add('visible');
-        if (a11yBtn) a11yBtn.classList.add('hidden');
         if (text) desc.textContent = text;
         /* ⚠️ I messaggi che ruotano ogni 4 secondi («Estrazione concetti
            chiave…») servono a far compagnia durante un'attesa MUTA. Quando chi
@@ -135,7 +133,6 @@ window.showLoadingOverlay = function (show, text, mode = 'default', nome, onAnnu
     } else {
         el.classList.remove('visible');
         window._loadingTestoProprio = false;   /* il prossimo velo riparte coi messaggi */
-        if (a11yBtn) a11yBtn.classList.remove('hidden');
         if (loadingInterval) {
             clearInterval(loadingInterval);
             loadingInterval = null;

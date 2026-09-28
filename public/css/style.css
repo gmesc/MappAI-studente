@@ -312,8 +312,8 @@ body.a11y-zoom-x2 {
     border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Global A11y Panel Toggle & Floating Actions Toggle Button */
-#a11y-panel-toggle,
+/* Floating Actions Toggle Button e bottone della barra (il cerchio degli
+   strumenti compensativi che stava qui è stato tolto il 26/9/2026, packet 0039) */
 #floating-actions-toggle,
 #sidebar-toggle-btn {
     width: 48px !important;
@@ -332,18 +332,10 @@ body.a11y-zoom-x2 {
     outline: none !important;
 }
 
-#a11y-panel-toggle {
-    position: fixed !important;
-    top: 24px !important;
-    right: 24px !important;
-    z-index: 999999 !important;
-}
-
 #floating-actions-toggle {
     position: relative !important;
 }
 
-#a11y-panel-toggle:hover,
 #floating-actions-toggle:hover,
 #sidebar-toggle-btn:hover {
     background-color: #f8fafc !important;
@@ -354,9 +346,6 @@ body.a11y-zoom-x2 {
 }
 
 /* Rimuove l'anello di focus persistente al click */
-#a11y-panel-toggle:focus,
-#a11y-panel-toggle:active,
-#a11y-panel-toggle:focus-visible,
 #floating-actions-toggle:focus,
 #floating-actions-toggle:active,
 #floating-actions-toggle:focus-visible,
@@ -367,8 +356,6 @@ body.a11y-zoom-x2 {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
-#a11y-panel-toggle svg,
-#a11y-panel-toggle i,
 #floating-actions-toggle svg,
 #floating-actions-toggle i,
 #sidebar-toggle-btn svg,
@@ -387,15 +374,6 @@ body.a11y-zoom-x2 {
 #floating-actions-toggle:hover i,
 #floating-actions-toggle:hover svg {
     transform: scaleX(-1) rotate(0deg) !important;
-}
-
-#a11y-panel {
-    top: 80px !important;
-    right: 24px !important;
-    width: 350px !important;
-    padding: 12px !important;
-    gap: 8px !important;
-    border-radius: 30px !important;
 }
 
 /* Floating Actions Menu mirroring a11y panel styling */
@@ -444,16 +422,6 @@ body.a11y-zoom-x2 {
     opacity: 0 !important;
     pointer-events: none !important;
     transform: translateY(10px) !important;
-}
-
-#a11y-panel span {
-    font-size: 10px !important;
-    margin-top: 8px !important;
-    margin-bottom: 4px !important;
-}
-
-#a11y-panel span:first-child {
-    margin-top: 0 !important;
 }
 
 .btn_a11y_tool,
@@ -901,24 +869,6 @@ body.a11y-zoom-x2 #landing-view .glass-card>* {
     margin-right: auto !important;
 }
 
-/* A11y Compensatory filters */
-html.a11y-invert {
-    filter: invert(1) hue-rotate(180deg);
-    background-color: #000;
-}
-
-html.a11y-low-contrast {
-    filter: contrast(0.75);
-}
-
-html.a11y-high-contrast {
-    filter: contrast(1.5);
-}
-
-html.a11y-grayscale {
-    filter: grayscale(1);
-}
-
 /* Riga di lettura */
 #reading-ruler {
     display: none;
@@ -939,6 +889,10 @@ html.a11y-grayscale {
     display: block;
 }
 
+/* ⚠️ Il pannello degli strumenti compensativi non c'è più nell'app del docente
+   (packet 0039, 26/9/2026), ma l'app dell'allievo ne ha ancora una copia nel suo
+   index.html e riceve questo foglio di stile per copia: `.a11y-panel` e
+   `.hidden-panel` la tengono nascosta finché non si pulisce là (INTAKE). */
 .a11y-panel {
     position: fixed;
     top: 5rem;
@@ -1834,7 +1788,6 @@ body.is-snapshotting #floating-actions-menu,
 body.is-snapshotting #floating-actions-toggle,
 body.is-snapshotting #mode-hint,
 body.is-snapshotting .a11y-panel,
-body.is-snapshotting #a11y-panel-toggle,
 body.is-snapshotting #insegnai-drawer,
 body.is-snapshotting #toast-container,
 body.is-snapshotting .modal {
@@ -2457,8 +2410,7 @@ body.a11y-zoomed-modals .fixed.inset-0>div:not(#sidebar):not(#insegnai-drawer)>*
 
 /* Lock Floating/Circular Actions Buttons dimensions on all zoom levels */
 #sidebar-toggle-btn,
-#floating-actions-toggle,
-#a11y-panel-toggle {
+#floating-actions-toggle {
     width: 48px !important;
     height: 48px !important;
     padding: 12px !important;
@@ -2472,10 +2424,7 @@ body.a11y-zoomed-modals .fixed.inset-0>div:not(#sidebar):not(#insegnai-drawer)>*
 #sidebar-toggle-btn i,
 #floating-actions-toggle svg,
 #floating-actions-toggle id,
-#floating-actions-toggle i,
-#a11y-panel-toggle svg,
-#a11y-panel-toggle id,
-#a11y-panel-toggle i {
+#floating-actions-toggle i {
     width: 24px !important;
     height: 24px !important;
     min-width: 24px !important;
@@ -2493,10 +2442,6 @@ body.a11y-zoomed-modals .fixed.inset-0>div:not(#sidebar):not(#insegnai-drawer)>*
     left: 32px !important;
 }
 
-#a11y-panel-toggle.fixed {
-    top: 24px !important;
-    right: 24px !important;
-}
 
 /* Map Control Card overrides for zoom x1.5 and x2 to keep it compact and on-screen */
 body.a11y-zoom-x15 #map-control-card,

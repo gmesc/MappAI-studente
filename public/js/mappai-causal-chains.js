@@ -85,11 +85,13 @@
     }
 
     // ── API per la sintesi ──────────────────────────────────────────────────
-    function triplesFor(nodes) {
+    /* `links` facoltativo (packet 0042): chi lavora su una VISTA della mappa
+       (la quarantena) passa i suoi collegamenti; senza, quelli della mappa. */
+    function triplesFor(nodes, linksVista) {
         const C = window.MappAICausalCore;
         const a = _getAppState();
         if (!C || !nodes || !nodes.length) return [];
-        const links = (a && a.db && a.db.links) || [];
+        const links = Array.isArray(linksVista) ? linksVista : ((a && a.db && a.db.links) || []);
         const ids = new Set(nodes.map(n => n.id));
         const linkT = C.extractLinkTriples(nodes, links, _familyMap())
             .filter(x => ids.has(x.sourceId) && ids.has(x.targetId));
@@ -130,11 +132,13 @@
     }
 
     // ── Catena dell'intera mappa ────────────────────────────────────────────
-    function buildForCurrentMap() {
+    /* `dbVista` facoltativo (packet 0042): la vista della quarantena; senza, la mappa aperta. */
+    function buildForCurrentMap(dbVista) {
         const C = window.MappAICausalCore;
         const a = _getAppState();
-        if (!C || !a || !a.db) return null;
-        return C.buildChains({ nodes: a.db.nodes || [], links: a.db.links || [], familyMap: _familyMap() });
+        const db = dbVista || (a && a.db);
+        if (!C || !db) return null;
+        return C.buildChains({ nodes: db.nodes || [], links: db.links || [], familyMap: _familyMap() });
     }
 
     function _rowHtml(x) {
@@ -222,15 +226,19 @@
      * dalla mappa. Senza questo, la revisione si vedrebbe solo nell'editor e
      * stampa e PDF continuerebbero a mostrare l'estrazione grezza.
      */
-    function chainsForOutput() {
+    /* `opts.db` facoltativo (packet 0042): con la vista della quarantena vale il
+       SUO `causalDoc` — assente quando conteneva frasi o collegamenti esclusi,
+       e allora i nessi si ricavano dalla vista, mai dalla mappa aperta. */
+    function chainsForOutput(opts) {
         const a = _getAppState();
-        const saved = a && a.db && a.db.causalDoc;
+        const vista = opts && opts.db ? opts.db : null;
+        const saved = vista ? vista.causalDoc : a && a.db && a.db.causalDoc;
         const C = window.MappAICausalCore;
         if (saved && C && C.chainsFromDoc) {
             const revised = C.chainsFromDoc(saved);
             if (revised && revised.total) return revised;
         }
-        return buildForCurrentMap();
+        return vista ? buildForCurrentMap(vista) : buildForCurrentMap();
     }
 
     function mapName() {

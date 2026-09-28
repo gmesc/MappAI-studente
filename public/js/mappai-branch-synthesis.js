@@ -123,13 +123,23 @@
     }
 
     // ── Elenco fonti deduplicato + blocco contenuti per il prompt ─────────
-    function _buildSourcesAndContent(nodes) {
+    /* `vista` facoltativa (packet 0042): `{ db, review }` della quarantena. I nodi
+       si leggono dalla vista per id (`buildInput`), le rettifiche dalla sua
+       revisione. Senza, la mappa aperta e la revisione corrente, come sempre.
+       Con la vista entrano SOLO i nodi che la vista conosce (giro 2 del 26/09):
+       i rami si raccolgono dalla mappa viva, e un nodo aggiunto sulla tela
+       dopo il record non l'ha esaminato nessuno. */
+    function _buildSourcesAndContent(nodes, vista) {
         const reviewApi = window.MappAIReview;
-        const review = reviewApi && reviewApi.current ? reviewApi.current() : appState._pipelineManifest?.review;
+        const review = (vista && vista.review) || (reviewApi && reviewApi.current ? reviewApi.current() : appState._pipelineManifest?.review);
         const sources = reviewApi && reviewApi.sources ? reviewApi.sources()
             : (appState._pdfPagine?.length ? appState._pdfPagine : appState.sources || []);
         if (!window.MappAIGroundingCore) throw new Error('Grounding module not loaded');
-        return window.MappAIGroundingCore.buildInput(appState.db, nodes, sources, review);
+        return window.MappAIGroundingCore.buildInput(vista && vista.db ? vista.db : appState.db, vista && vista.db ? _nodiDellaVista(nodes, vista) : nodes, sources, review);
+    }
+    function _nodiDellaVista(nodes, vista) {
+        const byId = new Map(((vista.db && vista.db.nodes) || []).map(n => [String(n.id), n]));
+        return nodes.filter(n => n && byId.has(String(n.id))).map(n => byId.get(String(n.id)));
     }
 
     function _sourceVersion() {
@@ -414,10 +424,10 @@
     // ── Generazione AI ─────────────────────────────────────────────────────
     // Una passata di sintesi su un insieme di nodi (un ramo, o l'intera mappa
     // se piccola). Ritorna { rawText, sourcesArr } o null se niente contenuti.
-    async function _synthesizeOnce(nodes, label, apiKey, giro) {
+    async function _synthesizeOnce(nodes, label, apiKey, giro, vista) {
     const callModelAPI = giro ? payload => giro.chat('materiali', payload) : window.fetchModelAPI;
         const version = _sourceVersion();
-        const input = _buildSourcesAndContent(nodes);
+        const input = _buildSourcesAndContent(nodes, vista);
         const { nodesListText, sourcesArr } = input;
         if (!nodesListText) return null;
 
@@ -427,7 +437,9 @@
         // documento stampabile. '' / [] se il modulo manca o non trova nulla.
         let causalTriples = [];
         try {
-            if (window.MappAICausal && window.MappAICausal.triplesFor) causalTriples = window.MappAICausal.triplesFor(nodes) || [];
+            if (window.MappAICausal && window.MappAICausal.triplesFor) causalTriples = (vista
+                ? window.MappAICausal.triplesFor(_nodiDellaVista(nodes, vista), (vista.db && vista.db.links) || [])
+                : window.MappAICausal.triplesFor(nodes)) || [];
         } catch (e) { if (giro) giro.verifica(); causalTriples = []; }
         const causalScaffold = (causalTriples.length && window.MappAICausal.promptBlockFromTriples)
             ? window.MappAICausal.promptBlockFromTriples(causalTriples) : '';
@@ -536,17 +548,17 @@
     // aggiunge nulla per lo studente. Un ramo fallito non azzera gli altri.
     const WHOLE_SINGLE_MAX = 30;
 
-    async function _generateWholeMapSynthesis(apiKey, giro) {
+    async function _generateWholeMapSynthesis(apiKey, giro, vista) {
     const callModelAPI = giro ? payload => giro.chat('materiali', payload) : window.fetchModelAPI;
         const version = _sourceVersion();
         const mapName = window._getTimelineProjectName ? window._getTimelineProjectName() : 'MappAI';
-        const allNodes = appState.db.nodes || [];
+        const allNodes = (vista && vista.db ? vista.db.nodes : appState.db.nodes) || [];
 
         try {
             if (allNodes.length <= WHOLE_SINGLE_MAX) {
                 _ovl(true, window.t('bs_progress_whole', 'Sintesi della mappa in corso…'));
                 const out = await _synthesizeOnce(
-                    [...allNodes].sort((a, b) => (a.level || 0) - (b.level || 0)), mapName, apiKey, giro);
+                    [...allNodes].sort((a, b) => (a.level || 0) - (b.level || 0)), mapName, apiKey, giro, vista);
                 _requireSameVersion(version);
                 _ovl(false);
                 if (!out) {
@@ -571,7 +583,7 @@
                 _ovl(true,
                     window.t('bs_progress', 'Sintesi ramo') + ' ' + (i + 1) + '/' + branches.length + ': ' + label + '…');
                 try {
-                    const out = await _synthesizeOnce(_collectBranchNodes(b.id), label, apiKey, giro);
+                    const out = await _synthesizeOnce(_collectBranchNodes(b.id), label, apiKey, giro, vista);
                     if (out) sections.push({ branchLabel: label, rawText: out.rawText, sourcesArr: out.sourcesArr, grounding: out.grounding, causalTriples: out.causalTriples || [] });
                 } catch (e) { if (giro) giro.verifica();
                     if (e.code === 'STALE_SYNTHESIS_SOURCE') throw e;
@@ -590,7 +602,7 @@
             let intro = '', introSources = [], introGrounding = { unknownCitationIds: [] };
             try {
                 _ovl(true, window.t('bs_progress_overview', 'Scrivo la panoramica…'));
-                const input = _buildSourcesAndContent(allNodes);
+                const input = _buildSourcesAndContent(allNodes, vista);
                 const langNote = window.mapLangNote ? window.mapLangNote() : '';
                 const prompt = 'Questi sono i contenuti approvati e le fonti originali della mappa "' + mapName + '".\n' +
                     'Scrivi una PANORAMICA introduttiva (150-220 parole) che colleghi i temi dei rami ' +
@@ -2131,7 +2143,8 @@ ${_bsPie(data.mapName)}
     };
 
     // Namespace pipeline (011): sintesi «tutta la mappa» headless.
-    //   runWholeMap({apiKey?, tuned?, silent?}) → Promise<data|null> (forma _lastSynthesis)
+    //   runWholeMap({apiKey?, tuned?, silent?, db?, review?}) → Promise<data|null> (forma _lastSynthesis)
+    //     `db` + `review` (packet 0042): la vista della quarantena; senza, la mappa aperta come sempre.
     //   buildHtml(data, opts?)   → string (= _buildSynthesisPrintHtml)
     //   generateAudio(data)      → Promise<{blob, mime, ext, cues}> (Google-only, throw se manca chiave)
     // Il flusso manuale (modale sintesi) resta invariato: usa gli entry esistenti.
@@ -2139,7 +2152,10 @@ ${_bsPie(data.mapName)}
         runWholeMap: async function (opts) {
             opts = opts || {};
             const giro = opts.giro;
-            if (window.MappAIReview?.requireApproved && !await window.MappAIReview.requireApproved()) return null;
+            /* packet 0042, giro 5 (F4): con la vista della quarantena (`opts.db`) la chiama la
+               pipeline, che ha già passato il cancello avvolto, e solo con l'opzione il consenso
+               della quarantena vale. Senza vista, la chiamata di sempre. */
+            if (window.MappAIReview?.requireApproved && !await (opts.db ? window.MappAIReview.requireApproved({ quarantena: true }) : window.MappAIReview.requireApproved())) return null;
             const apiKey = opts.apiKey || (!giro && window.getSystemKey ? window.getSystemKey() : '');
             if (!apiKey && !giro) throw new Error(window.t('tst_need_key', "Inserisci un'API Key per continuare"));
             const _prevArmed = window.MappAITune ? window.MappAITune.armed : false;
@@ -2147,7 +2163,8 @@ ${_bsPie(data.mapName)}
             if (window.MappAITune) window.MappAITune.armed = !!opts.tuned;
             _silent = !!opts.silent;
             try {
-                return (await _generateWholeMapSynthesis(apiKey, giro)) || null;
+                const vista = opts.db ? { db: opts.db, review: opts.review } : null;
+                return (await (vista ? _generateWholeMapSynthesis(apiKey, giro, vista) : _generateWholeMapSynthesis(apiKey, giro))) || null;
             } finally {
                 _silent = _prevSilent;
                 if (window.MappAITune) window.MappAITune.armed = _prevArmed;
