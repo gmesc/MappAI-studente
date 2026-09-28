@@ -1,0 +1,5 @@
+# il .gitignore della radice esclude `ios/` (il progetto Xcode GENERATO): qui `ios/` è il
+# codice Swift del plugin, e va versionato — senza, il plugin non esiste in un clone
+!ios/
+# i file utente che Xcode scrive quando apre il pacchetto
+.swiftpm/

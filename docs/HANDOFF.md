@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 26/9, «Stampa» sull'iPad (task 0036 di MappAI re, più i PDF).** Nella WKWebView
+`window.print()` non fa niente: la stampante della sintesi e il «Stampa» della `.mm-doc-bar`
+erano bottoni muti (misurato nel simulatore). Ora c'è un **plugin Capacitor locale,
+`plugins/mappai-stampa`** (dipendenza `file:` in `package.json`, Swift in
+`ios/Sources/StampaPlugin/`): riceve il `file://` vero del documento e apre il menu di stampa di
+iOS — AirPrint, anteprima, «Salva su File». Un HTML si carica in una WKWebView fuori schermo e si
+stampa col suo `viewPrintFormatter()` (vale il `@media print`: niente barre); un PDF va a iOS così
+com'è. Lato JS `studente/stampa.js` (puro, 9 test) sostituisce il `print` dell'iframe del pannello
+al `load` — un aggancio solo per tutti i bottoni del documento — e `documenti.js` mette una
+stampante nella testata del pannello quando è aperto un PDF (nel browser il PDF si apre in una
+scheda sua). Misurato nel simulatore iPad Air 11": sintesi → menu, «Salva su File» → PDF A4 di 3
+pagine senza barre; scheda PDF → menu, 2 pagine come l'originale; `.mm-doc-bar` → menu, anteprima
+senza barra; seconda stampa dopo la prima: riparte. ⚠️ **Dopo una rigenerazione di `ios/`** (`npx
+cap add ios`): `npm install` e `npx cap sync ios` rimettono il plugin in `CapApp-SPM` e in
+`packageClassList` — niente da copiare a mano (`plugins/mappai-stampa/README.md`).
+
 **⟵ 8/9, tre rilievi dall'iPad.** (1) **In split la mappa si inquadra da sé.** Il pannello stava
 SOPRA il canvas: metà mappa finiva nascosta. Ora `#d3-container` si accorcia davvero con le due
 variabili che il dock pubblica (`--sd-w`/`--sd-h`, più `min-height:0` che vince sui 400 px di
@@ -275,7 +291,7 @@ nascosti, stampa visibile · «Lavagna QR» nascosto.
 | il launcher-console e lo split | `studente/launcher-core.js` (puro, 4 test) + `autotest.js` (`openLauncher`, `avvia`, `prova` con `o.split`/`o.mc`) + `documenti.js` (dock `sd--destra`/`sd--basso`, `chiudiChiedendo`) + `prova-core.js` (`orientamento`, `clampSplit`, `foglioDaSet`, `verdetto`, `reportMCDaStato`) | il modale storico del launcher non c'è più; «Avvia» è l'unica azione che conclude |
 | la sessione su disco | `studente/prova-core.js` (`nomeSessione`, `foglioCompilato`, `itemsHtml`, `reportMC`) + `studente/prova-pdf.js` + `autotest.js` (`scriviSessione`, `scriviReportMC`) + `documenti.js` (`azione`) | `Studio Attivo/Prove/<nome>/`: sorgente prima della resa (inv. 18); il PDF è jsPDF (l'unico percorso su iPad); stampante = `openPrintable` + `window.print`; cartella = share sheet / download |
 | il dock e i materiali | `studente/documenti.js` | `#studente-dock` in `#main-content`, maniglia (clamp 360px–60%), iframe da blob; elenco per prefisso + 4 stampe dalla mappa; `azione()` per stampante/cartella = fase 2 |
-| Capacitor | `package.json`, `capacitor.config.json`, `tools/plist-ipad.py` | `@capacitor/core|ios|filesystem|share` 8; `ios/` generato il 6/9 (Node 22), in `.gitignore`, si rigenera con `npm run ios` |
+| Capacitor | `package.json`, `capacitor.config.json`, `tools/plist-ipad.py`, `plugins/mappai-stampa/` | `@capacitor/core|ios|filesystem|share` 8; il plugin locale `mappai-stampa` (la stampa di iOS, 26/9); `ios/` generato il 6/9 (Node 22), in `.gitignore`, si rigenera con `npm run ios` |
 
 ## 3. Le decisioni prese qui (oltre a quelle del piano)
 

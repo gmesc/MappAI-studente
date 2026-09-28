@@ -128,6 +128,7 @@
         if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
         corpo.classList.remove('sd-corpo--pdf');
         if (dock) dock.classList.remove('sd--senza-testa');
+        var sb = dock && dock.querySelector('.sd-stampa'); if (sb) sb.remove();
         /* la fila del lettore dell'app vale per il documento che se ne va: si
            toglie, e la voce o la lettura veloce di quel documento tacciono */
         var fila = dock && dock.querySelector('.sd-fila'); if (fila) fila.remove();
@@ -142,7 +143,42 @@
         try { if (window.MappAILetturaVeloce) window.MappAILetturaVeloce.chiudi(); } catch (e) { }
         corpo.innerHTML = ''; chiediChiusura = null;
     }
-    /* apri({ titolo, iframe: url } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool> ) */
+    /* ── «STAMPA» SULL'IPAD (task 0036, 26/9) ─────────────────────────────────
+       Nella WKWebView `window.print()` non fa niente (misurato nel simulatore:
+       nessun menu, nessun avviso). Il `print` dell'iframe si sostituisce al `load`
+       con quello di `studente/stampa.js`: il plugin nativo `Stampa` riceve il
+       file:// vero del documento e apre il menu di stampa di iOS; nel browser
+       resta l'originale. Un aggancio solo vale per la stampante della sintesi
+       (anche quella della fila dell'app, che ne preme il bottone) e per il
+       «Stampa» della `.mm-doc-bar`: chiamano tutti `window.print()`. */
+    function pluginStampa() { var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin; return FSP ? FSP('Stampa') : null; }
+    function avvisaStampa(m) { toast(m, 'error'); }
+    function agganciaStampa(f, o) {
+        var St = window.MappAIStudenteStampa; if (!St) return;
+        St.aggancia(f, { plugin: pluginStampa, url: o.fileUri || null, titolo: o.titolo, avvisa: avvisaStampa, prefisso: t('st_stampa_ko', 'Non riesco a stampare: ') });
+    }
+    /* la stampante nella testata del pannello, per i documenti che non hanno una
+       barra loro (i PDF): accanto alla × */
+    function stampante(fn) {
+        var testa = dock.querySelector('.sd-testa'), x = testa.querySelector('.sd-chiudi');
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'sd-stampa';
+        b.setAttribute('title', t('st_stampa', 'Stampa')); b.setAttribute('aria-label', t('st_stampa', 'Stampa'));
+        b.innerHTML = '<i data-lucide="printer"></i>';
+        b.addEventListener('click', function () { fn(); });
+        testa.insertBefore(b, x);
+        if (window.safeCreateIcons) window.safeCreateIcons();
+    }
+    /* il file:// vero di un file del vault (sull'iPad), null nel browser */
+    function uriVero(vaultPath, relPath) {
+        var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
+        var Fs = FSP ? FSP('Filesystem') : null;
+        if (!Fs) return Promise.resolve(null);
+        var vp = vaultPath.replace(/^Documents\/?/, '');
+        return Fs.getUri({ path: (vp ? vp + '/' : '') + relPath, directory: 'DOCUMENTS' }).then(function (u) { return u.uri; });
+    }
+
+    /* apri({ titolo, iframe: url, fileUri? } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool>, stampa: fn ) */
     function apri(o) {
         if (!monta()) return null;
         o = o || {};
@@ -153,10 +189,11 @@
         collasso = null; misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
-            f.addEventListener('load', function () { vesti(f); });
+            f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); });
             corpo.appendChild(f);
         } else if (o.html) corpo.innerHTML = o.html;
         else if (typeof o.monta === 'function') o.monta(corpo);
+        if (typeof o.stampa === 'function') stampante(o.stampa);
         dock.hidden = false;
         window.dispatchEvent(new Event('resize'));
         if (window.MappAIStudenteMappa) window.MappAIStudenteMappa.conDocumento();
@@ -323,9 +360,9 @@
         var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
         var Fs = FSP ? FSP('Filesystem') : null, C = window.Capacitor;
         if (Fs && C && C.convertFileSrc) {
-            var vp = vaultPath.replace(/^Documents\/?/, '');
-            return Fs.getUri({ path: (vp ? vp + '/' : '') + relPath, directory: 'DOCUMENTS' }).then(function (u) {
-                apri({ titolo: nome, iframe: C.convertFileSrc(u.uri) });
+            /* l'URI vero resta accanto all'iframe: è quello che la stampa di iOS carica */
+            return uriVero(vaultPath, relPath).then(function (uri) {
+                apri({ titolo: nome, iframe: C.convertFileSrc(uri), fileUri: uri });
             }).catch(function () { return apriBlob(vaultPath, relPath, nome); });
         }
         return apriBlob(vaultPath, relPath, nome);
@@ -335,7 +372,27 @@
         if (!V) return apriBlob(vaultPath, relPath, nome);
         return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
             if (!r || !r.ok) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (r && r.error ? ' ' + r.error : ''), 'error'); return; }
-            apri({ titolo: nome, monta: function (host) { host.classList.add('sd-corpo--pdf'); V.monta(host, r.base64); } });
+            apri({
+                titolo: nome,
+                monta: function (host) { host.classList.add('sd-corpo--pdf'); V.monta(host, r.base64); },
+                stampa: function () { stampaPdf(vaultPath, relPath, nome, r.base64); }
+            });
+        });
+    }
+    /* LA STAMPA DI UN PDF (26/9): sull'iPad il file va a iOS così com'è (il plugin
+       `Stampa` lo passa a `UIPrintInteractionController`, che lo impagina da sé);
+       nel browser si apre in una scheda sua, dove il visore del browser ha la sua
+       stampante. */
+    function stampaPdf(vaultPath, relPath, nome, base64) {
+        var St = window.MappAIStudenteStampa; if (!St) return;
+        St.stampaFile({
+            plugin: pluginStampa, titolo: nome, avvisa: avvisaStampa, prefisso: t('st_stampa_ko', 'Non riesco a stampare: '),
+            url: function () { return uriVero(vaultPath, relPath); },
+            altrimenti: function () {
+                var url = URL.createObjectURL(b64ToBlob(base64, 'application/pdf'));
+                if (!window.open(url, '_blank')) toast(t('st_popup', 'Il browser ha bloccato la finestra di stampa.'), 'warning');
+                setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+            }
         });
     }
     function apriBlob(vaultPath, relPath, nome) {
@@ -403,8 +460,10 @@
     }
 
     /* ── le celle della tabella delle prove ─────────────────────────────────
-       `apri:<id>` la riga → il documento nel dock · `stampa:<id>` → l'HTML in una
-       finestra e `window.print()` (su iPad è il menu di stampa) · `cartella:<id>`
+       `apri:<id>` la riga → il documento nel dock · `stampa:<id>` → sull'iPad il
+       menu di stampa di iOS (plugin `Stampa`: `window.print()` nella WKWebView non
+       fa niente; oggi la tabella non offre questa cella, studia-core), nel browser
+       l'HTML in una finestra e `window.print()` · `cartella:<id>`
        → il PDF al foglio di condivisione di iOS (`@capacitor/share`: «Salva su
        File», «Apri in…», Mail); nel browser si scarica. L'app File non si apre su
        un percorso: la cartella dell'app è già lì (LEGGIMI-studente). */
@@ -426,6 +485,13 @@
             return;
         }
         if (m[1] === 'stampa') {
+            if (pluginStampa() && window.MappAIStudenteStampa) {
+                window.MappAIStudenteStampa.stampaFile({
+                    plugin: pluginStampa, titolo: s.nome || s.id, avvisa: avvisaStampa, prefisso: t('st_stampa_ko', 'Non riesco a stampare: '),
+                    url: function () { return uriVero(vaultPath, base + (s.html || 'risposte.html')); }
+                });
+                return;
+            }
             leggiB64(vaultPath, base + (s.html || 'risposte.html')).then(function (b64) {
                 var html = decodeURIComponent(escape(atob(b64)));
                 var w = window.MappAIStudyExport && window.MappAIStudyExport.openPrintable

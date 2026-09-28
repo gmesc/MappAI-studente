@@ -1,0 +1,23 @@
+{
+  "name": "mappai-stampa",
+  "version": "0.1.0",
+  "description": "MappAI studente — «Stampa» sull'iPad: il menu di stampa di iOS per i documenti HTML e i PDF del pannello",
+  "author": {
+    "name": "Giacomo Meschini",
+    "email": "giacomo@insegnai.ch"
+  },
+  "private": true,
+  "license": "ISC",
+  "files": [
+    "ios/Sources",
+    "Package.swift"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}
