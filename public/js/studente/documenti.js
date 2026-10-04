@@ -27,7 +27,7 @@
        cambio di orientamento cambia SOLO il CSS: il contenuto (la view della
        prova, l'iframe) resta lo stesso nodo. Due clamp, due memorie. */
     var KEY_W = 'mappai_studente_dock_w', KEY_H = 'mappai_studente_dock_h', MIN_W = 360, MIN_H = 240;
-    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null;
+    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null, solo = false;
     var mq = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
     function PC() { return window.MappAIProvaCore; }
     function orientamento() {
@@ -123,7 +123,7 @@
         return dock;
     }
     function libera() {
-        if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; }
+        [].concat(urlAperto || []).forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) { } }); urlAperto = null;   // uno o più (la scheda: HTML + foto)
         /* un PDF aperto tiene un documento pdf.js e un worker: si chiudono */
         if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
         corpo.classList.remove('sd-corpo--pdf');
@@ -186,7 +186,14 @@
         libera();
         titolo.textContent = o.titolo || '';
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
-        collasso = null; misura(memoria());
+        /* SOLO IL DOCUMENTO (4/10): un dossier non ha una mappa da guardare (Giacomo: «solo
+           la scheda, senza mappa»). Il pannello prende tutto lo schermo come quando lo si
+           trascina sul bordo della mappa, ma senza la maniglia verde che la riaprirebbe;
+           la × riporta a STUDIA. Vale per la scheda e per tutto ciò che si apre mentre il
+           dossier è caricato (materiali, sintesi, prove). */
+        solo = !!o.pieno || dossierAperto();
+        dock.classList.toggle('sd--solo', solo);
+        collasso = solo ? 'mappa' : null; misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
             f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); });
@@ -323,15 +330,74 @@
     }
     function chiudi() {
         if (!dock || dock.hidden) return;
-        dock.hidden = true; libera(); collasso = null; ingombro(0, 0);
+        dock.hidden = true; libera(); collasso = null; solo = false; dock.classList.remove('sd--solo'); ingombro(0, 0);
         window.dispatchEvent(new Event('resize'));
         /* il canvas torna largo quanto lo schermo: la mappa si rimette nel riquadro */
         if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
     }
     /* chiudere a prova in corso è lavoro da perdere: si chiede */
     function chiudiChiedendo() {
-        if (!chiediChiusura) return chiudi();
-        Promise.resolve(chiediChiusura()).then(function (si) { if (si) chiudi(); });
+        /* senza mappa sotto (`solo`) la × non può lasciare un canvas vuoto: torna a STUDIA */
+        var torna = solo && window.MappAIStudente && window.MappAIStudente.torna;
+        var fatto = function () { chiudi(); if (torna) window.MappAIStudente.torna(); };
+        if (!chiediChiusura) return fatto();
+        Promise.resolve(chiediChiusura()).then(function (si) { if (si) fatto(); });
+    }
+    /* il dossier caricato: la radice `fonte_0` (nodiDaScheda, deterministica) — la
+       stessa prova di `buildVaultMapData › dossier` */
+    function dossierAperto() {
+        var s = S(), n = s && s.db && s.db.nodes;
+        return !!(s && s.activeVaultPath && Array.isArray(n) && n.some(function (x) { return x && x.id === 'fonte_0'; }));
+    }
+
+    /* ── LA SCHEDA DI UN DOSSIER (4/10) ─────────────────────────────────────
+       Il documento «Analisi della fonte» di MappAI (`buildAnalisiFonteHtml`, nella copia
+       di mappai-quiz-print), con la scheda ricomposta dai nodi (`studia-core ›
+       schedaDaNodi`: `pipeline.json` allo studente non arriva) e la foto di `Allegati/`.
+       La foto NON entra in base64 (13 MB dentro l'HTML): il generatore sa solo
+       `fotoB64`, quindi gli si passa un segno e lo si sostituisce con un indirizzo.
+       · iPad: l'HTML si scrive in `Studio Attivo/` e si apre dal file vero — la stampa
+         di iOS carica quello (`fileUri`), e la foto ci arriva per percorso relativo;
+       · browser: l'HTML e la foto sono due blob, revocati alla chiusura.
+       Niente barra del documento (la sua × fa `window.close()`, muta in un iframe): la
+       stampante sta nella testata del pannello, come per i PDF. */
+    var FOTO = /\.(png|jpe?g|webp|gif)$/i, SEGNO = 'SD-FOTO-DEL-DOSSIER';
+    function apriScheda(vaultPath) {
+        var s = S(), C = window.MappAIStudiaCore, VC = window.MappAIVisioneCore;
+        var sch = (s && s.db && C && C.schedaDaNodi && VC) ? C.schedaDaNodi(s.db.nodes, VC.BLOCCHI) : null;
+        if (!sch || !window.buildAnalisiFonteHtml) {
+            toast(t('st_scheda_manca', 'Questo dossier non porta una scheda da leggere.'), 'warning');
+            return Promise.resolve(false);
+        }
+        var html = function (src) {
+            var h = window.buildAnalisiFonteHtml(src ? Object.assign({}, sch, { fotoB64: SEGNO, mime: 'image/jpeg' }) : sch,
+                { mapName: sch.titolo, includeBar: false });
+            return src ? h.split('data:image/jpeg;base64,' + SEGNO).join(src) : h;
+        };
+        var stampa = function () { var f = corpo && corpo.querySelector('iframe'); if (f && f.contentWindow) f.contentWindow.print(); };
+        var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
+        var Fs = FSP ? FSP('Filesystem') : null, Cap = window.Capacitor;
+        return window.electronAPI.vaultMaterialsList({ vaultPath: vaultPath, dir: 'Allegati' })
+            .then(function (r) { return ((r && r.files) || []).filter(function (f) { return FOTO.test(f.name); })[0] || null; }, function () { return null; })
+            .then(function (foto) {
+                var nelBrowser = function () {
+                    var conFoto = foto ? window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: foto.relPath })
+                        .then(function (r) { return (r && r.ok) ? URL.createObjectURL(b64ToBlob(r.base64, mime(foto.name))) : ''; }, function () { return ''; })
+                        : Promise.resolve('');
+                    return conFoto.then(function (fotoUrl) {
+                        var url = URL.createObjectURL(new Blob([html(fotoUrl)], { type: 'text/html' }));
+                        apri({ titolo: sch.titolo, iframe: url, pieno: true, stampa: stampa });
+                        urlAperto = fotoUrl ? [url, fotoUrl] : url;   // dopo `apri`: il suo `libera` revoca i precedenti
+                        return true;
+                    });
+                };
+                if (!(Fs && Cap && Cap.convertFileSrc)) return nelBrowser();
+                var rel = 'Studio Attivo/Analisi della fonte.html';
+                return window.electronAPI.saveVaultFile({ vaultPath: vaultPath, relPath: rel, text: html(foto ? '../Allegati/' + encodeURIComponent(foto.name) : '') })
+                    .then(function (w) { if (!w || !w.ok) throw new Error((w && w.error) || 'scrittura'); return uriVero(vaultPath, rel); })
+                    .then(function (uri) { apri({ titolo: sch.titolo, iframe: Cap.convertFileSrc(uri), fileUri: uri, pieno: true, stampa: stampa }); return true; })
+                    .catch(function () { return nelBrowser(); });
+            });
     }
 
     /* ── i materiali del vault ──────────────────────────────────────────── */
@@ -354,6 +420,7 @@
            pagina, senza scorrimento né pinch (misurato sull'iPad il 7/9). Li disegna
            `studente/pdf-vista.js` con pdf.js. */
         if (/\.pdf$/i.test(nome || relPath)) return apriPdf(vaultPath, relPath, nome);
+        if (/\.(png|jpe?g|webp|gif)$/i.test(nome || relPath)) return apriImmagine(vaultPath, relPath, nome);
         /* sull'iPad il file si carica dal suo URL vero (`capacitor://…` via convertFileSrc):
            l'HTML della sintesi apre così anche l'audio che sta accanto (percorsi relativi),
            cosa che un blob: non può fare; ed è la stessa strada che la WKWebView usa per i PDF */
@@ -379,7 +446,58 @@
             });
         });
     }
-    /* LA STAMPA DI UN PDF (26/9): sull'iPad il file va a iOS così com'è (il plugin
+    /* LE IMMAGINI (4/10): la foto di un dossier (0067) sta in `Allegati/` ed è grande
+       (6500×4812 quella misurata). In un iframe diventava una pagina con la sola
+       immagine a grandezza naturale: nel pannello se ne vedeva un angolo, e sull'iPad
+       un iframe non si ingrandisce col pinch (la ragione dei PDF, 7/9). Qui un `<img>`
+       nel pannello: a zoom 1 la foto è INTERA (Giacomo, 4/10); si ingrandisce col
+       pinch del visore PDF (`pizzica`; ⌘ + rotella sul Mac) fino ai suoi pixel veri.
+       Sull'iPad la sorgente è il file vero (convertFileSrc): niente base64 da 13 MB
+       in memoria. Una foto non ha la stampante: il plugin conosce HTML e PDF. */
+    function apriImmagine(vaultPath, relPath, nome) {
+        var C = window.Capacitor;
+        var vero = (C && C.convertFileSrc) ? uriVero(vaultPath, relPath).catch(function () { return null; }) : Promise.resolve(null);
+        return vero.then(function (uri) {
+            if (uri) return { src: C.convertFileSrc(uri) };
+            return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
+                if (!r || !r.ok) return { errore: (r && r.error) || '' };
+                return { src: URL.createObjectURL(b64ToBlob(r.base64, mime(nome || relPath))), blob: true };
+            });
+        }).then(function (s) {
+            if (!s.src) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (s.errore ? ' ' + s.errore : ''), 'error'); return; }
+            apri({ titolo: nome, monta: function (host) { host.classList.add('sd-corpo--pdf'); vistaImmagine(host, s.src, nome); } });
+            if (s.blob) urlAperto = s.src;   // dopo `apri`: il suo `libera` revoca quello di prima
+        });
+    }
+    function vistaImmagine(host, src, nome) {
+        host.innerHTML = '<div class="sp-scroll"><div class="sp-pila"><div class="sp-attesa">' + esc(t('st_pdf_carico', 'Apro il documento…')) + '</div></div></div>';
+        var scroll = host.querySelector('.sp-scroll'), pila = host.querySelector('.sp-pila');
+        var img = new Image(), z = 1;
+        img.className = 'sp-img'; img.alt = nome || '';
+        /* la scala di zoom 1: intera nel riquadro (meno il padding di .sp-scroll), mai
+           più grande del vero — un'immagine piccola non si sgrana da sola */
+        function intera() {
+            if (!img.naturalWidth) return 1;
+            var w = Math.max(60, scroll.clientWidth - 24), h = Math.max(60, scroll.clientHeight - 24);
+            return Math.min(w / img.naturalWidth, h / img.naturalHeight, 1);
+        }
+        function rifai() {
+            if (!img.naturalWidth) return;
+            var k = intera() * z;
+            img.style.width = Math.round(img.naturalWidth * k) + 'px';
+            img.style.height = Math.round(img.naturalHeight * k) + 'px';
+        }
+        img.onload = function () { pila.innerHTML = ''; pila.appendChild(img); rifai(); };
+        img.onerror = function () { pila.innerHTML = '<p class="sd-vuoto">' + esc(t('st_file_ko', 'Non riesco ad aprire il file.')) + '</p>'; };
+        img.src = src;
+        var V = window.MappAIStudentePdfVista;
+        if (V && V.pizzica) V.pizzica(scroll, pila, function (nuovo) { z = nuovo; rifai(); }, function () { return z; },
+            function () { return Math.max(6, 1 / intera()); });   // il tetto: i pixel veri, e almeno i 6× dei PDF
+        window.addEventListener('resize', rifai);
+        host.__risistema = rifai;
+        host.__pulisci = function () { window.removeEventListener('resize', rifai); img.onload = img.onerror = null; };
+    }
+    /* LA STAMPA DI UN PDF (26/9):sull'iPad il file va a iOS così com'è (il plugin
        `Stampa` lo passa a `UIPrintInteractionController`, che lo impagina da sé);
        nel browser si apre in una scheda sua, dove il visore del browser ha la sua
        stampante. */
@@ -539,5 +657,5 @@
         });
     };
 
-    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere, corpo: function () { return corpo; } };
+    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, apriScheda: apriScheda, dossier: dossierAperto, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());

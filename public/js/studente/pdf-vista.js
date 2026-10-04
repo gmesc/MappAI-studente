@@ -143,9 +143,12 @@
        ridisegno) intorno al punto fra le dita; al rilascio si fissa lo zoom, si
        ridisegna alla risoluzione giusta e si sposta lo scorrimento in modo che quel
        punto resti dov'era: `nuovo = p·f − (p − vecchio)`, con `p` il punto in
-       coordinate del mucchio e `f` il fattore di crescita. */
-    function pizzica(scroll, pila, fatto, zoomOra) {
+       coordinate del mucchio e `f` il fattore di crescita.
+       `tetto` (facoltativo, 4/10): lo zoom massimo, o una funzione che lo dice. Senza,
+       6× come per i PDF; le immagini lo alzano fino ai loro pixel veri. */
+    function pizzica(scroll, pila, fatto, zoomOra, tetto) {
         var attivo = false, base = 1, k = 1, d0 = 1, px = 0, py = 0, sx0 = 0, sy0 = 0;
+        function alto() { var x = typeof tetto === 'function' ? tetto() : tetto; return Math.max(Z_MIN, x || Z_MAX); }
         function bordo() {
             var cs = window.getComputedStyle(scroll);
             return [parseFloat(cs.paddingLeft) || 0, parseFloat(cs.paddingTop) || 0];
@@ -160,14 +163,14 @@
         }
         function durante(scala) {
             if (!attivo) return;
-            k = Math.max(Z_MIN, Math.min(Z_MAX, base * scala)) / base;
+            k = Math.max(Z_MIN, Math.min(alto(), base * scala)) / base;
             pila.style.transform = 'scale(' + k + ')';
         }
         function fine() {
             if (!attivo) return;
             attivo = false;
             pila.style.transform = ''; pila.style.transformOrigin = '';
-            var z = Math.max(Z_MIN, Math.min(Z_MAX, base * k)), f = z / base;
+            var z = Math.max(Z_MIN, Math.min(alto(), base * k)), f = z / base;
             if (f === 1) return;
             fatto(z);
             scroll.scrollLeft = px * f - (px - sx0);
@@ -200,5 +203,5 @@
         }, { passive: false });
     }
 
-    window.MappAIStudentePdfVista = { monta: monta, libreria: libreria };
+    window.MappAIStudentePdfVista = { monta: monta, libreria: libreria, pizzica: pizzica };   // pizzica: anche le immagini (documenti.js, 4/10)
 }());

@@ -8,6 +8,57 @@
 
 ## 0. Dove si riprende
 
+**⟵ 4/10, un dossier da foto si apre come SCHEDA, non come mappa** (Giacomo: «solo la scheda,
+senza mappa»). Il dossier (0067) è un vault il cui grafo È la scheda (`nodiDaScheda`: radice
+`fonte_0`, un ramo `fonte_<blocco>` per blocco, righe «Etichetta: valore»); la scheda intera sta
+in `pipeline.json` e il PDF `Analisi-fonte` in `Materiale Studio`, e nessuno dei due arriva allo
+studente (`relVaultStudente`). Il reader la **ricompone dai nodi** (`studia-core › schedaDaNodi`,
+l'inverso, 3 test con il `nodiDaScheda` vero) e la disegna col documento di MappAI
+(`buildAnalisiFonteHtml`, copia di quiz-print), con i quattro blocchi da **`mappai-visione-core.js`,
+copia nuova** (in `sincronizza.js` col sì di Giacomo). Console: per un vault `dossier: true` la
+cella «Scheda» (icona immagine, anche nell'elenco) al posto di «Mappa». `documenti.js › apriScheda`:
+il pannello a **tutto schermo senza maniglia** (`apri({ pieno })`, classe `sd--solo`, e vale per
+tutto ciò che si apre col dossier caricato), la × torna a STUDIA; la foto non entra in base64 (un
+segno sostituito da un indirizzo); niente barra del documento (la sua × fa `window.close()`), la
+stampante nella testata. Sull'iPad l'HTML si scrive in `Studio Attivo/Analisi della fonte.html` e si
+apre dal file vero (la stampa di iOS lo carica), la foto per percorso relativo `../Allegati/…`; nel
+browser due blob. `console.js › apriMappa(fullPath, conScheda)`: per un dossier apre la scheda
+(Flashcard e Prova le stanno sopra; sintesi e materiali passano `false`). Misurato nel browser:
+scheda 1023 px su 1023, foto + 4 blocchi, stampante e ×; × → console; la foto dai Materiali a
+tutto schermo (914×677); Flashcard → la scheda sotto e l'avviso «non porta mazzi»; «Svizzera»
+invariata (pannello 430 px con la maniglia). ⚠️ **Da provare sull'iPad:** la scheda dal file
+vero, la foto relativa, la stampa. Copie a **`d817d70e`**: è arrivato anche lo 0069
+(`en_translations.js`, `?v=sync-20261004b`) — la seconda sincronizzazione piccola è fatta.
+
+**⟵ 4/10, le immagini nel pannello si vedono intere e si ingrandiscono.** La foto di un dossier
+(0067, in `Allegati/`, 6500×4812 quella misurata) andava in un iframe come tutto ciò che non è un
+PDF: diventava una pagina con la sola immagine a grandezza naturale, e nel pannello se ne vedeva
+un angolo; sull'iPad, poi, un iframe non si ingrandisce col pinch (la ragione dei PDF, 7/9). Ora
+`documenti.js › apriImmagine` (png · jpg · webp · gif) monta un `<img>` nel pannello: a zoom 1 la
+foto è **intera** nel riquadro (Giacomo, 4/10), mai più grande del vero; si ingrandisce col
+**pinch del visore PDF** (`pdf-vista.js › pizzica`, ora esportato, con un tetto facoltativo) fino
+ai suoi pixel veri, ⌘ + rotella sul Mac. Sull'iPad la sorgente è il file vero (`convertFileSrc`),
+non un base64 da 13 MB. Una foto non ha la stampante (il plugin conosce HTML e PDF). Misurato nel
+browser: pannello a destra 405×300 dentro 429×707, pannello in basso (768×1024) 573×424 dentro
+767×454; zoom 405 → 1008 px in 5 scatti, tetto 6500, ritorno a 405; PDF ancora a 6× al massimo,
+sintesi HTML ancora nell'iframe con la sua veste. ⚠️ **Da provare sull'iPad:** il pinch sulla foto
+e la memoria con una foto così grande.
+
+**⟵ 4/10, sincronizzate 9 copie da MappAI re `ada73aa1`** (dall'ultima, `934f42a0`): `en_translations`,
+`bento-composizione`, `ui-modals`, `teach-core`, `storage-lang`, `ui-canvas`, `files-core`,
+`vault-manager`, `vault-io` (task 0059, 0061, 0064–0067 di MappAI re), `?v=sync-20261004`. I blocchi
+di `index.html` non cambiano (`--confronta`: identici a quelli di `934f42a0`; `map-view` resta
+DIVERSO per costruzione). **Lo 0061 («creare non è aprire») qui non cambia niente di visibile:**
+l'adapter non legge `projectId` da `index.yaml` né lo mette nell'elenco dei vault, quindi
+`adottaVault` riconosce per nome come prima (con UNA lettura in più dell'elenco a ogni apertura); il
+`projectId` che `buildVaultMapData` ora mette nel `mapData` l'adapter lo ignora, e `vista.json` si
+scrive come prima. Le copie nuove non chiamano moduli del docente assenti qui (ogni nome nuovo è
+nelle copie o protetto). Provato nel browser: «Svizzera e la 2a GM» (39 nodi, Torna a STUDIA →
+`vista.json` scritto), «La carta» (Flashcard `1 / 9`, fronte → retro), il dossier da foto
+«LA GUERRE… · 08» (la foto di `Allegati/` compare come «La scheda del docente» e si apre nel
+pannello; a grandezza naturale fino alla voce qui sopra, che lo corregge). Dopo il merge
+dello 0069 in MappAI re serve una seconda sincronizzazione piccola (`en_translations.js`).
+
 **⟵ 26/9, «Stampa» sull'iPad (task 0036 di MappAI re, più i PDF).** Nella WKWebView
 `window.print()` non fa niente: la stampante della sintesi e il «Stampa» della `.mm-doc-bar`
 erano bottoni muti (misurato nel simulatore). Ora c'è un **plugin Capacitor locale,

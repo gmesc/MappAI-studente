@@ -106,6 +106,38 @@
         }).filter(Boolean);
     }
 
+    /* LA SCHEDA DI UN DOSSIER, DAI SUOI NODI (4/10) — l'inverso di `nodiDaScheda` di
+       mappai-visione-core. Un dossier da foto (0067) È la sua scheda: radice `fonte_0` =
+       il titolo, un ramo `fonte_<blocco>` per blocco pieno, e nel ramo una riga
+       «Etichetta: valore» per campo (`testoBlocco`). La scheda vera sta in
+       `pipeline.json`, che allo studente non arriva (`relVaultStudente`): qui la si
+       ricompone dai nodi, che arrivano. `blocchi` = `MappAIVisioneCore.BLOCCHI` (la
+       griglia, una fonte sola). Una riga senza etichetta nota (il docente ha scritto
+       a mano) si accoda al campo di prima; un ramo senza nessuna etichetta va intero
+       nel primo campo. Null se non è un dossier o se non ha blocchi pieni. */
+    function schedaDaNodi(nodes, blocchi) {
+        var l = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+        var nodo = function (id) { return l.filter(function (n) { return n.id === id; })[0] || null; };
+        var radice = nodo('fonte_0');
+        if (!radice || !Array.isArray(blocchi)) return null;
+        var sch = { titolo: _s(radice.label).trim() }, pieni = 0;
+        blocchi.forEach(function (bl) {
+            var n = nodo('fonte_' + bl.id), testo = n ? _s(n.desc || n.content).trim() : '';
+            if (!testo) return;
+            var campi = {}, ultimo = null;
+            testo.split('\n').forEach(function (riga) {
+                riga = riga.trim();
+                if (!riga) return;
+                var c = (bl.campi || []).filter(function (x) { return riga.indexOf(x.et + ':') === 0; })[0];
+                if (c) { campi[c.id] = riga.slice(c.et.length + 1).trim(); ultimo = c.id; }
+                else if (ultimo) campi[ultimo] += ' ' + riga;
+            });
+            if (!ultimo && bl.campi && bl.campi.length) campi[bl.campi[0].id] = testo;
+            sch[bl.id] = campi; pieni++;
+        });
+        return pieni ? sch : null;
+    }
+
     function fmtData(iso) {
         var d = iso ? new Date(iso) : null;
         if (!d || isNaN(d.getTime())) return '';
@@ -128,7 +160,7 @@
             nav.push({ gruppo: g.nome, id: 'g:' + g.nome, contatore: g.vaults.length, collassabile: true, chiuso: !!chiusi[g.nome] });
             g.vaults.forEach(function (v) {
                 nav.push({
-                    id: 'v:' + v.fullPath, etichetta: v.rootNodeLabel || v.folderName, icona: 'map',
+                    id: 'v:' + v.fullPath, etichetta: v.rootNodeLabel || v.folderName, icona: v.dossier ? 'image' : 'map',
                     sotto: v.classeDichiarata || v.classDir || '', attiva: sel === v.fullPath, chiude: false
                 });
             });
@@ -172,8 +204,13 @@
                la stessa forma `azione` (icona a riposo, etichetta al passaggio), e sotto il
                riquadro dei materiali che disegna `s.tabelle`. I tre comandi CONCLUDONO: la
                console si chiude e l'esito arriva al .then() (inv. 10). */
+            /* un DOSSIER da foto (`dossier: true` in index.yaml) non ha una mappa da
+               guardare: è una scheda (Giacomo, 4/10: «solo la scheda, senza mappa»).
+               Stesso posto, stesso esito che conclude; lo apre documenti.js › apriScheda. */
             var az = [
-                { id: 'mappa', et: t('st_mappa', 'Mappa'), forma: 'azione', icona: 'git-merge', aiuto: t('st_tip_mappa', 'Apre la mappa.') },
+                prog.dossier
+                    ? { id: 'scheda', et: t('st_scheda', 'Scheda'), forma: 'azione', icona: 'image', aiuto: t('st_tip_scheda', 'La foto e la sua scheda di analisi.') }
+                    : { id: 'mappa', et: t('st_mappa', 'Mappa'), forma: 'azione', icona: 'git-merge', aiuto: t('st_tip_mappa', 'Apre la mappa.') },
                 { id: 'flashcard', et: t('st_flashcard', 'Flashcard'), forma: 'azione', icona: 'copy', aiuto: t('st_tip_flashcard', 'Le carte: leggi, pensa, gira.') },
                 { id: 'prova', et: t('st_prova', 'Prova'), forma: 'azione', icona: 'help-circle', aiuto: t('st_tip_prova', 'Un quiz o un foglio di domande aperte.') },
                 /* «Sintesi» (7/9): il documento che si legge per primo aveva una sola
@@ -244,5 +281,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa };
+    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi };
 }));

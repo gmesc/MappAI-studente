@@ -1155,6 +1155,11 @@ function renderModelSelect(models, selectEl, currentValue) {
 }
 
 window.refreshGeminiModels = async function () {
+    /* La gara (0064): due ricaricamenti possono essere in volo insieme (quello di
+       switchAIProvider, non atteso, e uno dopo la scelta del modello). Vale solo
+       l'ultimo partito: gli altri, dopo l'attesa della rete, escono senza toccare
+       la tendina. Il contatore sta sulla funzione, così vive fra le chiamate. */
+    const giro = window.refreshGeminiModels._giro = (window.refreshGeminiModels._giro || 0) + 1;
     const isInfomaniak = (appState.aiProvider === 'infomaniak');
     const apiKey = window.getSystemKey();
     const selectEl = document.getElementById('model-select');
@@ -1185,9 +1190,6 @@ window.refreshGeminiModels = async function () {
         }
     }
 
-    const storageKey = isInfomaniak ? 'infomaniak_selected_model' : 'gemini_selected_model';
-    const currentValue = localStorage.getItem(storageKey) || (selectEl ? selectEl.value : '');
-
     if (statusEl) { statusEl.innerText = "Caricamento modelli in corso..."; statusEl.classList.remove('hidden'); }
     if (refreshIcon) refreshIcon.style.animation = 'spin 1s linear infinite';
 
@@ -1204,6 +1206,8 @@ window.refreshGeminiModels = async function () {
             }
             rawModels = await window.electronAPI.listModels({ apiKey });
         }
+        // superata da un ricaricamento partito dopo: la tendina è sua (0064)
+        if (giro !== window.refreshGeminiModels._giro) return;
 
         if (!rawModels || rawModels.error || !Array.isArray(rawModels)) {
             const errMsg = (rawModels && rawModels.error) ? rawModels.error : "Risposta non valida o errore di connessione.";
@@ -1264,6 +1268,9 @@ window.refreshGeminiModels = async function () {
 
         // Populate select with optgroups
         if (selectEl) {
+            // il modello salvato si legge DOPO l'attesa della rete: una scelta fatta nel frattempo vale (0064)
+            const storageKey = isInfomaniak ? 'infomaniak_selected_model' : 'gemini_selected_model';
+            const currentValue = localStorage.getItem(storageKey) || (selectEl ? selectEl.value : '');
             renderModelSelect(filteredModels, selectEl, currentValue);
             const availableModelsKey = isInfomaniak ? 'infomaniak_available_models' : 'gemini_available_models';
             if (!isInfomaniak) localStorage.setItem(availableModelsKey, JSON.stringify(filteredModels.map(m => ({ id: m.id, displayName: m.displayName, kb: m.kb }))));
@@ -1272,6 +1279,8 @@ window.refreshGeminiModels = async function () {
         if (statusEl) { statusEl.innerText = `${filteredModels.length} modelli compatibili trovati.`; }
 
     } catch (err) {
+        // superata: l'errore di una chiamata vecchia non tocca catalogo, stato e pannello dell'ultima (0064)
+        if (giro !== window.refreshGeminiModels._giro) return;
         if (isInfomaniak) {
             let old = {}; try { old = JSON.parse(localStorage.getItem('infomaniak_catalogue_state') || '{}'); } catch (_) { /* cache precedente */ }
             localStorage.setItem('infomaniak_catalogue_state', JSON.stringify({ ...old, stale: true }));
@@ -1279,7 +1288,8 @@ window.refreshGeminiModels = async function () {
         }
         if (statusEl) statusEl.innerText = window.t('catalog_refresh_failed', 'Catalogo non aggiornato. Le ultime scelte sono conservate.');
     } finally {
-        if (refreshIcon) refreshIcon.style.animation = '';
+        // la rotellina la ferma solo l'ultima chiamata partita (0064)
+        if (refreshIcon && giro === window.refreshGeminiModels._giro) refreshIcon.style.animation = '';
     }
 }
 
