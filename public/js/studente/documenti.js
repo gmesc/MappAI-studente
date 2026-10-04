@@ -538,7 +538,7 @@
             var r = { files: due[0].concat(due[1]) };
             /* che cosa lo studente vede lo decide `studia-core.daMostrare`, uno solo per
                la console e per il pannello: niente .json, niente nascosti, e da
-               «Materiale Studio» nessun PDF (le soluzioni in coda; la scheda del docente
+               «Materiale Studio» nessun PDF (le soluzioni in coda; la fonte
                sta in `Allegati/` ed è l'unico PDF che viaggia). */
             var C1 = window.MappAIStudiaCore;
             var files = (r.files || []).filter(function (f) { return C1 && C1.daMostrare ? C1.daMostrare(f) : true; });
@@ -552,7 +552,7 @@
             var elenco = sintesi ? files.filter(function (f) { return f !== sintesi; }) : files;
             if (!files.length) html += '<p class="sd-vuoto">' + esc(t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.')) + '</p>';
             elenco.forEach(function (f) {
-                var g = (C1 && C1.inAllegati && C1.inAllegati(f)) ? { et: t('st_g_scheda', 'La scheda del docente'), icona: 'book-open' }
+                var g = (C1 && C1.inAllegati && C1.inAllegati(f)) ? { et: t('st_g_fonte', 'La fonte'), icona: 'book-open' }
                     : (genere(f.name) || { et: t('st_file', 'File'), icona: 'file' });
                 html += '<button type="button" class="sd-riga" data-rel="' + esc(f.relPath) + '" data-nome="' + esc(f.name) + '">' +
                     '<i data-lucide="' + g.icona + '"></i><span class="sd-riga__t"><b>' + esc(g.et) + '</b><small>' + esc(f.name) + '</small></span></button>';
