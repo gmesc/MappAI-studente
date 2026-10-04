@@ -354,6 +354,7 @@
            pagina, senza scorrimento né pinch (misurato sull'iPad il 7/9). Li disegna
            `studente/pdf-vista.js` con pdf.js. */
         if (/\.pdf$/i.test(nome || relPath)) return apriPdf(vaultPath, relPath, nome);
+        if (/\.(png|jpe?g|webp|gif)$/i.test(nome || relPath)) return apriImmagine(vaultPath, relPath, nome);
         /* sull'iPad il file si carica dal suo URL vero (`capacitor://…` via convertFileSrc):
            l'HTML della sintesi apre così anche l'audio che sta accanto (percorsi relativi),
            cosa che un blob: non può fare; ed è la stessa strada che la WKWebView usa per i PDF */
@@ -379,7 +380,58 @@
             });
         });
     }
-    /* LA STAMPA DI UN PDF (26/9): sull'iPad il file va a iOS così com'è (il plugin
+    /* LE IMMAGINI (4/10): la foto di un dossier (0067) sta in `Allegati/` ed è grande
+       (6500×4812 quella misurata). In un iframe diventava una pagina con la sola
+       immagine a grandezza naturale: nel pannello se ne vedeva un angolo, e sull'iPad
+       un iframe non si ingrandisce col pinch (la ragione dei PDF, 7/9). Qui un `<img>`
+       nel pannello: a zoom 1 la foto è INTERA (Giacomo, 4/10); si ingrandisce col
+       pinch del visore PDF (`pizzica`; ⌘ + rotella sul Mac) fino ai suoi pixel veri.
+       Sull'iPad la sorgente è il file vero (convertFileSrc): niente base64 da 13 MB
+       in memoria. Una foto non ha la stampante: il plugin conosce HTML e PDF. */
+    function apriImmagine(vaultPath, relPath, nome) {
+        var C = window.Capacitor;
+        var vero = (C && C.convertFileSrc) ? uriVero(vaultPath, relPath).catch(function () { return null; }) : Promise.resolve(null);
+        return vero.then(function (uri) {
+            if (uri) return { src: C.convertFileSrc(uri) };
+            return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
+                if (!r || !r.ok) return { errore: (r && r.error) || '' };
+                return { src: URL.createObjectURL(b64ToBlob(r.base64, mime(nome || relPath))), blob: true };
+            });
+        }).then(function (s) {
+            if (!s.src) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (s.errore ? ' ' + s.errore : ''), 'error'); return; }
+            apri({ titolo: nome, monta: function (host) { host.classList.add('sd-corpo--pdf'); vistaImmagine(host, s.src, nome); } });
+            if (s.blob) urlAperto = s.src;   // dopo `apri`: il suo `libera` revoca quello di prima
+        });
+    }
+    function vistaImmagine(host, src, nome) {
+        host.innerHTML = '<div class="sp-scroll"><div class="sp-pila"><div class="sp-attesa">' + esc(t('st_pdf_carico', 'Apro il documento…')) + '</div></div></div>';
+        var scroll = host.querySelector('.sp-scroll'), pila = host.querySelector('.sp-pila');
+        var img = new Image(), z = 1;
+        img.className = 'sp-img'; img.alt = nome || '';
+        /* la scala di zoom 1: intera nel riquadro (meno il padding di .sp-scroll), mai
+           più grande del vero — un'immagine piccola non si sgrana da sola */
+        function intera() {
+            if (!img.naturalWidth) return 1;
+            var w = Math.max(60, scroll.clientWidth - 24), h = Math.max(60, scroll.clientHeight - 24);
+            return Math.min(w / img.naturalWidth, h / img.naturalHeight, 1);
+        }
+        function rifai() {
+            if (!img.naturalWidth) return;
+            var k = intera() * z;
+            img.style.width = Math.round(img.naturalWidth * k) + 'px';
+            img.style.height = Math.round(img.naturalHeight * k) + 'px';
+        }
+        img.onload = function () { pila.innerHTML = ''; pila.appendChild(img); rifai(); };
+        img.onerror = function () { pila.innerHTML = '<p class="sd-vuoto">' + esc(t('st_file_ko', 'Non riesco ad aprire il file.')) + '</p>'; };
+        img.src = src;
+        var V = window.MappAIStudentePdfVista;
+        if (V && V.pizzica) V.pizzica(scroll, pila, function (nuovo) { z = nuovo; rifai(); }, function () { return z; },
+            function () { return Math.max(6, 1 / intera()); });   // il tetto: i pixel veri, e almeno i 6× dei PDF
+        window.addEventListener('resize', rifai);
+        host.__risistema = rifai;
+        host.__pulisci = function () { window.removeEventListener('resize', rifai); img.onload = img.onerror = null; };
+    }
+    /* LA STAMPA DI UN PDF (26/9):sull'iPad il file va a iOS così com'è (il plugin
        `Stampa` lo passa a `UIPrintInteractionController`, che lo impagina da sé);
        nel browser si apre in una scheda sua, dove il visore del browser ha la sua
        stampante. */

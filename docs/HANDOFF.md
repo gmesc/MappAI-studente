@@ -8,6 +8,20 @@
 
 ## 0. Dove si riprende
 
+**⟵ 4/10, le immagini nel pannello si vedono intere e si ingrandiscono.** La foto di un dossier
+(0067, in `Allegati/`, 6500×4812 quella misurata) andava in un iframe come tutto ciò che non è un
+PDF: diventava una pagina con la sola immagine a grandezza naturale, e nel pannello se ne vedeva
+un angolo; sull'iPad, poi, un iframe non si ingrandisce col pinch (la ragione dei PDF, 7/9). Ora
+`documenti.js › apriImmagine` (png · jpg · webp · gif) monta un `<img>` nel pannello: a zoom 1 la
+foto è **intera** nel riquadro (Giacomo, 4/10), mai più grande del vero; si ingrandisce col
+**pinch del visore PDF** (`pdf-vista.js › pizzica`, ora esportato, con un tetto facoltativo) fino
+ai suoi pixel veri, ⌘ + rotella sul Mac. Sull'iPad la sorgente è il file vero (`convertFileSrc`),
+non un base64 da 13 MB. Una foto non ha la stampante (il plugin conosce HTML e PDF). Misurato nel
+browser: pannello a destra 405×300 dentro 429×707, pannello in basso (768×1024) 573×424 dentro
+767×454; zoom 405 → 1008 px in 5 scatti, tetto 6500, ritorno a 405; PDF ancora a 6× al massimo,
+sintesi HTML ancora nell'iframe con la sua veste. ⚠️ **Da provare sull'iPad:** il pinch sulla foto
+e la memoria con una foto così grande.
+
 **⟵ 4/10, sincronizzate 9 copie da MappAI re `ada73aa1`** (dall'ultima, `934f42a0`): `en_translations`,
 `bento-composizione`, `ui-modals`, `teach-core`, `storage-lang`, `ui-canvas`, `files-core`,
 `vault-manager`, `vault-io` (task 0059, 0061, 0064–0067 di MappAI re), `?v=sync-20261004`. I blocchi
@@ -20,8 +34,7 @@ scrive come prima. Le copie nuove non chiamano moduli del docente assenti qui (o
 nelle copie o protetto). Provato nel browser: «Svizzera e la 2a GM» (39 nodi, Torna a STUDIA →
 `vista.json` scritto), «La carta» (Flashcard `1 / 9`, fronte → retro), il dossier da foto
 «LA GUERRE… · 08» (la foto di `Allegati/` compare come «La scheda del docente» e si apre nel
-pannello). ⚠️ **Aperto:** il JPG nel pannello è un `blob:` in iframe a grandezza naturale
-(6500×4812), non adattato alla larghezza — `studente/documenti.js`, non le copie. Dopo il merge
+pannello; a grandezza naturale fino alla voce qui sopra, che lo corregge). Dopo il merge
 dello 0069 in MappAI re serve una seconda sincronizzazione piccola (`en_translations.js`).
 
 **⟵ 26/9, «Stampa» sull'iPad (task 0036 di MappAI re, più i PDF).** Nella WKWebView
