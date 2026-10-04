@@ -8,6 +8,28 @@
 
 ## 0. Dove si riprende
 
+**⟵ 4/10, un dossier da foto si apre come SCHEDA, non come mappa** (Giacomo: «solo la scheda,
+senza mappa»). Il dossier (0067) è un vault il cui grafo È la scheda (`nodiDaScheda`: radice
+`fonte_0`, un ramo `fonte_<blocco>` per blocco, righe «Etichetta: valore»); la scheda intera sta
+in `pipeline.json` e il PDF `Analisi-fonte` in `Materiale Studio`, e nessuno dei due arriva allo
+studente (`relVaultStudente`). Il reader la **ricompone dai nodi** (`studia-core › schedaDaNodi`,
+l'inverso, 3 test con il `nodiDaScheda` vero) e la disegna col documento di MappAI
+(`buildAnalisiFonteHtml`, copia di quiz-print), con i quattro blocchi da **`mappai-visione-core.js`,
+copia nuova** (in `sincronizza.js` col sì di Giacomo). Console: per un vault `dossier: true` la
+cella «Scheda» (icona immagine, anche nell'elenco) al posto di «Mappa». `documenti.js › apriScheda`:
+il pannello a **tutto schermo senza maniglia** (`apri({ pieno })`, classe `sd--solo`, e vale per
+tutto ciò che si apre col dossier caricato), la × torna a STUDIA; la foto non entra in base64 (un
+segno sostituito da un indirizzo); niente barra del documento (la sua × fa `window.close()`), la
+stampante nella testata. Sull'iPad l'HTML si scrive in `Studio Attivo/Analisi della fonte.html` e si
+apre dal file vero (la stampa di iOS lo carica), la foto per percorso relativo `../Allegati/…`; nel
+browser due blob. `console.js › apriMappa(fullPath, conScheda)`: per un dossier apre la scheda
+(Flashcard e Prova le stanno sopra; sintesi e materiali passano `false`). Misurato nel browser:
+scheda 1023 px su 1023, foto + 4 blocchi, stampante e ×; × → console; la foto dai Materiali a
+tutto schermo (914×677); Flashcard → la scheda sotto e l'avviso «non porta mazzi»; «Svizzera»
+invariata (pannello 430 px con la maniglia). ⚠️ **Da provare sull'iPad:** la scheda dal file
+vero, la foto relativa, la stampa. Copie a **`d817d70e`**: è arrivato anche lo 0069
+(`en_translations.js`, `?v=sync-20261004b`) — la seconda sincronizzazione piccola è fatta.
+
 **⟵ 4/10, le immagini nel pannello si vedono intere e si ingrandiscono.** La foto di un dossier
 (0067, in `Allegati/`, 6500×4812 quella misurata) andava in un iframe come tutto ciò che non è un
 PDF: diventava una pagina con la sola immagine a grandezza naturale, e nel pannello se ne vedeva

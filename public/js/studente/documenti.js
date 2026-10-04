@@ -27,7 +27,7 @@
        cambio di orientamento cambia SOLO il CSS: il contenuto (la view della
        prova, l'iframe) resta lo stesso nodo. Due clamp, due memorie. */
     var KEY_W = 'mappai_studente_dock_w', KEY_H = 'mappai_studente_dock_h', MIN_W = 360, MIN_H = 240;
-    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null;
+    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null, solo = false;
     var mq = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
     function PC() { return window.MappAIProvaCore; }
     function orientamento() {
@@ -123,7 +123,7 @@
         return dock;
     }
     function libera() {
-        if (urlAperto) { try { URL.revokeObjectURL(urlAperto); } catch (e) { } urlAperto = null; }
+        [].concat(urlAperto || []).forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) { } }); urlAperto = null;   // uno o più (la scheda: HTML + foto)
         /* un PDF aperto tiene un documento pdf.js e un worker: si chiudono */
         if (corpo && corpo.__pulisci) { try { corpo.__pulisci(); } catch (e) { } corpo.__pulisci = null; corpo.__risistema = null; }
         corpo.classList.remove('sd-corpo--pdf');
@@ -186,7 +186,14 @@
         libera();
         titolo.textContent = o.titolo || '';
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
-        collasso = null; misura(memoria());
+        /* SOLO IL DOCUMENTO (4/10): un dossier non ha una mappa da guardare (Giacomo: «solo
+           la scheda, senza mappa»). Il pannello prende tutto lo schermo come quando lo si
+           trascina sul bordo della mappa, ma senza la maniglia verde che la riaprirebbe;
+           la × riporta a STUDIA. Vale per la scheda e per tutto ciò che si apre mentre il
+           dossier è caricato (materiali, sintesi, prove). */
+        solo = !!o.pieno || dossierAperto();
+        dock.classList.toggle('sd--solo', solo);
+        collasso = solo ? 'mappa' : null; misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
             f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); });
@@ -323,15 +330,74 @@
     }
     function chiudi() {
         if (!dock || dock.hidden) return;
-        dock.hidden = true; libera(); collasso = null; ingombro(0, 0);
+        dock.hidden = true; libera(); collasso = null; solo = false; dock.classList.remove('sd--solo'); ingombro(0, 0);
         window.dispatchEvent(new Event('resize'));
         /* il canvas torna largo quanto lo schermo: la mappa si rimette nel riquadro */
         if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
     }
     /* chiudere a prova in corso è lavoro da perdere: si chiede */
     function chiudiChiedendo() {
-        if (!chiediChiusura) return chiudi();
-        Promise.resolve(chiediChiusura()).then(function (si) { if (si) chiudi(); });
+        /* senza mappa sotto (`solo`) la × non può lasciare un canvas vuoto: torna a STUDIA */
+        var torna = solo && window.MappAIStudente && window.MappAIStudente.torna;
+        var fatto = function () { chiudi(); if (torna) window.MappAIStudente.torna(); };
+        if (!chiediChiusura) return fatto();
+        Promise.resolve(chiediChiusura()).then(function (si) { if (si) fatto(); });
+    }
+    /* il dossier caricato: la radice `fonte_0` (nodiDaScheda, deterministica) — la
+       stessa prova di `buildVaultMapData › dossier` */
+    function dossierAperto() {
+        var s = S(), n = s && s.db && s.db.nodes;
+        return !!(s && s.activeVaultPath && Array.isArray(n) && n.some(function (x) { return x && x.id === 'fonte_0'; }));
+    }
+
+    /* ── LA SCHEDA DI UN DOSSIER (4/10) ─────────────────────────────────────
+       Il documento «Analisi della fonte» di MappAI (`buildAnalisiFonteHtml`, nella copia
+       di mappai-quiz-print), con la scheda ricomposta dai nodi (`studia-core ›
+       schedaDaNodi`: `pipeline.json` allo studente non arriva) e la foto di `Allegati/`.
+       La foto NON entra in base64 (13 MB dentro l'HTML): il generatore sa solo
+       `fotoB64`, quindi gli si passa un segno e lo si sostituisce con un indirizzo.
+       · iPad: l'HTML si scrive in `Studio Attivo/` e si apre dal file vero — la stampa
+         di iOS carica quello (`fileUri`), e la foto ci arriva per percorso relativo;
+       · browser: l'HTML e la foto sono due blob, revocati alla chiusura.
+       Niente barra del documento (la sua × fa `window.close()`, muta in un iframe): la
+       stampante sta nella testata del pannello, come per i PDF. */
+    var FOTO = /\.(png|jpe?g|webp|gif)$/i, SEGNO = 'SD-FOTO-DEL-DOSSIER';
+    function apriScheda(vaultPath) {
+        var s = S(), C = window.MappAIStudiaCore, VC = window.MappAIVisioneCore;
+        var sch = (s && s.db && C && C.schedaDaNodi && VC) ? C.schedaDaNodi(s.db.nodes, VC.BLOCCHI) : null;
+        if (!sch || !window.buildAnalisiFonteHtml) {
+            toast(t('st_scheda_manca', 'Questo dossier non porta una scheda da leggere.'), 'warning');
+            return Promise.resolve(false);
+        }
+        var html = function (src) {
+            var h = window.buildAnalisiFonteHtml(src ? Object.assign({}, sch, { fotoB64: SEGNO, mime: 'image/jpeg' }) : sch,
+                { mapName: sch.titolo, includeBar: false });
+            return src ? h.split('data:image/jpeg;base64,' + SEGNO).join(src) : h;
+        };
+        var stampa = function () { var f = corpo && corpo.querySelector('iframe'); if (f && f.contentWindow) f.contentWindow.print(); };
+        var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
+        var Fs = FSP ? FSP('Filesystem') : null, Cap = window.Capacitor;
+        return window.electronAPI.vaultMaterialsList({ vaultPath: vaultPath, dir: 'Allegati' })
+            .then(function (r) { return ((r && r.files) || []).filter(function (f) { return FOTO.test(f.name); })[0] || null; }, function () { return null; })
+            .then(function (foto) {
+                var nelBrowser = function () {
+                    var conFoto = foto ? window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: foto.relPath })
+                        .then(function (r) { return (r && r.ok) ? URL.createObjectURL(b64ToBlob(r.base64, mime(foto.name))) : ''; }, function () { return ''; })
+                        : Promise.resolve('');
+                    return conFoto.then(function (fotoUrl) {
+                        var url = URL.createObjectURL(new Blob([html(fotoUrl)], { type: 'text/html' }));
+                        apri({ titolo: sch.titolo, iframe: url, pieno: true, stampa: stampa });
+                        urlAperto = fotoUrl ? [url, fotoUrl] : url;   // dopo `apri`: il suo `libera` revoca i precedenti
+                        return true;
+                    });
+                };
+                if (!(Fs && Cap && Cap.convertFileSrc)) return nelBrowser();
+                var rel = 'Studio Attivo/Analisi della fonte.html';
+                return window.electronAPI.saveVaultFile({ vaultPath: vaultPath, relPath: rel, text: html(foto ? '../Allegati/' + encodeURIComponent(foto.name) : '') })
+                    .then(function (w) { if (!w || !w.ok) throw new Error((w && w.error) || 'scrittura'); return uriVero(vaultPath, rel); })
+                    .then(function (uri) { apri({ titolo: sch.titolo, iframe: Cap.convertFileSrc(uri), fileUri: uri, pieno: true, stampa: stampa }); return true; })
+                    .catch(function () { return nelBrowser(); });
+            });
     }
 
     /* ── i materiali del vault ──────────────────────────────────────────── */
@@ -591,5 +657,5 @@
         });
     };
 
-    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, azione: azione, genere: genere, corpo: function () { return corpo; } };
+    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, apriScheda: apriScheda, dossier: dossierAperto, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());

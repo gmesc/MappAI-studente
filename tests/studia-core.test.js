@@ -100,3 +100,45 @@ test('briciole: Studia › materia › mappa', () => {
     assert.deepStrictEqual(C.briciole({ vaults: VAULTS, sel: 'Documents/Clima' }).map(b => b.et), ['Studia', 'Geografia', 'Il Clima']);
     assert.deepStrictEqual(C.briciole({ vaults: VAULTS }).map(b => b.et), ['Studia']);
 });
+
+/* LA SCHEDA DI UN DOSSIER (4/10): il reader la ricompone dai nodi, perché `pipeline.json`
+   allo studente non arriva. Andata e ritorno con il `nodiDaScheda` VERO della copia. */
+const VC = require('../public/js/mappai-visione-core.js');
+const SCHEDA = {
+    titolo: "LA GUERRE est l'Industrie Nationale de la PRUSSE",
+    identita: { genere: 'manifesto', autore: 'Maurice Neumont (firma in basso a destra)', data: '1917', tecnica: 'litografia a colori su carta' },
+    osservazione: { descrizione: "Una carta d'Europa: la Prussia è un mostro che allunga i tentacoli.", testo: 'Pour que les PEUPLES puissent vivre: «Libertà»' },
+    critica: { prova: 'La propaganda francese del 1917.', tace: 'Il punto di vista tedesco.' }
+};
+
+test('schedaDaNodi: andata e ritorno con nodiDaScheda, i due punti nei valori restano', () => {
+    const g = VC.nodiDaScheda(SCHEDA);
+    const sch = C.schedaDaNodi(g.nodes, VC.BLOCCHI);
+    assert.deepStrictEqual(sch, SCHEDA);   // il blocco vuoto («interpretazione») non compare
+});
+
+test('schedaDaNodi: righe senza etichetta, rami scritti a mano, e chi non è un dossier', () => {
+    const nodes = [
+        { id: 'fonte_0', label: ' Foto ' },
+        { id: 'fonte_osservazione', desc: 'Descrizione: un uomo seduto\ncon due figure accanto\n\nTipografia: nessuna' },
+        { id: 'fonte_critica', desc: 'Testo libero del docente, senza etichette.' }
+    ];
+    assert.deepStrictEqual(C.schedaDaNodi(nodes, VC.BLOCCHI), {
+        titolo: 'Foto',
+        osservazione: { descrizione: 'un uomo seduto con due figure accanto', tipografia: 'nessuna' },
+        critica: { prova: 'Testo libero del docente, senza etichette.' }
+    });
+    assert.strictEqual(C.schedaDaNodi([{ id: 'root', label: 'Mappa' }], VC.BLOCCHI), null);
+    assert.strictEqual(C.schedaDaNodi([{ id: 'fonte_0', label: 'Vuota' }], VC.BLOCCHI), null);
+    assert.strictEqual(C.schedaDaNodi(null, VC.BLOCCHI), null);
+});
+
+test("schema: un dossier ha «Scheda» al posto di «Mappa», e l'icona dell'immagine", () => {
+    const dossier = { folderName: 'Foto', fullPath: 'Documents/4R/Storia/Foto', classDir: '4R', discDir: 'Storia', rootNodeLabel: 'Foto', dossier: true };
+    const s = C.schema({ vaults: VAULTS.concat([dossier]), sel: dossier.fullPath, materiali: [] });
+    assert.deepStrictEqual(Core.validaSchema(s).errori, []);
+    assert.deepStrictEqual(s.bento[0].voci.map(v => v.id), ['scheda', 'flashcard', 'prova', 'sintesi', 'docente']);
+    assert.strictEqual(s.nav.filter(v => v.id === 'v:' + dossier.fullPath)[0].icona, 'image');
+    const m = C.schema({ vaults: VAULTS, sel: VAULTS[0].fullPath, materiali: [] });
+    assert.strictEqual(m.bento[0].voci[0].id, 'mappa');
+});

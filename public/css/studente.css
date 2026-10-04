@@ -44,6 +44,8 @@ html.studente #studente-dock.sd--senza-mappa.sd--destra .sd-man, #studente-dock.
 #studente-dock.sd--senza-doc.sd--basso .sd-man::after, #studente-dock.sd--senza-mappa.sd--basso .sd-man::after { top: 8px; height: 6px; width: 40px; margin-left: -20px; border-radius: 0; background: repeating-linear-gradient(to right, #fff 0 2px, transparent 2px 5px); animation: none; }
 #studente-dock.sd--senza-mappa.sd--basso { border-top: 0; }
 #studente-dock.sd--senza-mappa .sd-testa { padding-left: 34px; }
+/* solo il documento (un dossier, 4/10): niente maniglia per riaprire una mappa che non c'è */
+#studente-dock.sd--solo .sd-man { display: none; }
 @media (prefers-reduced-motion: reduce) { #studente-dock .sd-man::after { animation: none; } }
 #studente-dock .sd-corpo > .sc-wrap { height: 100%; }
 #studente-dock .sd-testa { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid #e2e8f0; min-height: 52px; }

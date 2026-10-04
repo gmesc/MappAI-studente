@@ -60,6 +60,7 @@ const FILES = [
   'js/mappai-console-manifesto.js',
   'js/mappai-scelta-core.js', 'js/mappai-scelta-view.js', 'js/mappai-scelta.js',
   'js/mappai-files-core.js', 'js/mappai-vista-core.js', 'js/mappai-pipeline-core.js',
+  'js/mappai-visione-core.js',   // 4/10: i quattro blocchi della scheda di un dossier (studente/documenti.js › apriScheda)
   'js/mappai-sidebar-resize.js', 'js/mappai-mastery-view.js', 'js/mappai-effort-view.js',
   'js/mappai-celeration.js', 'js/mappai-study-path.js', 'js/mappai-palace.js', 'js/mappai-pomodoro.js',
   'js/mappai-user-profile.js', 'js/mappai-search-finder.js',

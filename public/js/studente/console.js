@@ -81,8 +81,16 @@
        Se il vault scelto è già a schermo (rientro da «Torna a STUDIA») si
        mostra e basta; altrimenti si carica come fa INSEGNA (`directLoadVault`:
        adotta l'identità, applica vista.json, monta il canvas). */
-    function apriMappa(fullPath) {
+    /* `conScheda` (4/10): un DOSSIER non si guarda come mappa — caricato, si apre la sua
+       scheda a tutto schermo (documenti.js › apriScheda), e Flashcard e Prova le stanno
+       sopra. Chi apre subito un altro documento (sintesi, materiali) passa `false`: la
+       scheda verrebbe disegnata per niente, e il dock va comunque a tutto schermo. */
+    function apriMappa(fullPath, conScheda) {
         return _apriMappa(fullPath).then(function (ok) {
+            var D = window.MappAIStudenteDocumenti;
+            if (ok && D && D.dossier && D.dossier()) {
+                return (conScheda === false || !D.apriScheda) ? ok : D.apriScheda(fullPath).then(function () { return ok; });
+            }
             /* la mappa si presenta sempre allo stesso modo: sidebar chiusa, vista Albero,
                e in split il disegno per il verso del tablet (studente/mappa.js) */
             if (ok && window.MappAIStudenteMappa) setTimeout(function () { window.MappAIStudenteMappa.assetto(); }, 60);
@@ -162,7 +170,7 @@
             st.aperta = false;
             scelto = st.sel || scelto;
             var a = r && r.azione;
-            if (a === 'mappa' && scelto) return apriMappa(scelto);
+            if ((a === 'mappa' || a === 'scheda') && scelto) return apriMappa(scelto);
             if (a === 'flashcard' && scelto) return apriFlashcard(scelto);
             /* «Prova»: la mappa sotto, poi il launcher dello studente (autotest, viste, strumenti) */
             if (a === 'prova' && scelto) return apriMappa(scelto).then(function (ok) { if (ok && window.ActiveStudy) window.ActiveStudy.openLauncher(); });
@@ -170,12 +178,12 @@
             if (a === 'sintesi' && scelto) {
                 var sin = C().trovaSintesi(st.materiali);
                 if (!sin) { toast(t('st_sintesi_manca_toast', 'Questa mappa non porta una sintesi: il docente non l\'ha pubblicata.'), 'info'); setTimeout(apri, 50); return; }
-                return apriMappa(scelto).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, sin.relPath, sin.name); });
+                return apriMappa(scelto, false).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, sin.relPath, sin.name); });
             }
             /* un materiale dalla console: la mappa sotto, il documento nel dock accanto */
             if (/^mat:/.test(a) && scelto) {
                 var rel = a.slice(4), nome = rel.split('/').pop();
-                return apriMappa(scelto).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, rel, nome); });
+                return apriMappa(scelto, false).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, rel, nome); });
             }
             /* chiusa dal pallino: se sotto c'è una mappa la si mostra, altrimenti si riapre */
             var ss = S();
