@@ -116,8 +116,14 @@ window.directLoadVault = async function (folderPath) {
                questa mappa nella scheda di un'altra (46 copie accumulate, una
                voce col vault sbagliato — misurato sui dati veri). Allinea anche
                classDir/discDir, che erano il residuo della mappa di prima. */
+            /* 0061 (29/09, ADR 0013): gesto `apri` — vince l'id scritto nella cartella;
+               senza id, per nome come prima, ma non la voce che un'altra cartella dichiara
+               già; una cartella vuota e senza id è una creazione. È la strada di INSEGNA,
+               delle console, degli elenchi, del ripiego di `loadProject` e del
+               ricongiungimento per id (D7). `loadRes` c'è già: nessuna attesa in più. */
             if (typeof StorageManager !== 'undefined' && StorageManager.adottaVault) {
-                await StorageManager.adottaVault(folderPath, appState);
+                await StorageManager.adottaVault(folderPath, appState, { gesto: 'apri', idCartella: loadRes.data.projectId,
+                    vuota: !(loadRes.data.nodes || []).length && !loadRes.data._pipelineManifest });
             }
             appState.extractionMode = loadRes.data.extractionMode || "mindmap";
             /* la mappa PORTA la sua classe e la sua materia (9/8): si tengono da
@@ -295,6 +301,17 @@ window.resetVaultState = function () {
     delete appState._reviewRestoreError;
     appState.activeVaultPath = null;
     appState.activeVaultClassDir = null;   // 22/7: nesting classe del vault auto-creato
+    /* 0061 (29/09, D1; ADR 0013): l'identità nasce quando la generazione comincia
+       (inv. 20-bis: ciò che dura dichiara a che cosa appartiene quando comincia). Senza,
+       con una mappa aperta l'autosave del rendering scriveva la mappa nuova nella voce
+       della precedente, e la cartella nuova ne avrebbe tenuto l'id. Si CONIA invece di
+       azzerare: autosave, consumi e cartella partono con lo stesso id, e la regola
+       `nuova` lo tiene. La chiamano le estrazioni, e ora «Importa JSON» e le mappe
+       dimostrative (D6). `typeof` (inv. 3). */
+    if (typeof StorageManager !== 'undefined') {
+        StorageManager.currentProjectId = 'proj_' + Date.now();
+        StorageManager.idInCartella = null;
+    }
     const syncBtn = document.getElementById('sync-vault-btn');
     if (syncBtn) {
         syncBtn.classList.add('hidden');

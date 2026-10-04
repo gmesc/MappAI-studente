@@ -177,7 +177,11 @@
         { id: 'mp-syn-on', aiuto: 'Un testo continuo che riassume la mappa, da leggere o da ascoltare.', et: 'Sintesi della mappa', tipo: 'spunta', chiave: 'synthesis', master: true, seFuori: 'niente sintesi' },
         { id: 'mp-syn-audio', aiuto: 'Legge la sintesi con la voce naturale di Google e salva l\u0027audio accanto al testo. Costa chiamate AI.', et: 'Voce naturale (audio)', tipo: 'spunta', chiave: 'synthesis.audio', figlioDi: 'mp-syn-on', seFuori: 'sintesi solo testo' },
 
-        { id: 'mp-src-pdf', aiuto: 'Copia il file di partenza dentro il vault, in «Allegati»: la cartella dell\u0027allievo basta a sé stessa.', et: 'Salva la fonte in «Allegati»', tipo: 'spunta', chiave: 'sourcePdf', seFuori: 'la fonte non viene copiata nel vault' },
+        /* 0067 (0068 fuso, strada A): l'aiuto parla anche delle foto. Un dossier da
+           immagine mette SEMPRE la foto piena in «Allegati», che l'allievo riceve:
+           con una foto la spunta non ha niente da decidere, e il guscio la nasconde
+           (Giacomo, 01/10). Il comportamento col PDF non cambia. */
+        { id: 'mp-src-pdf', aiuto: 'Un PDF resta sempre nel vault, in «Fonti»: con la spunta ne va una copia in «Allegati», che l\u0027allievo riceve. Con una foto la spunta non compare: la foto va in «Allegati» comunque.', et: 'Manda la fonte all\'allievo', tipo: 'spunta', chiave: 'sourcePdf', seFuori: 'l\'allievo non riceve il PDF della fonte (resta in «Fonti»); la foto di un dossier la riceve lo stesso, da «Allegati»' },
         { id: 'mp-estimate', aiuto: 'Quante chiamate all\u0027AI costerà quello che hai spuntato, aggiornato mentre scegli.', et: 'Stima chiamate AI', tipo: 'esito', chiave: '—',
           seFuori: '⚠️ si sceglie senza vedere quanto costa: è la ragione per cui il modale è stato portato in pagina' },
 
@@ -260,6 +264,18 @@
         { id: 'mn-genere-opz', aiuto: 'Il tema centrale della mappa mentale, oppure quanti concetti generare nel grafo.', et: 'Tema centrale / numero di nodi', tipo: 'strumento', forma: 'campo', chiave: '—',
           sposta: '#mn-genere-dx', gruppo: 'Contenuto', grande: true,
           seFuori: 'il tema centrale (MindMap) e lo slider dei nodi (KG) tornano nella riga storica' },
+        /* ── LA MODALITÀ ICONOGRAFICA (0067, ADR 0015) ─────────────────────────
+           Con una scheda di fonte iconografica confermata, il guscio
+           (`mappai-crea-iconografica.js`) mette questi due pezzi AL POSTO di
+           `mn-genere` e `mn-genere-opz`, con gli stessi span. Non stanno nella
+           composizione: nascono e muoiono con la foto. Sono nell'inventario perché
+           l'Officina §7 li veda e il validatore sappia che esistono. */
+        { id: 'mn-foto', aiuto: 'L\'anteprima della foto caricata fra le fonti. Compare solo con una fonte iconografica, al posto della scelta Mappa / Knowledge Graph.', et: 'Anteprima della foto', tipo: 'strumento', forma: 'pannello', chiave: '—',
+          sposta: '#ci-foto', gruppo: 'Contenuto', grande: true,
+          seFuori: 'nessuna perdita a schermo: il guscio della modalità iconografica la monta da sé al posto del genere di mappa' },
+        { id: 'mn-scheda', aiuto: 'La scheda letta dall\'AI: il titolo si corregge qui e diventa il nome del dossier; «Rivedi la scheda» riapre i quattro blocchi.', et: 'Scheda letta (titolo correggibile)', tipo: 'strumento', forma: 'pannello', chiave: '—',
+          sposta: '#ci-scheda', gruppo: 'Contenuto', grande: true,
+          seFuori: 'nessuna perdita a schermo: il guscio la monta da sé al posto del tema centrale, quando c\'è una scheda confermata' },
 
         /* — le altre quattro fonti — */
         { id: 'mn-src-url', aiuto: 'Parti da una pagina web: MappAI ne scarica il contenuto.', et: 'Link web', tipo: 'strumento', forma: 'bottone', chiave: '—', sposta: '#btn-src-url',
@@ -569,7 +585,7 @@
           voci: [{ id: 'mp-ns-title', et: 'Titolo' }, 'mp-ns-card', 'mp-ns-keywords', 'mp-ns-summary',
               { id: 'mp-ns-level', w: 140 }, { id: 'mp-ns-fmt', w: 130 }] },
         { id: 'src', titolo: 'Fonte & Sintesi', icona: 'paperclip', span: 1,
-          voci: [{ id: 'mp-src-pdf', et: 'Allega PDF' }, { id: 'mp-ns-causal', et: 'Catena perché' }] },
+          voci: [{ id: 'mp-src-pdf', et: 'Manda la fonte all\'allievo' }, { id: 'mp-ns-causal', et: 'Catena perché' }] },
         /* Riga sua, a tutta larghezza: la scelta moltiplica il costo di ciò che
            sta nel box «Quiz» sopra, quindi le sta sotto e non dentro — dentro
            sarebbe una spunta come le altre, e non lo è (sette generazioni). */

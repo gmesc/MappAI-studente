@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 4/10, sincronizzate 9 copie da MappAI re `ada73aa1`** (dall'ultima, `934f42a0`): `en_translations`,
+`bento-composizione`, `ui-modals`, `teach-core`, `storage-lang`, `ui-canvas`, `files-core`,
+`vault-manager`, `vault-io` (task 0059, 0061, 0064–0067 di MappAI re), `?v=sync-20261004`. I blocchi
+di `index.html` non cambiano (`--confronta`: identici a quelli di `934f42a0`; `map-view` resta
+DIVERSO per costruzione). **Lo 0061 («creare non è aprire») qui non cambia niente di visibile:**
+l'adapter non legge `projectId` da `index.yaml` né lo mette nell'elenco dei vault, quindi
+`adottaVault` riconosce per nome come prima (con UNA lettura in più dell'elenco a ogni apertura); il
+`projectId` che `buildVaultMapData` ora mette nel `mapData` l'adapter lo ignora, e `vista.json` si
+scrive come prima. Le copie nuove non chiamano moduli del docente assenti qui (ogni nome nuovo è
+nelle copie o protetto). Provato nel browser: «Svizzera e la 2a GM» (39 nodi, Torna a STUDIA →
+`vista.json` scritto), «La carta» (Flashcard `1 / 9`, fronte → retro), il dossier da foto
+«LA GUERRE… · 08» (la foto di `Allegati/` compare come «La scheda del docente» e si apre nel
+pannello). ⚠️ **Aperto:** il JPG nel pannello è un `blob:` in iframe a grandezza naturale
+(6500×4812), non adattato alla larghezza — `studente/documenti.js`, non le copie. Dopo il merge
+dello 0069 in MappAI re serve una seconda sincronizzazione piccola (`en_translations.js`).
+
 **⟵ 26/9, «Stampa» sull'iPad (task 0036 di MappAI re, più i PDF).** Nella WKWebView
 `window.print()` non fa niente: la stampante della sintesi e il «Stampa» della `.mm-doc-bar`
 erano bottoni muti (misurato nel simulatore). Ora c'è un **plugin Capacitor locale,

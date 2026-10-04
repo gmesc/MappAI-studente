@@ -22,18 +22,45 @@ const StorageManager = {
        nuova SUBITO, così nemmeno un salvataggio parte con l'identità altrui.
        Allinea anche classDir/discDir di appState: erano il residuo della mappa
        precedente, e l'autosave li congelava nella voce sbagliata. */
-    adottaVault: async function (folderPath, stato) {
+    adottaVault: async function (folderPath, stato, opts) {
+        /* 0061 (29/09) — CREARE NON È APRIRE (ADR 0013). Questa funzione serviva sia
+           a chi riapre una cartella sia a chi la crea (fine generazione, pipeline,
+           «Esporta nel Vault»), e cercava sempre per NOME: una mappa nuova col titolo
+           di una vecchia ne prendeva l'id (28/9, «Svizzera e 2a GM» →
+           proj_1788975818955 del 9/9). Ora il chiamante dice il gesto (`opts.gesto`:
+           nuova · per-la-mappa · apri · voce; senza `opts` vale `apri`, cioè la
+           riapertura di prima) e la decisione è del core
+           (`MappAITeachCore.identitaDellaCartella`, inv. 4). Qui restano la posizione
+           (cura (a) dell'11/9, trappola 26), l'elenco delle cartelle e il conio.
+           Scrive `currentProjectId` e `idInCartella` = { percorso, id da scrivere in
+           `index.yaml` (null = non si scrive), posizione }.
+           ⚠️ NON scrive `activeVaultPath`: lo fa il chiamante, DOPO. Con la cartella
+           nuova già attiva, un autosave che cadesse nelle attese qui dentro farebbe
+           dichiarare la cartella alla voce del giro prima della decisione, e `nuova`
+           conierebbe un secondo id (packet 0061 §4, «L'ordine»).
+           ⚠️ Il tetto delle microtask (tests/review-store.test.js): senza
+           `getAllVaults` nessuna attesa in più di prima; con `getAllVaults`, una. */
         const st = stato || (typeof appState !== 'undefined' ? appState : window.appState);
+        const o = opts || { gesto: 'apri' };
+        const gesto = o.gesto || 'apri';
         try {
             let classDir = null, discDir = null, vault = String(folderPath).split(/[\\/]/).filter(Boolean).pop();
             try {
                 const info = (window.electronAPI && window.electronAPI.filesRootGet)
                     ? await window.electronAPI.filesRootGet() : null;
                 const basi = [info && info.mapsBaseDir, info && info.studentsBaseDir].filter(Boolean);
+                /* 0061, 30/09, scelta A di Giacomo: su Windows i percorsi nativi hanno `\`
+                   (C:\…\Mappe\4R\Storia\X), e confrontata col prefisso della base la cartella
+                   sembrava fuori da Mappe/: classe e materia null, e con D5 la voce le perdeva.
+                   Si porta `\` a `/` sulla base e sul percorso, prima di confrontarli e di
+                   spezzarli. Su macOS e Linux non cambia niente: `safeName` toglie già `\` da
+                   ogni nome di cartella che l'app crea. La ritraduzione di Generico e il resto
+                   del blocco restano com'erano. */
+                const barre = (s) => String(s).replace(/\\/g, '/');
                 for (const b of basi) {
-                    const pref = String(b).replace(/\/+$/, '') + '/';
-                    if (String(folderPath).indexOf(pref) !== 0) continue;
-                    const segs = String(folderPath).slice(pref.length).split('/').filter(Boolean);
+                    const pref = barre(b).replace(/\/+$/, '') + '/';
+                    if (barre(folderPath).indexOf(pref) !== 0) continue;
+                    const segs = barre(folderPath).slice(pref.length).split('/').filter(Boolean);
                     // [vault] · [classe, vault] · [classe, materia, vault] ·
                     // (base allievi) [nome, 'Mappe', vault] → posizione flat.
                     // «Generico» (15/8 sera) è il contenitore dei vault senza
@@ -50,17 +77,36 @@ const StorageManager = {
 
             if (st) { st.activeVaultClassDir = classDir; st.activeVaultDiscDir = discDir; }
 
+            /* L'elenco delle cartelle (get-all-vaults) serve al core per le copie e
+               per la guardia sul nome (D3): chi l'ha già letto lo passa
+               (`ensureProjectVault`, per i fratelli); per `apri` e `per-la-mappa` si
+               legge qui, UNA volta; `nuova` e `voce` non lo usano. */
+            let cartelle = Array.isArray(o.cartelle) ? o.cartelle : null;
+            if (!cartelle && (gesto === 'apri' || gesto === 'per-la-mappa')) {
+                cartelle = [];
+                if (window.electronAPI && window.electronAPI.getAllVaults) {
+                    try { cartelle = (await window.electronAPI.getAllVaults()) || []; } catch (e) { cartelle = []; }
+                }
+            }
+
             const TC = window.MappAITeachCore;
             const projects = JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]');
-            const hit = (TC && TC.progettoDelVault)
-                ? TC.progettoDelVault(projects, { vault: vault, classDir: classDir, discDir: discDir })
-                : null;
-            this.currentProjectId = hit ? hit.id : ('proj_' + Date.now());
+            const deciso = (TC && TC.identitaDellaCartella)
+                ? TC.identitaDellaCartella(projects, {
+                    gesto: gesto, idCartella: o.idCartella, idAttuale: this.currentProjectId,
+                    pos: { vault: vault, classDir: classDir, discDir: discDir }, fullPath: folderPath,
+                    percorsoPrima: o.percorsoPrima || null, vuota: !!o.vuota, cartelle: cartelle || []
+                })
+                : null;   // senza il core: si conia, come prima
+            this.currentProjectId = (deciso && deciso.id) ? deciso.id : ('proj_' + Date.now());
+            this.idInCartella = { percorso: folderPath, id: (deciso && deciso.scrivi) ? this.currentProjectId : null,
+                posizione: { classDir: classDir, discDir: discDir } };
             return this.currentProjectId;
         } catch (e) {
             // mai lasciare l'identità della mappa precedente: meglio una scheda
             // nuova che una scheda scambiata
             this.currentProjectId = 'proj_' + Date.now();
+            this.idInCartella = null;
             return this.currentProjectId;
         }
     },
@@ -90,7 +136,15 @@ const StorageManager = {
             const nfc = s => { try { return String(s || '').normalize('NFC'); } catch (e) { return String(s || ''); } };
             const prevStr = localStorage.getItem('tutor_ai_projects');
             const prev = (prevStr ? JSON.parse(prevStr) : []).find(p => p.id === this.currentProjectId);
-            if (attivo && prev && prev.vault && nfc(prev.vault) !== nfc(attivo)) {
+            /* 0061 (29/09, ADR 0013) — l'unica eccezione: l'id viene dalla cartella
+               attiva (adottata in QUESTO percorso, e l'id è quello deciso lì). Allora il
+               nome è cambiato perché la cartella si è spostata o rinominata («21 …» in
+               Analisi): l'identità è sua e non si stacca. Una strada che cambia
+               `activeVaultPath` senza adottare non passa il controllo sul percorso, e
+               la rete scatta come prima. */
+            const ic = this.idInCartella;
+            const dallaCartella = !!(ic && ic.percorso === appState.activeVaultPath && ic.id === this.currentProjectId);
+            if (attivo && prev && prev.vault && nfc(prev.vault) !== nfc(attivo) && !dallaCartella) {
                 this.currentProjectId = 'proj_' + Date.now();
             }
         } catch (e) { /* best-effort: peggio bloccare un salvataggio che coniare un id */ }
@@ -145,16 +199,26 @@ const StorageManager = {
             // Contenitore di classe che annida il vault (22/7, auto-vault): serve a
             // disambiguare il match col disco (get-all-vaults ritorna folderName +
             // classDir). null = progetto senza classe (vault piatto storico o in Mappe/Generico/).
-            classDir: appState.activeVaultClassDir
-                || (existing ? existing.classDir : null)
-                || null,
+            /* 0061 (29/09, D5): se la cartella attiva è stata ADOTTATA in questo
+               percorso, la posizione della voce è quella che `adottaVault` ha appena
+               ricavato dal percorso — anche null: una cartella fuori dalle basi
+               (Analisi, Scrivania) non ha classe, e tenere «4R»/«Storia» della voce
+               darebbe una posizione ibrida che non esiste. Senza `posizione` (una
+               fotografia riaperta da `loadProject`), le righe di prima. */
+            classDir: (this.idInCartella && this.idInCartella.percorso === appState.activeVaultPath && this.idInCartella.posizione)
+                ? (this.idInCartella.posizione.classDir || null)
+                : (appState.activeVaultClassDir
+                    || (existing ? existing.classDir : null)
+                    || null),
             // Disciplina della generazione (29/7): nome leggibile per le tabelle
             // (colonna DISCIPLINA) + cartella che annida il vault dentro la classe.
             // Congelata come cls/clsId: una mappa non cambia disciplina da sola.
             disc: existing ? (existing.disc || appState.generationDiscipline || null) : (appState.generationDiscipline || null),
-            discDir: appState.activeVaultDiscDir
-                || (existing ? existing.discDir : null)
-                || null
+            discDir: (this.idInCartella && this.idInCartella.percorso === appState.activeVaultPath && this.idInCartella.posizione)
+                ? (this.idInCartella.posizione.discDir || null)
+                : (appState.activeVaultDiscDir
+                    || (existing ? existing.discDir : null)
+                    || null)
         };
 
         if (idx >= 0) projects[idx] = pMeta;
@@ -402,6 +466,10 @@ const StorageManager = {
             // Reset simulation so D3 creates a fresh one with correct node references
             simulation = null;
             this.currentProjectId = id;
+            /* 0061, 30/09: la voce che si apre non eredita la cartella adottata dalla mappa
+               di prima (inv. 20-bis) — nemmeno quando la sua cartella non c'è più e il
+               caricamento si ferma qui sotto. La decide, se c'è, il gesto `voce`. */
+            this.idInCartella = null;
 
             // Il manifest sul disco precede quello della cache. L'eventuale
             // bozza locale viene riconciliata dal controller prima di render e
@@ -410,10 +478,41 @@ const StorageManager = {
                 const vaultPath = appState.activeVaultPath;
                 const disk = await window.electronAPI.loadVault(vaultPath);
                 if (!disk || !disk.success) throw new Error((disk && disk.error) || 'Impossibile leggere la cartella del progetto');
-                if (window.MappAIReview && window.MappAIReview.restore) {
-                    await window.MappAIReview.restore(vaultPath, disk.data._pipelineManifest || null, { fromCache: true, diskData: disk.data });
-                } else if (disk.data._pipelineManifest?.review) throw new Error('Revisione non disponibile: caricamento interrotto');
-                else { appState._pipelineManifest = disk.data._pipelineManifest || null; delete appState._reviewRevision; }
+                /* 0061 (29/09, ADR 0013) — il gesto `voce`: la voce riaperta porta con sé
+                   la sua cartella, e l'id resta quello della voce. Ma se la cartella
+                   DICHIARA un altro id, è di un'altra mappa: è la porta da cui l'11/9 una
+                   mappa vecchia è entrata nella cartella della nuova (HOME e l'uscita ci
+                   avrebbero scritto la mappa della voce). Allora la voce la lascia: la
+                   mappa si apre senza cartella, il manifest di quella cartella non si
+                   ripristina (è dell'altra mappa), e il backfill qui sotto non parte.
+                   Senza id nella cartella, l'id ci si scrive solo se la voce aperta è
+                   quella che la posizione riconosce (bivio 2 = A). La posizione viene
+                   dalla fotografia: nessuna chiamata in più. */
+                const TCv = window.MappAITeachCore;
+                const deciso = (TCv && TCv.identitaDellaCartella)
+                    ? TCv.identitaDellaCartella(JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]'), {
+                        gesto: 'voce', idCartella: disk.data && disk.data.projectId, idAttuale: id, fullPath: vaultPath,
+                        pos: { vault: String(vaultPath).split(/[\\/]/).filter(Boolean).pop() || null,
+                            classDir: appState.activeVaultClassDir || null, discDir: appState.activeVaultDiscDir || null }
+                    })
+                    : { stacca: false, scrivi: false };
+                if (deciso.stacca) {
+                    console.warn('[Storage] la cartella «' + vaultPath + '» dichiara ' + disk.data.projectId +
+                        ', non ' + id + ': la voce si apre senza cartella (0061)');
+                    appState.activeVaultPath = null;
+                    appState.activeVaultClassDir = null;
+                    appState.activeVaultDiscDir = null;
+                    appState._pipelineManifest = null;
+                    delete appState._reviewRevision;
+                    this.idInCartella = null;
+                    var staccata = true;   // `var`: la legge il backfill più sotto, fuori da questo blocco
+                } else {
+                    this.idInCartella = { percorso: vaultPath, id: deciso.scrivi ? id : null };
+                    if (window.MappAIReview && window.MappAIReview.restore) {
+                        await window.MappAIReview.restore(vaultPath, disk.data._pipelineManifest || null, { fromCache: true, diskData: disk.data });
+                    } else if (disk.data._pipelineManifest?.review) throw new Error('Revisione non disponibile: caricamento interrotto');
+                    else { appState._pipelineManifest = disk.data._pipelineManifest || null; delete appState._reviewRevision; }
+                }
             } else {
                 appState._pipelineManifest = null;
                 delete appState._reviewRevision;
@@ -448,8 +547,25 @@ const StorageManager = {
 
             // Backfill pigro (22/7): se un progetto legacy non ha ancora una
             // cartella su disco, creala all'apertura (nome ROOT, nesting classe).
-            if (!appState.activeVaultPath && window.ensureProjectVault) {
-                setTimeout(() => { try { window.ensureProjectVault({ reason: 'open' }); } catch (e) { } }, 400);
+            /* 0061 (29/09, D7; ADR 0013): prima di crearne una, si cerca la cartella
+               che dichiara GIÀ l'id di questa voce — una voce che non ha fatto in tempo
+               a dichiararla (uscita forzata durante la pipeline), o già riordinata
+               senza che la fotografia lo sapesse. Se ce n'è esattamente una, si apre
+               quella (gesto `apri`) invece di farne una « · 02». Non parte per una
+               voce che ha appena lasciato la cartella di un'altra mappa (`staccata`). */
+            if (!appState.activeVaultPath && window.ensureProjectVault && !staccata) {
+                setTimeout(() => {
+                    try {
+                        const FCb = window.MappAIFilesCore;
+                        if (window.electronAPI && window.electronAPI.getAllVaults && FCb && FCb.idProgettoValido && FCb.idProgettoValido(id)) {
+                            window.electronAPI.getAllVaults().then(all => {
+                                const sue = (all || []).filter(v => v && v.projectId === id && v.fullPath);
+                                if (sue.length === 1 && window.directLoadVault) window.directLoadVault(sue[0].fullPath);
+                                else window.ensureProjectVault({ reason: 'open' });
+                            }).catch(() => { try { window.ensureProjectVault({ reason: 'open' }); } catch (e) { } });
+                        } else window.ensureProjectVault({ reason: 'open' });
+                    } catch (e) { }
+                }, 400);
             }
             if (appState.activeVaultPath && window.MappAIPipeline && window.MappAIPipeline.checkResume) window.MappAIPipeline.checkResume(appState.activeVaultPath);
 

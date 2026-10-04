@@ -1174,6 +1174,8 @@ window.importGraph = function (event) {
                 delete n.fx; delete n.fy;
             });
 
+            // 0061 (29/09, D6): una mappa importata è una mappa NUOVA — stacca id e cartella della mappa di prima (ADR 0013)
+            if (window.resetVaultState) window.resetVaultState();
             appState.db = { nodes: data.nodes, links: data.links };
             appState.extractionMode = data.mode || data.extractionMode || "mindmap";
 
