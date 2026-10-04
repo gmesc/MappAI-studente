@@ -59,7 +59,10 @@
         /* la fonte da cui tutto viene: sta in `Allegati/` ed è l'UNICO PDF che il
            docente manda allo studente (7/9). Prima nell'elenco perché è il documento
            che la lezione ha in mano. */
-        { id: 'scheda', chiave: 'st_g_scheda', testo: 'La scheda del docente', tipi: [SCHEDA] },
+        /* «La fonte» (Giacomo, 4/10): era «La scheda del docente», ma da quando un dossier
+           ha la sua «Scheda» (l'analisi) il nome confondeva — in `Allegati/` c'è la fonte:
+           il PDF di partenza o la foto */
+        { id: 'scheda', chiave: 'st_g_fonte', testo: 'La fonte', tipi: [SCHEDA] },
         { id: 'sintesi', chiave: 'st_g_sintesi', testo: 'Sintesi', tipi: ['Sintesi', 'Sintesi con voce'] },
         { id: 'mappa', chiave: 'st_g_mappa', testo: 'La mappa stampata', tipi: ['Mappa', 'Vista studio', 'Focus'] },
         { id: 'flashcard', chiave: 'st_g_flashcard', testo: 'Flashcard', tipi: ['Flashcard'] },
