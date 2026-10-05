@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 5/10, un dossier si legge come sulla LIM: la foto al posto della mappa, la scheda accanto** (Giacomo: «se
+l'allievo apre la scheda … la visualizzazione come l'apertura di una scheda da MappAI re in modalità LIM», poi «già
+divisa a metà, domande e flashcard fuori: vai»). Il modello è «Proietta» di MappAI re (`mappai-proiezione.js`: foto a
+tutto schermo con zoom, «Affianca» la scheda). Nel reader: `documenti.js › mostraFoto` monta `#studente-foto` DOVE
+STAREBBE IL CANVAS (`width/height: calc(100% - var(--sd-w|--sd-h))`, z 44, sotto il pannello) col visore delle
+immagini (intera e centrata, pinch, ⌘ + rotella, `ResizeObserver` per la maniglia) e due comandi: «Adatta» e la × che
+torna a STUDIA. La scheda si apre nel pannello ACCANTO (non più a tutto schermo: via il modo `sd--solo` del 4/10), con
+la maniglia e i due orientamenti di sempre (sdraiato: foto a sinistra; in piedi: foto sopra). La × del pannello chiude
+il documento e lascia la foto; «La fonte» dai Materiali, con la foto già accanto, chiude il pannello. Nel documento della
+scheda la foto resta (stampa e PDF la portano) ma a schermo si nasconde (`@media screen`). `console.js › apriMappa`: per
+un dossier la foto e poi la scheda; chiude la sidebar della mappa (sta fuori dal riquadro e il caricamento la riapre);
+una mappa vera toglie la foto. Il PDF all'allievo non serve: «Stampa» della barra → menu di iOS → «Salva su File».
+Misurato nel browser: sdraiato foto 593 px | scheda 430 px, foto centrata (245 px sopra e sotto); in piedi (768×1024)
+foto 512 px sopra, scheda 512 px sotto; × del pannello → foto a tutto schermo; × della foto → STUDIA; «Svizzera» dopo
+→ niente foto, 39 nodi. ⚠️ **Sull'iPad:** pinch sulla foto accanto alla scheda, la maniglia, la stampa con la foto.
+
 **⟵ 5/10, la scheda del dossier ha la barra e gli stili della sintesi** (Giacomo: «applica alla pagina di
 lettura della scheda la stessa tool bar … della sintesi. Allinea gli stili»). Il documento non esce più da
 `buildAnalisiFonteHtml` (quiz-print) ma dal costruttore della **sintesi** (`MappAISynthesis.buildHtml`, copia di

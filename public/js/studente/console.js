@@ -81,16 +81,24 @@
        Se il vault scelto è già a schermo (rientro da «Torna a STUDIA») si
        mostra e basta; altrimenti si carica come fa INSEGNA (`directLoadVault`:
        adotta l'identità, applica vista.json, monta il canvas). */
-    /* `conScheda` (4/10): un DOSSIER non si guarda come mappa — caricato, si apre la sua
-       scheda a tutto schermo (documenti.js › apriScheda), e Flashcard e Prova le stanno
-       sopra. Chi apre subito un altro documento (sintesi, materiali) passa `false`: la
-       scheda verrebbe disegnata per niente, e il dock va comunque a tutto schermo. */
+    /* `conScheda` (4/10): un DOSSIER non si guarda come mappa. Dal 5/10 al posto della
+       mappa c'è la sua FOTO (documenti.js › mostraFoto, la vista della LIM) e la scheda si
+       apre nel pannello accanto (apriScheda); Flashcard e Prova le stanno sopra. Chi apre
+       subito un altro documento (sintesi, materiali) passa `false`: la scheda verrebbe
+       disegnata per niente. Una mappa vera toglie la foto di un dossier aperto prima. */
     function apriMappa(fullPath, conScheda) {
         return _apriMappa(fullPath).then(function (ok) {
             var D = window.MappAIStudenteDocumenti;
             if (ok && D && D.dossier && D.dossier()) {
-                return (conScheda === false || !D.apriScheda) ? ok : D.apriScheda(fullPath).then(function () { return ok; });
+                /* la sidebar della mappa sta FUORI dal riquadro che la foto copre, e il caricamento
+                   la riapre dopo: si chiude come fa `assetto` per le mappe (60 ms), più un giro */
+                var M = window.MappAIStudenteMappa;
+                if (M && M.nascondiSidebar) [60, 400].forEach(function (ms) { setTimeout(M.nascondiSidebar, ms); });
+                return (D.mostraFoto ? D.mostraFoto(fullPath) : Promise.resolve()).then(function () {
+                    return (conScheda === false || !D.apriScheda) ? ok : D.apriScheda(fullPath).then(function () { return ok; });
+                });
             }
+            if (D && D.togliFoto) D.togliFoto();
             /* la mappa si presenta sempre allo stesso modo: sidebar chiusa, vista Albero,
                e in split il disegno per il verso del tablet (studente/mappa.js) */
             if (ok && window.MappAIStudenteMappa) setTimeout(function () { window.MappAIStudenteMappa.assetto(); }, 60);

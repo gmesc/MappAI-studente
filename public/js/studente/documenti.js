@@ -27,7 +27,7 @@
        cambio di orientamento cambia SOLO il CSS: il contenuto (la view della
        prova, l'iframe) resta lo stesso nodo. Due clamp, due memorie. */
     var KEY_W = 'mappai_studente_dock_w', KEY_H = 'mappai_studente_dock_h', MIN_W = 360, MIN_H = 240;
-    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null, solo = false;
+    var dock = null, corpo = null, titolo = null, urlAperto = null, chiediChiusura = null;
     var mq = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
     function PC() { return window.MappAIProvaCore; }
     function orientamento() {
@@ -186,14 +186,7 @@
         libera();
         titolo.textContent = o.titolo || '';
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
-        /* SOLO IL DOCUMENTO (4/10): un dossier non ha una mappa da guardare (Giacomo: «solo
-           la scheda, senza mappa»). Il pannello prende tutto lo schermo come quando lo si
-           trascina sul bordo della mappa, ma senza la maniglia verde che la riaprirebbe;
-           la × riporta a STUDIA. Vale per la scheda e per tutto ciò che si apre mentre il
-           dossier è caricato (materiali, sintesi, prove). */
-        solo = !!o.pieno || dossierAperto();
-        dock.classList.toggle('sd--solo', solo);
-        collasso = solo ? 'mappa' : null; misura(memoria());
+        collasso = null; misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
             f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); });
@@ -330,18 +323,15 @@
     }
     function chiudi() {
         if (!dock || dock.hidden) return;
-        dock.hidden = true; libera(); collasso = null; solo = false; dock.classList.remove('sd--solo'); ingombro(0, 0);
+        dock.hidden = true; libera(); collasso = null; ingombro(0, 0);
         window.dispatchEvent(new Event('resize'));
         /* il canvas torna largo quanto lo schermo: la mappa si rimette nel riquadro */
         if (window.MappAIStudenteMappa) setTimeout(window.MappAIStudenteMappa.inquadra, 160);
     }
     /* chiudere a prova in corso è lavoro da perdere: si chiede */
     function chiudiChiedendo() {
-        /* senza mappa sotto (`solo`) la × non può lasciare un canvas vuoto: torna a STUDIA */
-        var torna = solo && window.MappAIStudente && window.MappAIStudente.torna;
-        var fatto = function () { chiudi(); if (torna) window.MappAIStudente.torna(); };
-        if (!chiediChiusura) return fatto();
-        Promise.resolve(chiediChiusura()).then(function (si) { if (si) fatto(); });
+        if (!chiediChiusura) return chiudi();
+        Promise.resolve(chiediChiusura()).then(function (si) { if (si) chiudi(); });
     }
     /* il dossier caricato: la radice `fonte_0` (nodiDaScheda, deterministica) — la
        stessa prova di `buildVaultMapData › dossier` */
@@ -366,7 +356,10 @@
        toglie ciò che non è base64) e lo si sostituisce con un indirizzo.
        · iPad: l'HTML si scrive in `Studio Attivo/` e si apre dal file vero — la stampa
          di iOS carica quello (`fileUri`), e la foto ci arriva per percorso relativo;
-       · browser: l'HTML e la foto sono due blob, revocati alla chiusura. */
+       · browser: l'HTML e la foto sono due blob, revocati alla chiusura.
+       5/10: si apre nel pannello ACCANTO alla foto (`mostraFoto`, al posto della mappa).
+       La foto resta nel documento — la stampa e il PDF la portano — ma a schermo si
+       nasconde quando è già accanto (`@media screen`). */
     var FOTO = /\.(png|jpe?g|webp|gif)$/i, SEGNO = 'SDFOTODELDOSSIER';
     function apriScheda(vaultPath) {
         var s = S(), C = window.MappAIStudiaCore, VC = window.MappAIVisioneCore, SY = window.MappAISynthesis;
@@ -383,12 +376,12 @@
                 foto: src ? { b64: SEGNO, mime: 'image/jpeg', titolo: sch.titolo } : null
             });
             h = h.split('Sintesi di ramo').join(tipo).replace('<title>Sintesi — ', '<title>' + tipo + ' — ');
+            if (superficie && superficie.vp === vaultPath) h = h.replace('</head>', '<style id="sd-foto-accanto">@media screen{.bs-fonte{display:none}}</style></head>');
             return src ? h.split('data:image/jpeg;base64,' + SEGNO).join(src.replace(/"/g, '%22')) : h;
         };
         var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
         var Fs = FSP ? FSP('Filesystem') : null, Cap = window.Capacitor;
-        return window.electronAPI.vaultMaterialsList({ vaultPath: vaultPath, dir: 'Allegati' })
-            .then(function (r) { return ((r && r.files) || []).filter(function (f) { return FOTO.test(f.name); })[0] || null; }, function () { return null; })
+        return fotoDelDossier(vaultPath)
             .then(function (foto) {
                 var nelBrowser = function () {
                     var conFoto = foto ? window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: foto.relPath })
@@ -396,7 +389,7 @@
                         : Promise.resolve('');
                     return conFoto.then(function (fotoUrl) {
                         var url = URL.createObjectURL(new Blob([html(fotoUrl)], { type: 'text/html' }));
-                        apri({ titolo: sch.titolo, iframe: url, pieno: true });
+                        apri({ titolo: sch.titolo, iframe: url });
                         urlAperto = fotoUrl ? [url, fotoUrl] : url;   // dopo `apri`: il suo `libera` revoca i precedenti
                         return true;
                     });
@@ -405,7 +398,7 @@
                 var rel = 'Studio Attivo/Analisi della fonte.html';
                 return window.electronAPI.saveVaultFile({ vaultPath: vaultPath, relPath: rel, text: html(foto ? '../Allegati/' + encodeURIComponent(foto.name) : '') })
                     .then(function (w) { if (!w || !w.ok) throw new Error((w && w.error) || 'scrittura'); return uriVero(vaultPath, rel); })
-                    .then(function (uri) { apri({ titolo: sch.titolo, iframe: Cap.convertFileSrc(uri), fileUri: uri, pieno: true }); return true; })
+                    .then(function (uri) { apri({ titolo: sch.titolo, iframe: Cap.convertFileSrc(uri), fileUri: uri }); return true; })
                     .catch(function () { return nelBrowser(); });
             });
     }
@@ -464,7 +457,9 @@
        pinch del visore PDF (`pizzica`; ⌘ + rotella sul Mac) fino ai suoi pixel veri.
        Sull'iPad la sorgente è il file vero (convertFileSrc): niente base64 da 13 MB
        in memoria. Una foto non ha la stampante: il plugin conosce HTML e PDF. */
-    function apriImmagine(vaultPath, relPath, nome) {
+    /* la sorgente di un'immagine del vault: sull'iPad il file vero, nel browser un blob
+       (`blob: true` → chi la usa la revoca) */
+    function sorgenteImmagine(vaultPath, relPath, nome) {
         var C = window.Capacitor;
         var vero = (C && C.convertFileSrc) ? uriVero(vaultPath, relPath).catch(function () { return null; }) : Promise.resolve(null);
         return vero.then(function (uri) {
@@ -473,7 +468,13 @@
                 if (!r || !r.ok) return { errore: (r && r.error) || '' };
                 return { src: URL.createObjectURL(b64ToBlob(r.base64, mime(nome || relPath))), blob: true };
             });
-        }).then(function (s) {
+        });
+    }
+    function apriImmagine(vaultPath, relPath, nome) {
+        /* la foto di un dossier è già al posto della mappa: chiudere il pannello la
+           lascia a tutto schermo, invece di mostrarla due volte */
+        if (superficie && superficie.vp === vaultPath && superficie.rel === relPath) { chiudi(); return Promise.resolve(); }
+        return sorgenteImmagine(vaultPath, relPath, nome).then(function (s) {
             if (!s.src) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (s.errore ? ' ' + s.errore : ''), 'error'); return; }
             apri({ titolo: nome, monta: function (host) { host.classList.add('sd-corpo--pdf'); vistaImmagine(host, s.src, nome); } });
             if (s.blob) urlAperto = s.src;   // dopo `apri`: il suo `libera` revoca quello di prima
@@ -504,8 +505,64 @@
         if (V && V.pizzica) V.pizzica(scroll, pila, function (nuovo) { z = nuovo; rifai(); }, function () { return z; },
             function () { return Math.max(6, 1 / intera()); });   // il tetto: i pixel veri, e almeno i 6× dei PDF
         window.addEventListener('resize', rifai);
+        /* il riquadro cambia taglia anche senza `resize` della finestra: la maniglia dello
+           split, girando l'iPad (5/10, la foto al posto della mappa) */
+        var ro = window.ResizeObserver ? new ResizeObserver(function () { rifai(); }) : null;
+        if (ro) ro.observe(scroll);
+        var pulisci = function () { window.removeEventListener('resize', rifai); if (ro) ro.disconnect(); img.onload = img.onerror = null; };
         host.__risistema = rifai;
-        host.__pulisci = function () { window.removeEventListener('resize', rifai); img.onload = img.onerror = null; };
+        host.__pulisci = pulisci;
+        /* «Adatta»: di nuovo intera, dall'angolo */
+        return { adatta: function () { z = 1; rifai(); scroll.scrollLeft = 0; scroll.scrollTop = 0; }, pulisci: pulisci };
+    }
+
+    /* ── LA FOTO AL POSTO DELLA MAPPA (5/10) ─────────────────────────────────
+       Giacomo: aprendo la scheda, «la visualizzazione come l'apertura di una scheda da
+       MappAI re in modalità LIM» (`mappai-proiezione.js › Proietta`), «già divisa a metà»,
+       domande e flashcard fuori. Un dossier non ha una mappa da guardare: dove starebbe il
+       canvas sta la FOTO di `Allegati/`, col visore delle immagini (intera, pinch, ⌘ +
+       rotella) e due comandi — «Adatta» e la × che torna a STUDIA. Il documento (la scheda,
+       la sintesi, una prova) sta nel pannello accanto, con la sua maniglia: lo split è
+       quello di sempre, e la superficie ne segue l'ingombro con le stesse variabili del
+       canvas (`--sd-w` / `--sd-h`). Portata la maniglia sul bordo, resta la sola foto o il
+       solo documento. La × del pannello chiude il documento e lascia la foto. */
+    var superficie = null;   /* { el, vp, rel, api, blob } */
+    function fotoDelDossier(vaultPath) {
+        return window.electronAPI.vaultMaterialsList({ vaultPath: vaultPath, dir: 'Allegati' })
+            .then(function (r) { return ((r && r.files) || []).filter(function (f) { return FOTO.test(f.name); })[0] || null; }, function () { return null; });
+    }
+    function mostraFoto(vaultPath) {
+        if (superficie && superficie.vp === vaultPath) { superficie.el.hidden = false; return Promise.resolve(true); }
+        togliFoto();
+        var main = document.getElementById('main-content');
+        if (!main) return Promise.resolve(false);
+        return fotoDelDossier(vaultPath).then(function (f) {
+            if (!f) return false;
+            return sorgenteImmagine(vaultPath, f.relPath, f.name).then(function (s) {
+                if (!s.src) return false;
+                var el = document.createElement('section');
+                el.id = 'studente-foto';
+                el.setAttribute('aria-label', t('st_foto_fonte', 'La fonte'));
+                el.innerHTML = '<div class="sf-corpo"></div><div class="sf-bar">' +
+                    '<button type="button" class="sf-btn" data-sf="adatta">' + esc(t('pj_adatta', 'Adatta')) + '</button>' +
+                    '<button type="button" class="sf-btn" data-sf="torna" aria-label="' + esc(t('st_torna', 'Torna a STUDIA')) + '" title="' + esc(t('st_torna', 'Torna a STUDIA')) + '">&times;</button></div>';
+                main.appendChild(el);
+                var api = vistaImmagine(el.querySelector('.sf-corpo'), s.src, f.name);
+                superficie = { el: el, vp: vaultPath, rel: f.relPath, api: api, blob: s.blob ? s.src : null };
+                el.querySelector('[data-sf="adatta"]').addEventListener('click', function () { api.adatta(); });
+                el.querySelector('[data-sf="torna"]').addEventListener('click', function () {
+                    if (window.MappAIStudente && window.MappAIStudente.torna) window.MappAIStudente.torna();
+                });
+                return true;
+            });
+        });
+    }
+    function togliFoto() {
+        if (!superficie) return;
+        try { superficie.api.pulisci(); } catch (e) { }
+        if (superficie.blob) { try { URL.revokeObjectURL(superficie.blob); } catch (e) { } }
+        if (superficie.el.parentNode) superficie.el.parentNode.removeChild(superficie.el);
+        superficie = null;
     }
     /* LA STAMPA DI UN PDF (26/9):sull'iPad il file va a iOS così com'è (il plugin
        `Stampa` lo passa a `UIPrintInteractionController`, che lo impagina da sé);
@@ -667,5 +724,5 @@
         });
     };
 
-    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, apriScheda: apriScheda, dossier: dossierAperto, azione: azione, genere: genere, corpo: function () { return corpo; } };
+    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, apriScheda: apriScheda, mostraFoto: mostraFoto, togliFoto: togliFoto, dossier: dossierAperto, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());
