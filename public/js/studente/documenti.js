@@ -350,31 +350,41 @@
         return !!(s && s.activeVaultPath && Array.isArray(n) && n.some(function (x) { return x && x.id === 'fonte_0'; }));
     }
 
-    /* ── LA SCHEDA DI UN DOSSIER (4/10) ─────────────────────────────────────
-       Il documento «Analisi della fonte» di MappAI (`buildAnalisiFonteHtml`, nella copia
-       di mappai-quiz-print), con la scheda ricomposta dai nodi (`studia-core ›
-       schedaDaNodi`: `pipeline.json` allo studente non arriva) e la foto di `Allegati/`.
-       La foto NON entra in base64 (13 MB dentro l'HTML): il generatore sa solo
-       `fotoB64`, quindi gli si passa un segno e lo si sostituisce con un indirizzo.
+    /* ── LA SCHEDA DI UN DOSSIER (4/10; veste della sintesi dal 5/10) ──────────
+       La scheda ricomposta dai nodi (`studia-core › schedaDaNodi`: `pipeline.json` allo
+       studente non arriva) e la foto di `Allegati/`.
+       5/10 (Giacomo: «la stessa tool bar della sintesi … allinea gli stili»): il documento
+       NON è più l'«Analisi della fonte» di quiz-print, ma esce dal costruttore della
+       SINTESI (`MappAISynthesis.buildHtml`, copia di mappai-branch-synthesis) col testo
+       che `studia-core › markdownDaScheda` gli scrive. Stessa barra `#ap-topbar`, stessi
+       stili, e qui nel pannello la stessa veste (`vesti`) e lo stesso lettore dell'app
+       (`lettoreApp`: ▶, velocità, effetto, Aa, Riga, lettura veloce, Stampa, ×) — una
+       strada sola per i due documenti. Il costruttore sa dire solo «Sintesi di ramo»:
+       l'etichetta del tipo si riscrive nel testo prodotto (titolo, marchio, testata).
+       La foto NON entra in base64 (8 MB di JPEG → 11 MB dentro l'HTML): il costruttore la
+       vuole in `foto.b64`, quindi gli si passa un segno (solo lettere: il costruttore
+       toglie ciò che non è base64) e lo si sostituisce con un indirizzo.
        · iPad: l'HTML si scrive in `Studio Attivo/` e si apre dal file vero — la stampa
          di iOS carica quello (`fileUri`), e la foto ci arriva per percorso relativo;
-       · browser: l'HTML e la foto sono due blob, revocati alla chiusura.
-       Niente barra del documento (la sua × fa `window.close()`, muta in un iframe): la
-       stampante sta nella testata del pannello, come per i PDF. */
-    var FOTO = /\.(png|jpe?g|webp|gif)$/i, SEGNO = 'SD-FOTO-DEL-DOSSIER';
+       · browser: l'HTML e la foto sono due blob, revocati alla chiusura. */
+    var FOTO = /\.(png|jpe?g|webp|gif)$/i, SEGNO = 'SDFOTODELDOSSIER';
     function apriScheda(vaultPath) {
-        var s = S(), C = window.MappAIStudiaCore, VC = window.MappAIVisioneCore;
+        var s = S(), C = window.MappAIStudiaCore, VC = window.MappAIVisioneCore, SY = window.MappAISynthesis;
         var sch = (s && s.db && C && C.schedaDaNodi && VC) ? C.schedaDaNodi(s.db.nodes, VC.BLOCCHI) : null;
-        if (!sch || !window.buildAnalisiFonteHtml) {
+        if (!sch || !SY || !SY.buildHtml || !C.markdownDaScheda) {
             toast(t('st_scheda_manca', 'Questo dossier non porta una scheda da leggere.'), 'warning');
             return Promise.resolve(false);
         }
+        var tipo = t('st_analisi_fonte', 'Analisi della fonte');
         var html = function (src) {
-            var h = window.buildAnalisiFonteHtml(src ? Object.assign({}, sch, { fotoB64: SEGNO, mime: 'image/jpeg' }) : sch,
-                { mapName: sch.titolo, includeBar: false });
-            return src ? h.split('data:image/jpeg;base64,' + SEGNO).join(src) : h;
+            var h = SY.buildHtml({
+                branchLabel: sch.titolo, mapName: sch.titolo, rawText: C.markdownDaScheda(sch, VC.BLOCCHI), sourcesArr: [],
+                classe: s.db.classe || undefined, materia: s.db.materia || undefined,
+                foto: src ? { b64: SEGNO, mime: 'image/jpeg', titolo: sch.titolo } : null
+            });
+            h = h.split('Sintesi di ramo').join(tipo).replace('<title>Sintesi — ', '<title>' + tipo + ' — ');
+            return src ? h.split('data:image/jpeg;base64,' + SEGNO).join(src.replace(/"/g, '%22')) : h;
         };
-        var stampa = function () { var f = corpo && corpo.querySelector('iframe'); if (f && f.contentWindow) f.contentWindow.print(); };
         var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
         var Fs = FSP ? FSP('Filesystem') : null, Cap = window.Capacitor;
         return window.electronAPI.vaultMaterialsList({ vaultPath: vaultPath, dir: 'Allegati' })
@@ -386,7 +396,7 @@
                         : Promise.resolve('');
                     return conFoto.then(function (fotoUrl) {
                         var url = URL.createObjectURL(new Blob([html(fotoUrl)], { type: 'text/html' }));
-                        apri({ titolo: sch.titolo, iframe: url, pieno: true, stampa: stampa });
+                        apri({ titolo: sch.titolo, iframe: url, pieno: true });
                         urlAperto = fotoUrl ? [url, fotoUrl] : url;   // dopo `apri`: il suo `libera` revoca i precedenti
                         return true;
                     });
@@ -395,7 +405,7 @@
                 var rel = 'Studio Attivo/Analisi della fonte.html';
                 return window.electronAPI.saveVaultFile({ vaultPath: vaultPath, relPath: rel, text: html(foto ? '../Allegati/' + encodeURIComponent(foto.name) : '') })
                     .then(function (w) { if (!w || !w.ok) throw new Error((w && w.error) || 'scrittura'); return uriVero(vaultPath, rel); })
-                    .then(function (uri) { apri({ titolo: sch.titolo, iframe: Cap.convertFileSrc(uri), fileUri: uri, pieno: true, stampa: stampa }); return true; })
+                    .then(function (uri) { apri({ titolo: sch.titolo, iframe: Cap.convertFileSrc(uri), fileUri: uri, pieno: true }); return true; })
                     .catch(function () { return nelBrowser(); });
             });
     }

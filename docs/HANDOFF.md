@@ -8,6 +8,19 @@
 
 ## 0. Dove si riprende
 
+**⟵ 5/10, la scheda del dossier ha la barra e gli stili della sintesi** (Giacomo: «applica alla pagina di
+lettura della scheda la stessa tool bar … della sintesi. Allinea gli stili»). Il documento non esce più da
+`buildAnalisiFonteHtml` (quiz-print) ma dal costruttore della **sintesi** (`MappAISynthesis.buildHtml`, copia di
+branch-synthesis), col testo che `studia-core › markdownDaScheda` scrive dalla scheda (`##` per blocco, «**Etichetta:**
+valore» per campo, «(interpretazione)» nei blocchi C e D; `*` e `[n]` neutralizzati; 1 test). Così il pannello lo
+tratta come una sintesi senza voce naturale: `vesti` + `lettoreApp` → la stessa fila dell'app (⟲10 · ▶ · 5⟳ ·
+velocità · effetto · Aa · Riga · lettura veloce · Stampa · ×), ▶ davanti ai titoli, foto in `.bs-fonte`. Il
+costruttore sa dire solo «Sintesi di ramo»: l'etichetta si riscrive in «Analisi della fonte» nel testo prodotto; la
+foto passa ancora per un segno (solo lettere) sostituito con l'indirizzo. La stampante della testata del pannello non
+serve più (il documento ha la sua, agganciata alla stampa di iOS). Misurato nel browser: fila identica a quella della
+sintesi di «La carta» (11 comandi), testata «… · Analisi della fonte · data», 4 titoli coi ▶, × → STUDIA.
+⚠️ **Sull'iPad:** dopo `npx cap sync ios`, la voce (▶) e la stampa sulla scheda.
+
 **⟵ 5/10, «solo iPad» sta nel progetto, e lo script non rimette più l'HTTP in chiaro.** Xcode avvisava a ogni
 build «User supplied UIDeviceFamily key in the Info.plist will be overwritten»: la famiglia la decide la build
 setting `TARGETED_DEVICE_FAMILY`, e la chiave che `tools/plist-ipad.py` scriveva nel plist non contava. Nel
