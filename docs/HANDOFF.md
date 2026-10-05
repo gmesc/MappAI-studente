@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 5/10, sincronizzate 3 copie da MappAI re `db68e116`** (dall'ultima, `d817d70e`): `en_translations`,
+`storage-lang`, `vista-core`, tutte dal solo commit `8668f8e8` (0076: la memoria rapida tiene solo ciò che la cartella
+non ha, e a cassetto pieno dice il vero), `?v=sync-20261005`. **Nel reader non cambia niente**, verificato sulle righe
+nuove e non solo sugli hash: l'interruttore `mappai_cassetto_snello` qui non si scrive da nessuna parte, quindi
+`saveCurrentProject` (`studente/console.js › torna`) chiama `statoSnello(appState)` senza opzioni, che ritorna la copia
+di prima; il ramo nuovo del cassetto pieno (`_cassettoPieno`, finestre, residuo) parte solo con l'interruttore acceso E
+`window.MappAIErrori`, che qui non c'è (`mappai-errori.js` non si carica): resta il toast di oggi; la riapertura dal
+residuo o dalla copia «superata» sta in `loadProject`, che il reader non raggiunge (niente elenco progetti:
+`loadSavedProject` non ha chiamanti, i vault si aprono con `directLoadVault`). `vista.json` passa da
+`raccogli`/`applica`, che lo 0076 non tocca. `en_translations`: 20 chiavi nuove. I blocchi di `index.html` non cambiano
+(`--confronta`: `map-view` resta DIVERSO per costruzione). Test 45/45. Provato nel browser: «Svizzera e la 2a GM»
+(39 nodi, Torna a STUDIA → `vista.json` scritto, `soloVista`), i dossier da foto «LA GUERRE… · 07» e «· 08» (foto al
+posto della mappa, scheda accanto, × → `vista.json` scritto); la copia nel cassetto ha la forma di prima (manifesto
+dentro, niente `_pipelineSegnale` né `_residuo`), nessun errore, nessuna finestra. Dopo il merge dello 0077 in MappAI re
+servirà una seconda sincronizzazione piccola (`study-export-core`, `files-core`).
+
 **⟵ 5/10, ingrandita, la foto non si taglia più a sinistra** (Giacomo dall'iPad: «quando sono in modalità split e
 ingrandisco l'immagine una parte del lato sinistro dell'immagine è croppata»). La `.sp-pila` del visore (foto e PDF) era
 larga quanto il riquadro e CENTRAVA col flexbox: ciò che si ingrandiva sbordava metà a destra (si scorre) e metà a

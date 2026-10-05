@@ -239,13 +239,19 @@ const StorageManager = {
            recenti della stessa mappa: nessuna schermata sa aprirle, chi apre
            passa dal match che prende sempre l'ultima) e si riprova. Niente
            domande in mezzo al lavoro: si fa, e lo si DICE col toast. */
+        /* 0076 (ADR 0018): con `mappai_cassetto_snello` = '1' la copia non porta
+           ciò che è già nella cartella (la regola sta in MappAIVistaCore). Spento:
+           la copia di oggi. Stesso interruttore per il ramo del cassetto pieno. */
+        let snello = false;
+        try { snello = localStorage.getItem('mappai_cassetto_snello') === '1'; } catch (e) { snello = false; }
         const _scrivi = () => {
             /* SNELLO (15/8): dopo il disegno D3 ogni arco porta dentro l'intero
                nodo di partenza e di arrivo — misurato su un foglio vero: 120 KB
                di link per 8,8 KB di dati. I link tornano coppie di id (il
                caricamento li accetta già così: è la forma dei vault). */
             const daScrivere = (window.MappAIVistaCore && window.MappAIVistaCore.statoSnello)
-                ? window.MappAIVistaCore.statoSnello(appState) : appState;
+                ? (snello ? window.MappAIVistaCore.statoSnello(appState, { snello: true }) : window.MappAIVistaCore.statoSnello(appState))
+                : appState;
             localStorage.setItem(this.currentProjectId, JSON.stringify(daScrivere));
             localStorage.setItem('tutor_ai_projects', JSON.stringify(projects));
         };
@@ -302,6 +308,9 @@ const StorageManager = {
                    SOLO in console: un tester non la apre, e la segnalazione
                    sarebbe arrivata come «non mi salva più». Ora è una riga del
                    registro, quindi viaggia da sola nella segnalazione. */
+                /* 0076: prima di parlare si scrive la cartella, e si dice solo il vero.
+                   Il reader non carica mappai-errori.js: lì resta il messaggio di oggi. */
+                const _nuovo = snello && !!window.MappAIErrori;
                 if (window.MappAIErrori) {
                     try {
                         window.MappAIErrori.registra({
@@ -309,8 +318,21 @@ const StorageManager = {
                             messaggio: 'SALVATAGGIO PERSO: spazio locale esaurito e nemmeno potando le copie ci sta. ' +
                                 'Il vault su disco resta intatto. (' + (e2 && e2.message || '') + ')'
                         });
-                        window.MappAIErrori.controllaCassetto('salvataggio perso', true);
+                        if (!_nuovo) window.MappAIErrori.controllaCassetto('salvataggio perso', true);
                     } catch (x) { }
+                }
+                if (_nuovo) {
+                    let parla = false;
+                    try { parla = this._cassettoPieno(pMeta); } catch (x) { parla = false; }
+                    /* se il ramo del cassetto pieno parla (una finestra, o una scrittura
+                       in volo che ne porterà una), il preavviso dell'80% su questa misura
+                       sarebbe la seconda finestra sullo stesso guasto; se esce in
+                       silenzio (generazione in corso, limite dei 60 s), il preavviso resta */
+                    try {
+                        if (parla) window.MappAIErrori.controllaCassetto('salvataggio perso', true, { preavviso: false });
+                        else window.MappAIErrori.controllaCassetto('salvataggio perso', true);
+                    } catch (x) { }
+                    return;
                 }
                 if (window.showToast) window.showToast(window.t('tst_quota_piena',
                     'Spazio locale esaurito: il progetto NON è stato salvato. La mappa su disco (vault) resta intatta.'), 'error');
@@ -357,13 +379,210 @@ const StorageManager = {
         }
     },
 
+    /* ── IL CASSETTO PIENO (0076, ADR 0018 punto 4) ─────────────────────────
+       Il toast di prima («NON è stato salvato… il vault resta intatto») sbagliava
+       in tutte e due le direzioni: il salvataggio automatico non scrive la
+       cartella, quindi il lavoro dopo l'ultimo gesto che l'aveva scritta stava
+       solo nella finestra aperta. Qui, a interruttore acceso:
+         1. si scrive la cartella del progetto aperto — una scrittura sola in
+            volo, non più di una ogni 60 s (saveCurrentProject scatta a ogni
+            `renderGraph`), mai durante una generazione o una pipeline (la
+            scriveranno loro alla fine), e MAI con `ensureProjectVault`, che
+            richiama saveCurrentProject;
+         2. scritta (e non `soloVista`, il reader): al posto della copia vecchia
+            il RESIDUO (B1 rivisto, Giacomo, 05/10: `_posaResiduo` qui sotto), e
+            la finestra che lo dice;
+         3. non scritta, o senza cartella, o la cartella non risponde entro 60 s:
+            la finestra che dice che il progetto non è salvato. Le due finestre
+            una volta per PROGETTO ciascuna, nella sessione.
+       Cartella, id e residuo si fissano QUI, all'inizio (inv. 20-bis): il
+       residuo è la copia dello stesso istante della mappa scritta nella cartella.
+       Ritorna true se il ramo PARLA (una finestra adesso, o una scrittura in volo
+       che ne porterà una); false se esce in silenzio. */
+    _cp: { inVolo: false, inVoloId: null, ultima: 0, dette: {} },
+    _cassettoPieno: function (pMeta) {
+        const cp = this._cp;
+        const T = (k, f) => (window.t ? window.t(k, f) : f);
+        const id = this.currentProjectId;
+        const registra = (msg) => {
+            if (!window.MappAIErrori) return;
+            try { window.MappAIErrori.registra({ dove: 'cassetto', messaggio: msg }); } catch (x) { }
+        };
+        const finestra = (quale) => {
+            const chiave = id + '|' + quale;
+            if (cp.dette[chiave]) return;
+            cp.dette[chiave] = true;
+            const MM = window.MappAIModal;
+            if (!MM || !MM.conferma) return;
+            /* una finestra sul cassetto si è vista: il preavviso dell'80% in questa
+               sessione sarebbe la seconda sullo stesso guasto */
+            try { if (window.MappAIErrori && window.MappAIErrori.segnaFinestraCassetto) window.MappAIErrori.segnaFinestraCassetto(); } catch (x) { }
+            const si = quale === 'salvato';
+            MM.conferma({
+                titolo: si ? T('cp_salvato_t', 'Memoria rapida piena') : T('cp_non_salvato_t', 'Progetto non salvato'),
+                icona: si ? 'hard-drive' : 'alert-triangle',
+                testo: si
+                    ? T('cp_salvato', 'Il tuo lavoro è salvato nella cartella. L\'app ha solo finito la memoria rapida.')
+                    : T('cp_non_salvato', 'Questo progetto non è stato salvato: la memoria rapida dell\'app è piena e non sono riuscito a scrivere la cartella.'),
+                conferma: T('cp_libera', 'Libera spazio ora'),
+                annulla: T('cp_chiudi', 'Chiudi')
+            }).then(ok => { if (ok && window.openCabina) window.openCabina('profilo', { sezione: 'pr-cartelle' }); }, () => { });
+        };
+        const percorso = appState.activeVaultPath;
+        if (!percorso) { finestra('non-salvato'); return true; }
+        if (cp.inVolo) {
+            /* la scrittura in volo è di un ALTRO progetto: la seconda non parte (mai
+               due in volo), ma questo progetto non resta muto — non è salvato */
+            if (cp.inVoloId !== id) finestra('non-salvato');
+            return true;
+        }
+        if ((window.MappAIGen && window.MappAIGen.attiva && window.MappAIGen.attiva()) ||
+            (window.MappAIPipeline && window.MappAIPipeline.occupata && window.MappAIPipeline.occupata())) return false;
+        const ora = Date.now();
+        if (cp.ultima && ora - cp.ultima < 60000) return false;
+        const api = window.electronAPI;
+        if (!api || !api.saveVault || !window.buildVaultMapData) { finestra('non-salvato'); return true; }
+        let mapData, residuoTesto = null;
+        const quando = new Date(ora).toISOString();
+        try { mapData = window.buildVaultMapData(); } catch (e) { finestra('non-salvato'); return true; }
+        try {
+            const VCc = window.MappAIVistaCore;
+            if (VCc && VCc.residuo && VCc.statoSnello) {
+                residuoTesto = JSON.stringify(VCc.residuo(VCc.statoSnello(appState, { snello: true }), { cartella: percorso, quando: quando }));
+            }
+        } catch (e) { residuoTesto = null; }   // senza residuo si va al ripiego: la copia vecchia resta
+        /* La copia nel cassetto a T0, quando la scrittura parte (e se il progetto
+           ha una riga d'indice): il residuo si posa SOLO sopra questa. Se intanto è
+           arrivata una copia più nuova (si è liberato spazio) o il progetto è stato
+           eliminato, il residuo di T0 non deve schiacciarla né farlo rinascere. */
+        let copiaT0 = null, rigaT0 = false;
+        try { copiaT0 = localStorage.getItem(id); } catch (x) { copiaT0 = null; }
+        try { rigaT0 = (JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]') || []).some(p => p && p.id === id); } catch (x) { rigaT0 = false; }
+        cp.inVolo = true;
+        cp.inVoloId = id;
+        cp.ultima = ora;
+        /* La guardia «una sola in volo» si scioglie solo quando la scrittura si
+           CHIUDE; la finestra invece non aspetta oltre 60 s: una cartella che non
+           risponde (disco esterno staccato, IPC appeso) altrimenti lascerebbe ogni
+           cassetto pieno di qui in poi senza una parola. Una risposta che arriva
+           DOPO il tetto vale ancora: se la cartella è stata scritta, il residuo si
+           posa e la finestra dice «salvato» — la «non salvato» del tetto non resta
+           l'ultima parola, sbagliata. */
+        let tetto = null, scaduto = false;
+        const esito = (res, inRitardo) => {
+            if (res && res.soloVista) {
+                /* il reader: `vista.json` non è la mappa — il messaggio di oggi */
+                if (!inRitardo && window.showToast) window.showToast(T('tst_quota_piena',
+                    'Spazio locale esaurito: il progetto NON è stato salvato. La mappa su disco (vault) resta intatta.'), 'error');
+                return;
+            }
+            if (!res || !res.success) {
+                /* `review-conflict` compreso: per chi lavora è «non scritta» */
+                registra('Cassetto pieno: la cartella NON è stata scritta. (' + ((res && res.error) || '') + ')');
+                if (!inRitardo) finestra('non-salvato');
+                return;
+            }
+            const posato = this._posaResiduo(id, percorso, residuoTesto, pMeta, quando, { copia: copiaT0, riga: rigaT0 });
+            if (posato !== 'sparita') finestra('salvato');
+        };
+        Promise.resolve()
+            .then(() => api.saveVault({ folderPath: percorso, mapData: mapData }))
+            .then(res => res, err => ({ success: false, error: err && err.message }))
+            .then(res => {
+                cp.inVolo = false;
+                cp.inVoloId = null;
+                if (tetto !== null) { try { clearTimeout(tetto); } catch (x) { } }
+                esito(res, scaduto);
+            });
+        tetto = setTimeout(() => {
+            scaduto = true;
+            registra('Cassetto pieno: la cartella non ha risposto in 60 s («' + percorso + '»). La scrittura resta in volo.');
+            finestra('non-salvato');
+        }, 60000);
+        return true;
+    },
+
+    /* ── IL RESIDUO AL POSTO DELLA COPIA (0076, B1 rivisto) ──────────────────
+       La copia di prima riaprirebbe i nodi vecchi, e al primo HOME la cartella
+       si riscriverebbe col vecchio; toglierla e basta perdeva ciò che la
+       cartella non ha (le fonti, una foto non ancora lanciata, le pagine) e
+       rendeva irraggiungibile una cartella fuori da `Mappe/`. Quindi:
+         · il RESIDUO si scrive SOPRA la copia (un `setItem` solo: mai un momento
+           in cui la copia non c'è), poi l'indice (inv. 18, «copia, poi indice»);
+         · se il residuo non entra, la copia vecchia resta INTERA e la riga
+           d'indice prende il segno «superata» col percorso esatto e l'impronta
+           della copia (la sua lunghezza: se la copia viene riscritta dopo, il
+           segno non vale più);
+         · se non entra nemmeno l'indice: una riga nel registro, e si resta come
+           oggi;
+         · e tutto questo SOLO se la copia è ancora quella di quando la scrittura
+           è partita (`t0` = { copia, riga }): una copia più nuova non si schiaccia,
+           un progetto eliminato non rinasce. Allora niente, e l'indice non si
+           tocca: una riga nel registro.
+       → 'residuo' | 'superata' | 'nessuno' | 'cambiata' | 'sparita' */
+    _posaResiduo: function (id, percorso, residuoTesto, pMeta, quando, t0) {
+        let copiaPrima = null;
+        try { copiaPrima = localStorage.getItem(id); } catch (x) { copiaPrima = null; }
+        let P = null;
+        try { P = JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]') || []; } catch (x) { P = null; }
+        if (t0) {
+            const rigaOra = !!(P && P.some(p => p && p.id === id));
+            const sparita = (t0.copia !== null && copiaPrima === null) || (t0.riga && !rigaOra);
+            if (sparita || copiaPrima !== t0.copia) {
+                if (window.MappAIErrori) {
+                    try {
+                        window.MappAIErrori.registra({ dove: 'cassetto', messaggio: 'Cassetto pieno: la copia è cambiata (o il progetto è ' +
+                            'stato eliminato) mentre si scriveva la cartella: niente residuo, l\'indice non si tocca.' });
+                    } catch (y) { }
+                }
+                return sparita ? 'sparita' : 'cambiata';
+            }
+        }
+        let posato = false;
+        if (residuoTesto) {
+            try { localStorage.setItem(id, residuoTesto); posato = true; } catch (x) { posato = false; }
+        }
+        if (posato) {
+            if (P && pMeta && pMeta.id === id) {
+                try {
+                    const i = P.findIndex(p => p && p.id === id);
+                    if (i >= 0) P[i] = pMeta; else P.push(pMeta);
+                    P.sort((a, b) => b.date - a.date);
+                    localStorage.setItem('tutor_ai_projects', JSON.stringify(P));
+                } catch (x) { /* l'indice di prima resta: il residuo porta da sé il percorso */ }
+            }
+            return 'residuo';
+        }
+        try {
+            if (!P) throw new Error('indice illeggibile');
+            const segno = { cartella: percorso, quando: quando, copia: copiaPrima ? copiaPrima.length : 0 };
+            const i = P.findIndex(p => p && p.id === id);
+            if (i >= 0) P[i] = Object.assign({}, P[i], { superata: segno });
+            else if (pMeta && pMeta.id === id) P.push(Object.assign({}, pMeta, { superata: segno }));
+            else throw new Error('nessuna riga d\'indice');
+            localStorage.setItem('tutor_ai_projects', JSON.stringify(P));
+            return 'superata';
+        } catch (x) {
+            if (window.MappAIErrori) {
+                try {
+                    window.MappAIErrori.registra({ dove: 'cassetto', messaggio: 'Cassetto pieno: la cartella è scritta, ma né il residuo né il segno ' +
+                        '«superata» entrano nella memoria rapida: alla riapertura si aprirà la copia di prima. (' + (x && x.message || '') + ')' });
+                } catch (y) { }
+            }
+            return 'nessuno';
+        }
+    },
+
     loadProject: async function (id) {
     /* ⚠️ Non si cambia mappa mentre la pipeline lavora (13/8): i suoi passi
        leggono `appState` mentre scrivono in una cartella fissata all'inizio —
        caricarne un'altra farebbe finire i materiali della mappa nuova nel vault
        della vecchia, in silenzio. Il velo copre la sola area di CREA apposta,
        per lasciar GIRARE per l'app: guardare sì, sostituire no. */
-    if ((window.mappaiOccupato && window.mappaiOccupato()) || appState._reviewRestoring) return false;
+    if ((window.mappaiOccupato && window.mappaiOccupato()) || appState._reviewRestoring || this._apreDallaCartella) return false;
+        /* 0076: lo stato di prima, finché una riapertura dalla cartella (residuo o
+           copia «superata») non è riuscita — per rimetterlo se qualcosa si ferma */
+        let prima = null;
         try {
             const data = localStorage.getItem(id);
             /* Senza snapshot ma con un VAULT, la mappa non è persa: si apre
@@ -374,6 +593,13 @@ const StorageManager = {
                 try {
                     const p = (JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]') || [])
                         .find(x => x && x.id === id);
+                    /* 0076 (B1): una riga «superata» porta il percorso ESATTO della
+                       cartella scritta a cassetto pieno — anche fuori da `Mappe/`,
+                       dove la ricerca per nome qui sotto non arriva */
+                    if (p && p.superata && p.superata.cartella && window.directLoadVault) {
+                        window.directLoadVault(String(p.superata.cartella));
+                        return true;
+                    }
                     if (p && p.vault && window.electronAPI && window.electronAPI.filesRootGet && window.directLoadVault) {
                         /* La POSIZIONE la dice il disco (get-all-vaults), non si
                            ricostruisce a mano: dal 15/8 sera un vault senza classe
@@ -403,17 +629,100 @@ const StorageManager = {
                 return false;
             }
 
+            const loadedState = JSON.parse(data);
+            if (!loadedState) return false;
+
+            /* L'identità della voce che si riapre, decisa dalla cartella letta (0061,
+               ADR 0013, gesto `voce`). Una funzione sola per la lettura di sempre e per
+               quella anticipata del residuo qui sotto. */
+            const decidiVoce = (disk, vaultPath, st) => {
+                const TCv = window.MappAITeachCore;
+                return (TCv && TCv.identitaDellaCartella)
+                    ? TCv.identitaDellaCartella(JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]'), {
+                        gesto: 'voce', idCartella: disk.data && disk.data.projectId, idAttuale: id, fullPath: vaultPath,
+                        pos: { vault: String(vaultPath).split(/[\\/]/).filter(Boolean).pop() || null,
+                            classDir: st.activeVaultClassDir || null, discDir: st.activeVaultDiscDir || null }
+                    })
+                    : { stacca: false, scrivi: false };
+            };
+
+            /* 0076 (B1 rivisto: il residuo). Se la copia è un RESIDUO (scritto a
+               cassetto pieno dopo la cartella), o se la riga d'indice la dichiara
+               «superata» dalla cartella e l'impronta torna (la copia non è stata
+               riscritta dopo), la MAPPA — nodi e collegamenti — si legge dalla
+               cartella al percorso ESATTO del segno, anche fuori da `Mappe/`; il
+               resto (fonti, foto in attesa, pagine, rapporti) viene dalla copia.
+               La lettura è quella che questa funzione fa già (`loadVault` qui
+               sotto), con la sua decisione d'identità e `R.restore`: nessuna strada
+               nuova. Vale anche a interruttore spento: un residuo già scritto si
+               riapre comunque. Il segno non entra nello stato: al salvataggio dopo
+               la copia torna normale. */
+            let dallaCartella = null, daResiduo = false;
+            try {
+                const res = loadedState._residuo;
+                if (res && typeof res === 'object' && res.cartella) {
+                    dallaCartella = String(res.cartella); daResiduo = true;
+                } else {
+                    const riga = (JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]') || []).find(x => x && x.id === id);
+                    const sup = riga && riga.superata;
+                    if (sup && sup.cartella && sup.copia === data.length) dallaCartella = String(sup.cartella);
+                }
+            } catch (e) { dallaCartella = null; daResiduo = false; }
+            delete loadedState._residuo;
+            /* La cartella si legge e si controlla PRIMA di toccare la sessione: un
+               residuo non ha la mappa, e se la sua cartella non si legge, è vuota o
+               dichiara un altro progetto, non c'è niente da aprire — lo si dice e la
+               sessione resta COM'ERA (stesso stato, stessa identità, stessa
+               cartella). Prima lo stato si sostituiva e poi si controllava: restava
+               una mappa vuota puntata sulla cartella, e HOME l'avrebbe scritta lì.
+               Una copia «superata» che non regge si apre come oggi. */
+            let letto = null;
+            if (dallaCartella) {
+                let motivo = null;
+                this._apreDallaCartella = true;
+                try {
+                    const CAMPI = window.MappAIVistaCore && window.MappAIVistaCore.CAMPI_DALLA_CARTELLA;
+                    if (!CAMPI || !(window.electronAPI && window.electronAPI.loadVault)) {
+                        motivo = window.t ? window.t('cp_residuo_vuota', 'la sua cartella non ha la mappa, e la memoria rapida nemmeno.')
+                            : 'la sua cartella non ha la mappa, e la memoria rapida nemmeno.';
+                    } else {
+                        let disk = null;
+                        try { disk = await window.electronAPI.loadVault(dallaCartella); } catch (e) { disk = { success: false, error: e && e.message }; }
+                        if (!disk || !disk.success) motivo = (disk && disk.error) || 'Impossibile leggere la cartella del progetto';
+                        else {
+                            const deciso = decidiVoce(disk, dallaCartella, loadedState);
+                            if (deciso.stacca) {
+                                motivo = window.t ? window.t('cp_residuo_altra', 'la sua cartella ora dichiara un altro progetto, e la memoria rapida non ha la mappa.')
+                                    : 'la sua cartella ora dichiara un altro progetto, e la memoria rapida non ha la mappa.';
+                            } else if (!((disk.data && disk.data.nodes) || []).length) {
+                                motivo = window.t ? window.t('cp_residuo_vuota', 'la sua cartella non ha la mappa, e la memoria rapida nemmeno.')
+                                    : 'la sua cartella non ha la mappa, e la memoria rapida nemmeno.';
+                            } else letto = { disk: disk, deciso: deciso, campi: CAMPI };
+                        }
+                    }
+                } finally { this._apreDallaCartella = false; }
+                if (motivo) {
+                    if (daResiduo) {
+                        console.error('[Storage] riapertura dal residuo non riuscita («' + dallaCartella + '»): ' + motivo);
+                        window.showAlert("Errore Caricamento", "Impossibile caricare il progetto: " + motivo);
+                        window.showLoadingOverlay(false);
+                        return false;
+                    }
+                    dallaCartella = null;
+                }
+            }
+            if (dallaCartella) loadedState.activeVaultPath = dallaCartella;
+
             // Vista studio (1/8): stessa guardia di backToLanding/importGraph/
             // loadMapVault/directLoadVault — senza, l'overlay resterebbe attivo
             // (S.active true, tab visibile) su un canvas ricostruito da zero e
             // il primo tocco del pannello lancerebbe un TypeError.
+            // (0076: dopo la lettura anticipata, così una riapertura fermata non
+            // tocca nemmeno la vista di chi sta lavorando.)
             if (window.MappAIStudioView && appState.layoutMode === 'studio') {
                 window.MappAIStudioView.exit();
                 appState.layoutMode = 'default';
             }
-
-            const loadedState = JSON.parse(data);
-            if (!loadedState) return false;
 
             // Robust initialization: ensure db and core structures exist
             if (!loadedState.db) loadedState.db = { nodes: [], links: [] };
@@ -447,6 +756,8 @@ const StorageManager = {
             loadedState._reviewRestoring = true;
             delete loadedState._reviewRestoreError;
             delete loadedState._reviewCommit;
+            if (letto) prima = { stato: appState, id: this.currentProjectId, ic: this.idInCartella,
+                sim: (typeof simulation !== 'undefined') ? simulation : null };
             appState = loadedState;
 
             // Normalize links: D3 stores source/target as objects after simulation
@@ -476,7 +787,9 @@ const StorageManager = {
             // autosave; una revisione di un altro progetto non viene ereditata.
             if (appState.activeVaultPath && window.electronAPI && window.electronAPI.loadVault) {
                 const vaultPath = appState.activeVaultPath;
-                const disk = await window.electronAPI.loadVault(vaultPath);
+                /* 0076: dalla cartella (residuo, «superata») la lettura è già stata
+                   fatta e controllata qui sopra: non se ne fa una seconda */
+                const disk = letto ? letto.disk : await window.electronAPI.loadVault(vaultPath);
                 if (!disk || !disk.success) throw new Error((disk && disk.error) || 'Impossibile leggere la cartella del progetto');
                 /* 0061 (29/09, ADR 0013) — il gesto `voce`: la voce riaperta porta con sé
                    la sua cartella, e l'id resta quello della voce. Ma se la cartella
@@ -488,14 +801,7 @@ const StorageManager = {
                    Senza id nella cartella, l'id ci si scrive solo se la voce aperta è
                    quella che la posizione riconosce (bivio 2 = A). La posizione viene
                    dalla fotografia: nessuna chiamata in più. */
-                const TCv = window.MappAITeachCore;
-                const deciso = (TCv && TCv.identitaDellaCartella)
-                    ? TCv.identitaDellaCartella(JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]'), {
-                        gesto: 'voce', idCartella: disk.data && disk.data.projectId, idAttuale: id, fullPath: vaultPath,
-                        pos: { vault: String(vaultPath).split(/[\\/]/).filter(Boolean).pop() || null,
-                            classDir: appState.activeVaultClassDir || null, discDir: appState.activeVaultDiscDir || null }
-                    })
-                    : { stacca: false, scrivi: false };
+                const deciso = letto ? letto.deciso : decidiVoce(disk, vaultPath, appState);
                 if (deciso.stacca) {
                     console.warn('[Storage] la cartella «' + vaultPath + '» dichiara ' + disk.data.projectId +
                         ', non ' + id + ': la voce si apre senza cartella (0061)');
@@ -508,6 +814,9 @@ const StorageManager = {
                     var staccata = true;   // `var`: la legge il backfill più sotto, fuori da questo blocco
                 } else {
                     this.idInCartella = { percorso: vaultPath, id: deciso.scrivi ? id : null };
+                    /* 0076: la mappa dalla cartella, prima di `R.restore`: i campi che il
+                       residuo non porta, nell'elenco UNO del core (inv. 6) */
+                    if (letto) letto.campi.forEach(k => { appState.db[k] = (disk.data && disk.data[k]) || []; });
                     if (window.MappAIReview && window.MappAIReview.restore) {
                         await window.MappAIReview.restore(vaultPath, disk.data._pipelineManifest || null, { fromCache: true, diskData: disk.data });
                     } else if (disk.data._pipelineManifest?.review) throw new Error('Revisione non disponibile: caricamento interrotto');
@@ -518,6 +827,7 @@ const StorageManager = {
                 delete appState._reviewRevision;
             }
             appState._reviewRestoring = false;
+            prima = null;   // 0076: la riapertura è riuscita, da qui vale il percorso di sempre
 
             // Ripristina posizioni salvate
             if (appState.db.nodes) {
@@ -571,7 +881,17 @@ const StorageManager = {
 
             return true;
         } catch (e) {
-            if (appState._reviewRestoring) { appState._reviewRestoring = false; appState._reviewRestoreError = e.message; }
+            if (prima) {
+                /* 0076: una riapertura dalla cartella fermata dopo aver sostituito lo
+                   stato (la revisione non si riconcilia): si rimette tutto com'era —
+                   lo stato, l'identità, la cartella — invece di lasciare una sessione
+                   a metà che HOME scriverebbe sul disco */
+                appState = prima.stato;
+                this.currentProjectId = prima.id;
+                this.idInCartella = prima.ic;
+                try { simulation = prima.sim; } catch (x) { }
+                prima = null;
+            } else if (appState._reviewRestoring) { appState._reviewRestoring = false; appState._reviewRestoreError = e.message; }
             console.error("Critical Load Error:", e);
             window.showAlert("Errore Caricamento", "Impossibile caricare il progetto: " + e.message);
             window.showLoadingOverlay(false);
