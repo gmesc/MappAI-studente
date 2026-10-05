@@ -141,6 +141,29 @@
         return pieni ? sch : null;
     }
 
+    /* LA SCHEDA COME TESTO DELLA SINTESI (5/10) — Giacomo: la pagina della scheda con la
+       stessa barra e gli stessi stili della sintesi. La scheda si scrive nel markdown che
+       il costruttore della sintesi legge (`_mdToHtml` di mappai-branch-synthesis): `##` →
+       titolo del blocco (h3), un paragrafo «**Etichetta:** valore» per campo — il lettore
+       e il karaoke li trovano come in una sintesi. I blocchi che INTERPRETANO lo dicono nel
+       titolo, come il bollino del documento del docente (mappai-visione-core: il modello
+       descrive bene e contestualizza male). Nei valori `*` e `[n]` si neutralizzano: per
+       quel markdown sarebbero corsivo e richiamo di nota. */
+    function markdownDaScheda(sch, blocchi) {
+        if (!sch || !Array.isArray(blocchi)) return '';
+        var pulito = function (v) { return _s(v).replace(/\s+/g, ' ').trim().replace(/\*/g, '\u2217').replace(/\[(\d+)\]/g, '($1)'); };
+        var out = [];
+        blocchi.forEach(function (bl) {
+            var campi = sch[bl.id] || {};
+            var righe = (bl.campi || []).filter(function (c) { return pulito(campi[c.id]); })
+                .map(function (c) { return '**' + c.et + ':** ' + pulito(campi[c.id]); });
+            if (!righe.length) return;
+            out.push('## ' + bl.titolo + (bl.interpretativo ? ' (interpretazione)' : ''));
+            out.push(righe.join('\n\n'));
+        });
+        return out.join('\n\n');
+    }
+
     function fmtData(iso) {
         var d = iso ? new Date(iso) : null;
         if (!d || isNaN(d.getTime())) return '';
@@ -284,5 +307,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi };
+    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi, markdownDaScheda: markdownDaScheda };
 }));

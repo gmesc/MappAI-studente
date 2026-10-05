@@ -142,3 +142,18 @@ test("schema: un dossier ha «Scheda» al posto di «Mappa», e l'icona dell'imm
     const m = C.schema({ vaults: VAULTS, sel: VAULTS[0].fullPath, materiali: [] });
     assert.strictEqual(m.bento[0].voci[0].id, 'mappa');
 });
+
+/* La scheda come testo della sintesi (5/10): il markdown che `_mdToHtml` legge. */
+test('markdownDaScheda: un titolo per blocco pieno, «interpretazione» dove serve, * e [n] neutralizzati', () => {
+    const md = C.markdownDaScheda({
+        titolo: 'X',
+        identita: { genere: 'manifesto', data: '1917' },
+        interpretazione: { finalita: 'mobilitare [1] i *civili*' }
+    }, VC.BLOCCHI);
+    assert.strictEqual(md, [
+        "## Carta d'identità", '**Genere della fonte:** manifesto\n\n**Data o periodo:** 1917',
+        '## Che cosa vuole ottenere (interpretazione)', '**Finalità:** mobilitare (1) i ∗civili∗'
+    ].join('\n\n'));
+    assert.strictEqual(C.markdownDaScheda(null, VC.BLOCCHI), '');
+    assert.strictEqual(C.markdownDaScheda(C.schedaDaNodi(VC.nodiDaScheda(SCHEDA).nodes, VC.BLOCCHI), VC.BLOCCHI).split('\n\n## ').length, 3);
+});
