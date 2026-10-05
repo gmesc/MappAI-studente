@@ -176,7 +176,8 @@ nessun foglio cambia. Test: `quiz-print-roundtrip` +1.
 a mano). `capacitor.config.json`: `appId com.insegnai.mappai.studente`, `webDir public`.
 `ios/` rigenerato con `npx cap add ios` e **rimessi a mano** `UIDeviceFamily [2]`,
 `UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace` (la prova che funzionavano è nel
-plist compilato in DerivedData). `RIUSO.md` + `tools/sincronizza.js` + `tests/riuso-divergenza.test.js`
+plist compilato in DerivedData). ⟶ 5/10: «solo iPad» è `TARGETED_DEVICE_FAMILY = 2` nel progetto,
+scritto da `tools/plist-ipad.py`; `UIDeviceFamily` nel plist non contava (Xcode la sovrascrive) e si toglie. `RIUSO.md` + `tools/sincronizza.js` + `tests/riuso-divergenza.test.js`
 come nella v1: copie **verbatim** dall'allowlist, hash confrontati, test che si salta se MappAI
 non c'è. Un file copiato non si modifica mai qui.
 
