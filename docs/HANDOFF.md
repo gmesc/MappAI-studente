@@ -8,6 +8,16 @@
 
 ## 0. Dove si riprende
 
+**⟵ 5/10, ingrandita, la foto non si taglia più a sinistra** (Giacomo dall'iPad: «quando sono in modalità split e
+ingrandisco l'immagine una parte del lato sinistro dell'immagine è croppata»). La `.sp-pila` del visore (foto e PDF) era
+larga quanto il riquadro e CENTRAVA col flexbox: ciò che si ingrandiva sbordava metà a destra (si scorre) e metà a
+sinistra (irraggiungibile, lo scorrimento non va sotto lo zero) — misurato −547 px. Ora la pila è
+`width: max-content; min-width: 100%`: piccola resta centrata, grande si allarga con ciò che contiene. Valeva anche per
+i PDF nel pannello (difetto nascosto). Misurato: foto zoomata, scorrimento a 0 → bordo sinistro a +12 px (il margine), in
+fondo → bordo destro visibile; zoom centrato sul punto (373 px contro 375 attesi); «Adatta» → intera e centrata; PDF 405 →
+1715 px, bordo sinistro a +12. ⚠️ La verifica in verticale c'era già: l'altezza cresce da sé. Stampa della scheda con la
+foto: VERDE sull'iPad (Giacomo, 5/10).
+
 **⟵ 5/10, un dossier si legge come sulla LIM: la foto al posto della mappa, la scheda accanto** (Giacomo: «se
 l'allievo apre la scheda … la visualizzazione come l'apertura di una scheda da MappAI re in modalità LIM», poi «già
 divisa a metà, domande e flashcard fuori: vai»). Il modello è «Proietta» di MappAI re (`mappai-proiezione.js`: foto a
