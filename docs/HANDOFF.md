@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 5/10, sincronizzate 3 copie da MappAI re `6189c0dd`** (dall'ultima, `db68e116`): `en_translations`,
+`study-export-core`, `files-core`, dal solo commit `73cb4a2d` (0077: i documenti salvati diventano file della cartella
+della mappa), `?v=sync-20261005b`. **Nel reader cambia una cosa sola, ed è voluta («Via di mezzo», Giacomo 05/10):**
+quando l'archivio dei documenti (`mappai_saved_documents`) non entra nella memoria rapida si scartano ancora i più
+vecchi finché il nuovo entra (l'allievo non ha un modo di toglierne), ma l'archivio non si svuota MAI a `'[]'`: se il
+nuovo non entra nemmeno da solo, `save` torna `null` e la lista di prima resta intatta (prima un documento troppo grande
+la svuotava tutta). Il resto dello 0077 qui non parte, verificato sulle righe: `mappai-documenti-core.js` NON è nel
+reader (né nell'elenco di `sincronizza.js`) e l'adapter dichiara `__studente`, quindi `_lettore`/`_scrittore` sono falsi:
+niente specchio, niente migrazione, niente file in `Documenti/`, niente `progetto` nelle voci, niente Cestino; `pronto()`
+si risolve subito. `files-core` ammette `Documenti/` solo in `sanitizeVaultRelPath`, che il reader non usa (il suo
+`saveVaultFile` ha `relAmmesso`); `relVaultStudente` è identica. `en_translations`: 4 chiavi nuove. `--confronta`:
+`map-view` resta DIVERSO per costruzione. Test 45/45. Provato nel browser: tre documenti da 50k, memoria riempita → un
+documento da 400k torna `null` e l'archivio resta A, B, C; liberati 30k, uno da 60k entra togliendo il più vecchio (D, C,
+B) e `get` lo riapre; «Svizzera e la 2a GM» e il dossier «LA GUERRE… · 07» si aprono, `vista.json` si scrive
+(`soloVista`), nessun errore, nessuna finestra.
+
 **⟵ 5/10, sincronizzate 3 copie da MappAI re `db68e116`** (dall'ultima, `d817d70e`): `en_translations`,
 `storage-lang`, `vista-core`, tutte dal solo commit `8668f8e8` (0076: la memoria rapida tiene solo ciò che la cartella
 non ha, e a cassetto pieno dice il vero), `?v=sync-20261005`. **Nel reader non cambia niente**, verificato sulle righe

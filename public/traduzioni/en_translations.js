@@ -3372,6 +3372,12 @@ const en_translations = {
     cp_preavviso_no: "Later",
     cp_residuo_altra: "its folder now declares another project, and the quick memory does not have the map.",
     cp_residuo_vuota: "its folder does not have the map, and neither does the quick memory.",
+    // 0077 (ADR 0018) — i documenti salvati come file della cartella della mappa
+    // (mappai-study-export-core.js): quando un documento non entra nella memoria rapida
+    sdoc_non_salvato: "The document «{t}» has not been saved: the app's quick memory is full. The other documents are safe.",
+    sdoc_non_salvato_cartella: "The document «{t}» has not been saved: the app's quick memory is full and it could not be written to the map folder. The other documents are safe.",
+    sdoc_modifiche_non_salvate: "The changes to the document «{t}» have not been saved: the app's quick memory is full and they could not be written to the map folder. The previous version remains.",
+    sdoc_solo_cartella: "The document «{t}» is in the map folder (Documenti), but the list of documents is full: it cannot be reopened from here.",
     // Cabina · gruppo «Sviluppo»: chi fa l'app e come gli si scrive
     cb_g_dev: "Development",
     cb_v_insegnai: "insegnai.ch",
