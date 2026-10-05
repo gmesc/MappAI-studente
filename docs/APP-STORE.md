@@ -14,7 +14,7 @@ lunghezze rispettano i limiti di Apple (nome 30, sottotitolo 30, testo promozion
 | Categoria | Istruzione (secondaria: Produttività) |
 | Età | 4+ |
 | Prezzo | Gratis |
-| Dispositivi | iPad (solo iPad: `UIDeviceFamily = [2]`) |
+| Dispositivi | iPad (solo iPad: `TARGETED_DEVICE_FAMILY = 2` nel progetto, scritto da `tools/plist-ipad.py`; `UIDeviceFamily` nel plist Xcode la sovrascrive, e dal 5/10 non c'è più) |
 | Copyright | © 2026 Giacomo Meschini — insegnai.ch |
 | Sito di supporto | https://insegnai.ch/mappai/ |
 | E-mail di supporto | giacomo@insegnai.ch |
@@ -120,7 +120,7 @@ Servono anche l'**icona 1024×1024** (c'è: `resources/icona-1024.png`) e, facol
 
 ## Prima di inviare (checklist tecnica)
 
-- [ ] `NSAllowsArbitraryLoads` tolto dal plist (resta `NSAllowsLocalNetworking`): Apple chiede una giustificazione per l'HTTP in chiaro.
+- [x] `NSAllowsArbitraryLoads` tolto dal plist (resta `NSAllowsLocalNetworking`): Apple chiede una giustificazione per l'HTTP in chiaro. Tolto a mano il 17/9; dal 5/10 anche da `tools/plist-ipad.py`, che lo rimetteva a ogni giro.
 - [ ] Versione e build in Xcode (1.0 / 1).
 - [ ] `npm run demo` rifatto dopo l'ultima generazione della mappa di prova; `public/demo/vault.json` nel repo.
 - [ ] Archivio con il team di firma; TestFlight con le classi prima della pubblicazione.

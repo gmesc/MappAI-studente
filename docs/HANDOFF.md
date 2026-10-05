@@ -8,6 +8,22 @@
 
 ## 0. Dove si riprende
 
+**⟵ 5/10, «solo iPad» sta nel progetto, e lo script non rimette più l'HTTP in chiaro.** Xcode avvisava a ogni
+build «User supplied UIDeviceFamily key in the Info.plist will be overwritten»: la famiglia la decide la build
+setting `TARGETED_DEVICE_FAMILY`, e la chiave che `tools/plist-ipad.py` scriveva nel plist non contava. Nel
+progetto valeva `2` solo perché messa a mano in Xcode; il modello di Capacitor (`ios-spm-template.tar.gz`) ha
+`"1,2"`: dopo una rigenerazione di `ios/` l'app sarebbe diventata iPhone + iPad in silenzio. Ora lo script
+**toglie** `UIDeviceFamily` e **scrive** `TARGETED_DEVICE_FAMILY = 2;` in `project.pbxproj`, in tutte le
+configurazioni (sostituzione sulla riga; senza la riga si ferma con un errore), e accetta la cartella `ios/`
+come argomento (`python3 tools/plist-ipad.py [cartella ios]`). Insieme (Giacomo: «1, allinea lo script e
+lancialo»): lo script rimetteva a ogni giro `NSAllowsArbitraryLoads`, tolto a mano dal plist il 17/9 — ora l'ATS
+è solo `NSAllowsLocalNetworking`, e la voce della checklist di `APP-STORE.md` è spuntata. Provato sul modello
+estratto (`"1,2"` → `2` in due configurazioni, secondo giro «già a posto», senza la riga: errore) e lanciato sul
+`ios/` vero: tolta solo `UIDeviceFamily`, `project.pbxproj` intatto (valeva già `2`). ⚠️ **In Xcode (Giacomo):**
+build pulita senza l'avviso; nel plist dell'app compilata `UIDeviceFamily` = `2` e basta; nessun iPhone fra i
+dispositivi. Gli altri due avvisi (`OSBARCScanParameters+Decodable.swift`, `LegacyFilesystemImplementation.swift`)
+sono dei plugin in `node_modules` e restano.
+
 **⟵ 4/10, un dossier da foto si apre come SCHEDA, non come mappa** (Giacomo: «solo la scheda,
 senza mappa»). Il dossier (0067) è un vault il cui grafo È la scheda (`nodiDaScheda`: radice
 `fonte_0`, un ramo `fonte_<blocco>` per blocco, righe «Etichetta: valore»); la scheda intera sta
@@ -295,7 +311,8 @@ scrive `Sorgenti/` da sé. Misurato via CDP sull'app viva (`mappai_saved_documen
 **Da provare sull'iPad (mai fatto: il guscio è stato provato SOLO nel browser).** Il
 progetto Xcode È generato (`ios/`, fuori dal repo) con Capacitor 8 (SPM, niente CocoaPods) e
 le tre chiavi del plist messe da `tools/plist-ipad.py` (`UIFileSharingEnabled`,
-`LSSupportsOpeningDocumentsInPlace`, `UIDeviceFamily=[2]` — la prova che funzionavano è nel
+`LSSupportsOpeningDocumentsInPlace`, `UIDeviceFamily=[2]` — dal 5/10 al suo posto
+`TARGETED_DEVICE_FAMILY = 2` nel progetto, vedi §0 — la prova che funzionavano è nel
 plist compilato di «MappAI Studente» in `MappAI re/ios/DerivedData`). ⚠️ Il CLI di
 Capacitor vuole **Node ≥ 22**: `nvm use 22` (sul Mac c'è la 22.22.3), poi `npm run ios`
 (rigenera se manca, plist, sync, apre Xcode). Poi firma e iPad: tocca a Giacomo.
