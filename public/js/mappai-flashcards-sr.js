@@ -50,7 +50,11 @@ window.generateFlashcardForNode = async function (node, silent = false, isBranch
     /* anche il quiz per-nodo sceglie fra tre opzioni: vale la stessa regola sulla
        lunghezza dei distrattori (vedi quizLengthBlock) */
     const _lenB = window.quizLengthBlock ? window.quizLengthBlock() : '';
-    const payload = window.injectClassTuning({ contents: [{ parts: [{ text: (_angleB ? _angleB + '\n\n' : '') + promptText + (_lenB ? '\n\n' + _lenB : '') }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } });
+    /* e il punto in fondo a ogni opzione (packet 0080, vedi quizPuntoBlock): il
+       quiz per nodo è sempre a scelta multipla. Vuoto a interruttore spento, o
+       dove mappai-study-session.js non è caricato. */
+    const _puntoB = window.quizPuntoBlock ? window.quizPuntoBlock() : '';
+    const payload = window.injectClassTuning({ contents: [{ parts: [{ text: (_angleB ? _angleB + '\n\n' : '') + promptText + (_lenB ? '\n\n' + _lenB : '') + (_puntoB ? '\n\n' + _puntoB : '') }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } });
 
     try {
         if (window.MappAIUsage) window.MappAIUsage.setContext('study', 'node_quiz');
@@ -69,6 +73,15 @@ window.generateFlashcardForNode = async function (node, silent = false, isBranch
                 items2 = PC.mescolaOpzioni(items2, String(node.id) + '|' + promptText.length);
             }
         } catch (e) { /* ripiego: ordine come è arrivato */ }
+        /* il punto in fondo a ogni opzione (packet 0080), dopo il rimescolamento;
+           a interruttore spento, o senza study-session (l'app dell'allievo carica
+           questo file com'è), le opzioni restano come sono */
+        try {
+            const PC = window.MappAIPipelineCore;
+            if (PC && PC.chiudiOpzioni && Array.isArray(items2) && window.quizPuntoAcceso && window.quizPuntoAcceso()) {
+                items2 = PC.chiudiOpzioni(items2);
+            }
+        } catch (e) { /* ripiego: le opzioni come sono */ }
         node.flashcardTest = items2;
         node.nextReview = Date.now(); // Available right away
 
@@ -248,9 +261,19 @@ window.regenerateStudySet = async function (setId) {
             const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { q: { type: "STRING" }, a1: { type: "STRING" }, a2: { type: "STRING" }, a3: { type: "STRING" }, correct: { type: "INTEGER" } }, required: ["q", "a1", "a2", "a3", "correct"] }, minItems: 5, maxItems: 5 };
             if (window.MappAIUsage) window.MappAIUsage.setContext('study', 'node_quiz');
             const _angleB = window.quizAngleBlock ? window.quizAngleBlock(set.angle || 'auto') : '';
-            const data = await window.fetchModelAPI(window.injectClassTuning({ contents: [{ parts: [{ text: (_angleB ? _angleB + '\n\n' : '') + promptText }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } }), apiKey);
+            // il punto in fondo alle opzioni anche quando si rigenera (packet 0080)
+            const _puntoB = window.quizPuntoBlock ? window.quizPuntoBlock() : '';
+            const data = await window.fetchModelAPI(window.injectClassTuning({ contents: [{ parts: [{ text: (_angleB ? _angleB + '\n\n' : '') + promptText + (_puntoB ? '\n\n' + _puntoB : '') }] }], generationConfig: { temperature: (window.QUIZ_TEMPERATURE || 0.7), responseMimeType: "application/json", responseSchema: schema, _respectTemp: true } }), apiKey);
             const raw = data.candidates[0].content.parts[0].text;
             newItems = salvageTruncatedJSON(raw.split(MARKER_JSON).join('').split(MARKER_END).join('').trim());
+            /* qui non c'è rimescolamento: il passo viene subito dopo la lettura,
+               con le stesse guardie della generazione */
+            try {
+                const PC = window.MappAIPipelineCore;
+                if (PC && PC.chiudiOpzioni && Array.isArray(newItems) && window.quizPuntoAcceso && window.quizPuntoAcceso()) {
+                    newItems = PC.chiudiOpzioni(newItems);
+                }
+            } catch (e) { /* ripiego: le opzioni come sono */ }
         } else if (set.mode === 'flashcard') {
             const _PLfc = window.MappAIPrintLayout;
             const _regolaFc = _PLfc ? _PLfc.promptRule(_PLfc.flashGeom(), null, window.getMapLanguage ? window.getMapLanguage() : "it") : "";

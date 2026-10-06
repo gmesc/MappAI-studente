@@ -8,6 +8,19 @@
 
 ## 0. Dove si riprende
 
+**⟵ 6/10 sera, sincronizzate 3 copie da MappAI re `5d989b91`** (dall'ultima, `a681216c`): `pipeline-core`,
+`flashcards-sr`, `study-session`, tutte dal solo commit `8ac16a8a` (0080, merge `dd2750cb`: le risposte della scelta
+multipla finiscono sempre col punto), `?v=sync-20261006b`. **Nel reader non cambia niente**, verificato sulle strade e
+non solo sugli hash: il punto (`quizPuntoBlock` nel prompt, `MappAIPipelineCore.chiudiOpzioni` dopo il rimescolamento)
+e il riconoscimento nuovo della risposta con una virgola davanti (`_indiceCorretta`, interna al core) vivono solo dopo
+una risposta del modello: in `generateDynamicQuiz` (da `startStudySession` e `regenerateStudySet`) e in
+`generateFlashcardForNode`. Nel reader nessuna di queste parte: `getSystemKey()` è vuota e il controllo viene prima;
+il menu contestuale con `studentMode` non disegna la sezione Spaced Repetition («Quiz Nodo», «Flashcard Nodo»…), e
+«Rigenera» dei set è potato. I quiz che arriveranno dal docente dopo lo 0080 avranno già il punto: è contenuto, non
+codice. Gli altri commit di re dopo `a681216c` sono solo documenti. `--confronta`: `map-view` resta DIVERSO per
+costruzione. Test 45/45. Provato nel browser: le tre copie si caricano col `?v=` nuovo, `chiudiOpzioni` chiude
+«Roma»/«Milano,» e lascia com'è «Roma»/«Roma.»; «La carta» si apre (mappa, flashcard 1 / 8), nessun errore.
+
 **⟵ 6/10, sincronizzata 1 copia da MappAI re `a681216c`** (dall'ultima, `6189c0dd`): `en_translations`, dai commit
 `4df59b62` e `3a3106ab` (0073, la veste di G2) e `474a9c35` e `814bc98b` (0074, la Fonte a destra, il divisore delle
 occorrenze), `?v=sync-20261006`. **Nel reader non cambia niente:** solo 132 righe aggiunte, 120 chiavi nuove tutte del
