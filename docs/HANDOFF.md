@@ -8,6 +8,19 @@
 
 ## 0. Dove si riprende
 
+**⟵ 6/10, sincronizzata 1 copia da MappAI re `a681216c`** (dall'ultima, `6189c0dd`): `en_translations`, dai commit
+`4df59b62` e `3a3106ab` (0073, la veste di G2) e `474a9c35` e `814bc98b` (0074, la Fonte a destra, il divisore delle
+occorrenze), `?v=sync-20261006`. **Nel reader non cambia niente:** solo 132 righe aggiunte, 120 chiavi nuove tutte del
+Banco del docente (`rv_veste_*`, `rv_fonte_*`, `rv_split_move_destra`, `rv_occurrences_split`…), nessuna tolta, nessun
+valore cambiato (dizionari caricati e confrontati: 3627 → 3747). Nessuna chiave nuova è usata in `public/` fuori da
+`traduzioni/`, nemmeno composta a runtime. Le copie JS del Banco (`mappai-review*.js`, `mappai-banco-*.js`) non sono
+nell'elenco del reader, `--verifica` 128 uguali. Le 9 chiavi doppie (`cb_v_guida`, `rv_source_empty`, `ui_reranker_*`…)
+c'erano già e restano nello stesso ordine; si curano in MappAI re, se mai. MappAI re aveva `docs/INTAKE.md` modificato
+(fuori dall'elenco delle copie; `en_translations.js` sul disco = commit); durante il lavoro è entrato `c31aa1eb`, solo
+l'ADR 0012: `--verifica` resta 128 uguali. `--confronta`: `map-view` resta DIVERSO per
+costruzione. Test 45/45. Provato nel browser con l'interfaccia in inglese: «La carta» si apre (mappa, comandi
+«Center»/«Show up to level»), nessun errore. Lo 0075 (G1 per nodo) porterà altre chiavi: un'altra sincronizzazione piccola.
+
 **⟵ 5/10, sincronizzate 3 copie da MappAI re `6189c0dd`** (dall'ultima, `db68e116`): `en_translations`,
 `study-export-core`, `files-core`, dal solo commit `73cb4a2d` (0077: i documenti salvati diventano file della cartella
 della mappa), `?v=sync-20261005b`. **Nel reader cambia una cosa sola, ed è voluta («Via di mezzo», Giacomo 05/10):**
