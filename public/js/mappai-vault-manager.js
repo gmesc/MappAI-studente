@@ -175,6 +175,20 @@ window.directLoadVault = async function (folderPath) {
                 });
             }
 
+            /* 0078 (§4.2, interruttore `mappai_cartella_completa`): lo stato di
+               generazione della mappa di PRIMA — disciplina, «tarata», pagine
+               del PDF, rapporti, guida semantica, bozze della revisione,
+               consumi — non passa a questa. Si azzera PRIMA di leggere ciò che
+               la cartella porta (la vista, i consumi, la revisione), così
+               quello vince. La lista è del core, una sola: `semanticGuidance`
+               è fra i suoi campi. Spento o senza core: come prima. */
+            if (window.MappAIVistaCore && window.MappAIVistaCore.cartellaCompleta && window.MappAIVistaCore.cartellaCompleta()) {
+                window.MappAIVistaCore.azzeraGenerazione(appState);
+                /* il layout torna quello di base: il bottone deve dirlo, o
+                   mostrerebbe ancora il layout della mappa di prima */
+                if (window.updateLayoutButtonLabel) { try { window.updateLayoutButtonLabel(); } catch (e) { } }
+            }
+
             appState.db = {
                 nodes: nodesList,
                 links: linksList,
@@ -190,7 +204,11 @@ window.directLoadVault = async function (folderPath) {
                PRECEDENTE non devono sopravvivere al cambio — stessa regola del
                tutorState qui sotto), POI si applica la vista se c'è. La regola
                di fusione di `applica` («non azzerare ciò che manca») serve ad
-               altri contesti; qui ciò che manca è di un'altra mappa. */
+               altri contesti; qui ciò che manca è di un'altra mappa.
+               0078: con l'interruttore acceso la vista porta anche la Catena dei
+               perché rivista, le copie dei documenti e i nodi fissati: si
+               applica DOPO che i nodi della cartella sono in `db` (qui sopra),
+               perché marca solo i nodi che ci sono. */
             appState.studioProfile = undefined;
             appState.focusTopic = '';
             appState.db.timelineEvents = [];

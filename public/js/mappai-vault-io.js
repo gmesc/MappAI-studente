@@ -541,6 +541,21 @@ window.loadMapVault = async function () {
                 });
             }
 
+            /* 0078 (§4.2): l'interruttore `mappai_cartella_completa` (il suo
+               lettore unico sta nel core della vista). Acceso, «Apri cartella»
+               fa quello che fa già `directLoadVault`: lo stato di generazione
+               della mappa di PRIMA si azzera PRIMA di leggere la cartella, poi
+               la cartella porta la sua vista e i suoi consumi, e vincono.
+               Spento o senza core: come prima — niente azzeramento, niente
+               vista, niente consumi. */
+            const _cartellaCompleta = !!(window.MappAIVistaCore && window.MappAIVistaCore.cartellaCompleta
+                && window.MappAIVistaCore.cartellaCompleta());
+            if (_cartellaCompleta) {
+                window.MappAIVistaCore.azzeraGenerazione(appState);
+                /* il layout torna quello di base: il bottone deve dirlo */
+                if (window.updateLayoutButtonLabel) { try { window.updateLayoutButtonLabel(); } catch (e) { } }
+            }
+
             appState.db = {
                 nodes: nodesList,
                 links: linksList,
@@ -549,6 +564,24 @@ window.loadMapVault = async function () {
                 customColors: loadRes.data.customColors || {}
             };
 
+            /* 0078: «Apri cartella» non applicava `vista.json` — timeline, foglio
+               dei nodi, catena rivista, copie e nodi fissati si perdevano. La
+               stessa sequenza di `directLoadVault`: si azzera ciò che la vista
+               governa (è della mappa di prima), poi si applica la vista, DOPO i
+               nodi della cartella (marca solo quelli che ci sono) e prima del
+               ripristino della revisione. */
+            if (_cartellaCompleta) {
+                appState.studioProfile = undefined;
+                appState.focusTopic = '';
+                appState.db.timelineEvents = [];
+                appState.db.timelineAI = [];
+                appState.db.nodeSheet = undefined;
+                if (loadRes.data.vista) {
+                    const _vApplicati = window.MappAIVistaCore.applica(appState, loadRes.data.vista);
+                    if (_vApplicati.length) console.log('[Vault] vista.json applicata:', _vApplicati.join(', '));
+                }
+            }
+
             if (window.MappAIJigsaw) {
                 window.MappAIJigsaw.syncModeToVault(loadRes.data.branchLocks);
                 window.MappAIJigsaw.applyLocks(appState.db.nodes, loadRes.data.branchLocks);
@@ -556,6 +589,26 @@ window.loadMapVault = async function () {
 
             // Ripristina le chat del vault (o azzera: mai ereditare quelle della mappa precedente)
             window.setTutorState(loadRes.data.tutorState || null);
+
+            /* 0078 (aggiunta del 06/10): i consumi dalla cartella, con le stesse
+               righe di `directLoadVault` (la provenienza col profilo dei modelli
+               compresa). Azzerati e basta, il salvataggio dopo scriverebbe
+               `generationUsage: null` nell'`index.yaml`. Provider e modello no:
+               quelle righe scrivono localStorage, e qui non ci sono mai state. */
+            if (_cartellaCompleta) {
+                const profiloAttivo = window.MappAIModelli && window.MappAIModelli.acceso();
+                if (loadRes.data.generationUsage) {
+                    appState.generationUsage = loadRes.data.generationUsage;
+                    if (window.updateCostDisplay) window.updateCostDisplay();
+                }
+                if (profiloAttivo) {
+                    // La provenienza della mappa viaggia separata dal Setup del prossimo giro.
+                    appState.generationUsage = Object.assign({}, loadRes.data.generationUsage || {}, {
+                        provenienzaMappa: { provider: loadRes.data.aiProvider || loadRes.data.generationUsage?.usedProvider || '',
+                            model: loadRes.data.generationUsage?.usedModel || loadRes.data.aiModel || '' }
+                    });
+                }
+            }
 
             /* Un dizionario già in `mapData` (non lo scrive `save-vault`, ma può
                arrivare da un demo o da un import) ha la precedenza; per tutto il
