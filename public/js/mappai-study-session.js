@@ -295,6 +295,29 @@ window.quizLengthBlock = function () {
         : 'LUNGHEZZA DELLE OPZIONI (obbligatoria): la risposta esatta NON deve essere la più lunga né la più dettagliata. Un\'opzione sbagliata corta e spoglia regala la risposta a chi non sa niente della materia. Dai a ogni opzione sbagliata la SUA qualificazione plausibile — una circostanza, una data, un motivo, una conseguenza — presa dallo stesso argomento, così che le tre opzioni siano confrontabili per lunghezza e per grado di dettaglio. Se la risposta esatta ha bisogno di una precisazione per essere esatta, anche le sbagliate ne hanno bisogno.';
 };
 
+/* ── IL PUNTO IN FONDO ALLE OPZIONI (6/10/26, packet 0080) ───────────────────
+   Giacomo, 3/10: le risposte dei quiz a scelta multipla uscivano senza il punto
+   finale, e il punto deve esserci sempre (ADR 0012, revisione 5, punto E). Due
+   mani, come per la lunghezza: la regola nel prompt, perché il modello scriva
+   frasi chiuse, e il passo deterministico MappAIPipelineCore.chiudiOpzioni dopo
+   il rimescolamento, perché il modello la regola non la rispetta sempre.
+   Vale solo per la scelta multipla (bivio B4): il Vero/Falso ha due parole, le
+   domande aperte non hanno opzioni.
+   L'interruttore è mappai_mc_punto, ACCESO di default (bivio B3): '0' lo spegne,
+   e allora prompt e quiz sono quelli di prima (invariante 1). Questa è l'UNICA
+   funzione che legge la chiave (invariante 6). Dove localStorage non c'è (Node,
+   una sandbox) vale acceso, come una chiave assente. */
+window.quizPuntoAcceso = function () {
+    try { return localStorage.getItem('mappai_mc_punto') !== '0'; } catch (e) { return true; }
+};
+window.quizPuntoBlock = function () {
+    if (!window.quizPuntoAcceso()) return '';
+    var en = (typeof window.getPromptLanguage === 'function') && window.getPromptLanguage() === 'en';
+    return en
+        ? 'FULL STOP AT THE END OF THE OPTIONS (mandatory): every option, the correct one and the wrong ones, is a complete sentence and ends with a full stop (or with "?" / "!" if the sentence calls for it): punctuation must not give away the correct answer.'
+        : 'PUNTO FINALE DELLE OPZIONI (obbligatorio): ogni opzione, la corretta e le sbagliate, è una frase completa e finisce con il punto (o con «?» / «!» se la frase lo chiede): la punteggiatura non deve distinguere la risposta giusta.';
+};
+
 // La taratura classe è iniettata come ovunque via injectClassTuning.
 window.generateDynamicQuiz = async function (opts) {
     opts = opts || {};
@@ -318,12 +341,15 @@ window.generateDynamicQuiz = async function (opts) {
     const lenBlock = (window.quizLengthBlock && !/apert/i.test(String(quizType)))
         ? window.quizLengthBlock() : '';
     const mc = !/vero|false|apert|open/i.test(String(quizType));
+    /* il punto in fondo alle opzioni: solo scelta multipla (packet 0080, vedi quizPuntoBlock) */
+    const puntoBlock = (mc && window.quizPuntoBlock) ? window.quizPuntoBlock() : '';
     const roleBlock = mc && window.MappAIPipelineCore && window.MappAIPipelineCore.questionRoleBlock
         ? window.MappAIPipelineCore.questionRoleBlock('mc', opts.complementary, window.getPromptLanguage && window.getPromptLanguage() === 'en') : '';
     const prompt = (angleBlock ? angleBlock + '\n\n' : '') +
         window.fillPromptTemplate("DYNAMIC_QUIZ", { quantity, quizType, nodeLabel, nonce }) +
         (evBlock ? '\n\n' + evBlock : '') +
         (lenBlock ? '\n\n' + lenBlock : '') +
+        (puntoBlock ? '\n\n' + puntoBlock : '') +
         (roleBlock ? '\n\n' + roleBlock : '');
     /* ── LA PROVA (11/9) ──────────────────────────────────────────────────────
        `evidenza` = la frase del MATERIALE che rende vera la risposta segnata. Non
@@ -414,6 +440,10 @@ window.generateDynamicQuiz = async function (opts) {
             arr = v.items;
             const seme = opts.seme || (nodeLabel + '|' + quizType + '|' + (opts.angle || 'auto') + '|' + nonce);
             arr = PC.mescolaOpzioni(arr, seme);
+            /* il punto in fondo a ogni opzione (packet 0080), solo scelta multipla
+               e interruttore acceso; PRIMA dei due controlli qui sotto, così
+               misurano le opzioni che finiscono nel foglio */
+            if (mc && PC.chiudiOpzioni && window.quizPuntoAcceso && window.quizPuntoAcceso()) arr = PC.chiudiOpzioni(arr);
             const pos = PC.posizioniCorrette(arr);
             if (pos.tot >= 4 && pos.maxQuota > 0.6) {
                 console.warn('[Quiz] la risposta esatta cade nella stessa posizione nel ' + Math.round(pos.maxQuota * 100) + '% degli item');
