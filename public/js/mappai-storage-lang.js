@@ -782,6 +782,17 @@ const StorageManager = {
                caricamento si ferma qui sotto. La decide, se c'è, il gesto `voce`. */
             this.idInCartella = null;
 
+            /* 0078 (§4.3-4.4, interruttore `mappai_cartella_completa`, lettore unico nel
+               core della vista): la copia del cassetto non ha mai portato le chat del
+               Tutor (sono del modulo, non di `appState`), quindi dopo «Riprendi» restavano
+               quelle della mappa di prima — e la `saveVault` dopo le scriveva nella
+               cartella di questa. Acceso, nei tre rami qui sotto il Tutor riceve le chat
+               della cartella di QUESTO progetto, o nessuna; e la cartella sua che non ha
+               `Fonti/` la riceve in fondo. Spento: come prima. */
+            const cartellaCompleta = !!(window.MappAIVistaCore && window.MappAIVistaCore.cartellaCompleta
+                && window.MappAIVistaCore.cartellaCompleta());
+            let cartellaSua = null;   // la cartella che si è rivelata di questo progetto
+
             // Il manifest sul disco precede quello della cache. L'eventuale
             // bozza locale viene riconciliata dal controller prima di render e
             // autosave; una revisione di un altro progetto non viene ereditata.
@@ -811,6 +822,8 @@ const StorageManager = {
                     appState._pipelineManifest = null;
                     delete appState._reviewRevision;
                     this.idInCartella = null;
+                    /* 0078: le chat di quella cartella sono dell'altra mappa */
+                    if (cartellaCompleta && window.setTutorState) window.setTutorState(null);
                     var staccata = true;   // `var`: la legge il backfill più sotto, fuori da questo blocco
                 } else {
                     this.idInCartella = { percorso: vaultPath, id: deciso.scrivi ? id : null };
@@ -821,10 +834,21 @@ const StorageManager = {
                         await window.MappAIReview.restore(vaultPath, disk.data._pipelineManifest || null, { fromCache: true, diskData: disk.data });
                     } else if (disk.data._pipelineManifest?.review) throw new Error('Revisione non disponibile: caricamento interrotto');
                     else { appState._pipelineManifest = disk.data._pipelineManifest || null; delete appState._reviewRevision; }
+                    /* 0078: le chat di QUESTA mappa, dalla stessa lettura della cartella
+                       (anche quella anticipata del residuo: nessuna seconda). DOPO il
+                       ripristino della revisione: se lancia, il residuo rimette la mappa di
+                       prima e il Tutor non è stato toccato. Senza chat nella cartella,
+                       nessuna: mai quelle della mappa di prima. */
+                    if (cartellaCompleta) {
+                        if (window.setTutorState) window.setTutorState((disk.data && disk.data.tutorState) || null);
+                        cartellaSua = vaultPath;
+                    }
                 }
             } else {
                 appState._pipelineManifest = null;
                 delete appState._reviewRevision;
+                /* 0078: nessuna cartella, nessuna chat da rimettere: il Tutor si azzera */
+                if (cartellaCompleta && window.setTutorState) window.setTutorState(null);
             }
             appState._reviewRestoring = false;
             prima = null;   // 0076: la riapertura è riuscita, da qui vale il percorso di sempre
@@ -878,6 +902,24 @@ const StorageManager = {
                 }, 400);
             }
             if (appState.activeVaultPath && window.MappAIPipeline && window.MappAIPipeline.checkResume) window.MappAIPipeline.checkResume(appState.activeVaultPath);
+
+            /* 0078 (§4.4): `Fonti/` alla cartella di questo progetto che non ce l'ha,
+               dalle fonti in memoria (quelle della copia). La funzione di ELABORA scrive
+               solo dove `Fonti/` manca, mai un PDF, e non svuota mai le fonti in
+               memoria; qui nessuna lettura delle fonti dal vault. Nel reader non c'è.
+               Se lancia, «Riprendi» è riuscito lo stesso: lo dice il registro (il nome
+               della cartella, mai il percorso), senza allarme. */
+            if (cartellaSua && window.completaFontiDellaCartella) {
+                try { await window.completaFontiDellaCartella(cartellaSua); }
+                catch (e) {
+                    try { console.warn('[Storage] Fonti/ non completata (0078):', e && e.message); } catch (x) { }
+                    try {
+                        if (window.MappAIErrori && window.MappAIErrori.registra) window.MappAIErrori.registra({ dove: 'fonti',
+                            messaggio: 'Fonti/ non completata alla ripresa di «' + (String(cartellaSua).split(/[\\/]/).filter(Boolean).pop() || '') +
+                                '»: le fonti restano nella memoria rapida' });
+                    } catch (x) { }
+                }
+            }
 
             return true;
         } catch (e) {

@@ -8,6 +8,30 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/10, sincronizzate 4 copie da MappAI re `a2669669`** (dall'ultima, `5d989b91`): `vista-core`, `vault-manager`,
+`vault-io`, `storage-lang`, tutte dal solo commit `1c7e73eb` (0078, merge `662e101e`: la cartella ha tutto quello che ha
+la copia nel cassetto), `?v=sync-20261007`. Interruttore `mappai_cartella_completa`, acceso di default. **Nel reader
+cambiano due cose, tutte e due volute dallo 0078:**
+- **Aprire una mappa non eredita lo stato di generazione di quella di prima.** `directLoadVault` chiama
+  `MappAIVistaCore.azzeraGenerazione` PRIMA di leggere la cartella (prima si scrivono solo identità, classe, materia,
+  manifesto): disciplina, «tarata», pagine del PDF, rapporti, consumi si tolgono o tornano di base, e `layoutMode` torna
+  a `'default'`. La Vista studio parte lo stesso: `apriMappa` → `assetto()` → `albero()` (studente/mappa.js) la rimette
+  a `'studio'` dopo, e guarda il DOM, non il campo; e `riprendi` dentro `initD3Visualization` fa lo stesso.
+- **I nodi fissati dall'allievo restano.** «Fissa Layout» (`salvaLayout`, permesso in `pota.js › FN_OK`) segna
+  `pinned`; `raccogli` ora mette in `vista.json` l'elenco dei loro id (`pinned`), e alla riapertura `applica` li
+  rimarca. Il reader non scrive le posizioni: i nodi restano fissati dove li mette il file del docente (l'adapter dà
+  già `fx = x`). Conta solo sulla mappa libera (`applyDefaultLayout` non sgancia i fissati), non nella Vista studio.
+Il resto non si raggiunge: `loadMapVault` («Sfoglia altre cartelle») sta nella finestra del gestore dei vault, che nel
+reader nessuno apre («Apri una cartella» passa da `directLoadVault`); il ramo nuovo di `storage-lang` è in
+`loadProject`, che il reader non raggiunge; `setTutorState` e `completaFontiDellaCartella` sono dietro `window.X &&`
+(la seconda vive in `mappai-elabora.js`, che il reader non ha). `fonti-core` ed `elabora`, cambiati dallo 0078, non
+sono nell'elenco delle copie. `--confronta`: `map-view` resta DIVERSO per costruzione. Test 45/45. Provato nel browser
+con «La carta»: tre campi di generazione finti in `appState` spariscono all'apertura, i consumi vengono dalla cartella,
+la Vista studio parte (bottone «Albero»); «Fissa Layout» → «Torna a STUDIA» → `vista.json` con 14 id `pinned` (schema
+`@1`); pagina ricaricata, mappa riaperta: 14 nodi fissati, Vista studio di nuovo su. Nessun errore; i due avvisi alla
+riapertura (`saveMapJSON is not a function`, `[StudioView] rientro` su `getBoundingClientRect`) ci sono uguali sul
+`main` `8b66e04`, stesso giro: non sono dello 0078.
+
 **⟵ 6/10 sera, sincronizzate 3 copie da MappAI re `5d989b91`** (dall'ultima, `a681216c`): `pipeline-core`,
 `flashcards-sr`, `study-session`, tutte dal solo commit `8ac16a8a` (0080, merge `dd2750cb`: le risposte della scelta
 multipla finiscono sempre col punto), `?v=sync-20261006b`. **Nel reader non cambia niente**, verificato sulle strade e

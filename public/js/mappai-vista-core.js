@@ -18,6 +18,19 @@
  * senza vista.json non deve cancellare la timeline appena costruita in
  * memoria. E `raccogli` non scrive un file per dire «tutto vuoto»: null.
  *
+ * Dal packet 0078 (ADR 0018 rev. 1, B2) la vista porta anche quello che
+ * viveva solo nella copia del cassetto: la Catena dei perché rivista
+ * (`db.causalDoc`), le copie dei documenti (`db.causalDocCloni`,
+ * `db.nodeSheetCloni`) e i nodi fissati (`pinned`, un elenco di id: `save-vault`
+ * non scrive il segno, e `load-vault` fissa ogni nodo che ha x/y). Lo
+ * governa l'interruttore `mappai_cartella_completa` (acceso di default, '0' lo
+ * spegne), col suo lettore unico `cartellaCompleta()`: spento, i due elenchi
+ * sono quelli di prima. Lo schema resta `@1` (B2 a): un codice vecchio ignora
+ * i campi che non conosce.
+ * E qui sta anche la lista dello STATO DI GENERAZIONE che un'apertura da
+ * cartella azzera prima di leggere la cartella (`azzeraGenerazione`): una
+ * lista sola, inv. 6.
+ *
  * UMD puro, testato in Node (tests/vista-core.test.js). Schema versionato:
  * `mappai-vista@1` — chi leggerà una v2 saprà di doverla capire prima.
  */
@@ -36,6 +49,38 @@
         return String(v).trim() !== '';
     }
 
+    /* L'interruttore `mappai_cartella_completa` (0078, B1 a): acceso di
+       default, spento solo con '0'. UNICO lettore della chiave (inv. 6): lo
+       chiedono anche le aperture da cartella e «Riprendi». Legge il
+       `localStorage` del luogo in cui il core gira; dove non c'è (Node) o
+       lancia, vale acceso — un difetto di lettura non deve spegnere niente. */
+    var CHIAVE_CARTELLA_COMPLETA = 'mappai_cartella_completa';
+    function cartellaCompleta() {
+        var v = null;
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.getItem === 'function') {
+                v = localStorage.getItem(CHIAVE_CARTELLA_COMPLETA);
+            }
+        } catch (e) { v = null; }
+        return v !== '0';
+    }
+
+    /* I campi di `db` che la vista porta dallo 0078: oggetti di solo testo
+       (sezioni e righe, carte), scritti dall'editor dei documenti attraverso
+       `MappAIClona`. Un valore che non è un oggetto non entra e non si applica:
+       chi li legge si aspetta quella forma. */
+    var CAMPI_DB_COMPLETA = ['causalDoc', 'causalDocCloni', 'nodeSheetCloni'];
+    function _oggettoPieno(v) { return _oggetto(v) && _pieno(v); }
+    /* Gli id dei nodi fissati, come stringa (il confronto di main.js è per
+       `String(id)`). Solo `pinned === true`: il segno lo mette «Salva layout». */
+    function _fissati(nodi) {
+        var out = [];
+        (Array.isArray(nodi) ? nodi : []).forEach(function (n) {
+            if (n && n.pinned === true && n.id != null) out.push(String(n.id));
+        });
+        return out;
+    }
+
     /* Dallo stato dell'app all'oggetto per vista.json. `stato` è appState (o
        un suo pari di prova); si legge, mai si modifica. */
     function raccogli(stato) {
@@ -49,6 +94,15 @@
         if (_pieno(db.timelineEvents)) { out.timelineEvents = db.timelineEvents; qualcosa = true; }
         if (_pieno(db.timelineAI)) { out.timelineAI = db.timelineAI; qualcosa = true; }
         if (_pieno(db.nodeSheet)) { out.nodeSheet = db.nodeSheet; qualcosa = true; }
+        /* 0078: catena, copie e nodi fissati, solo se pieni — una mappa che
+           non li ha non scrive un file per dirlo */
+        if (cartellaCompleta()) {
+            CAMPI_DB_COMPLETA.forEach(function (k) {
+                if (_oggettoPieno(db[k])) { out[k] = db[k]; qualcosa = true; }
+            });
+            var fissati = _fissati(db.nodes);
+            if (fissati.length) { out.pinned = fissati; qualcosa = true; }
+        }
         return qualcosa ? out : null;
     }
 
@@ -67,7 +121,56 @@
         if (_pieno(vista.timelineEvents)) { stato.db.timelineEvents = vista.timelineEvents; applicati.push('timelineEvents'); }
         if (_pieno(vista.timelineAI)) { stato.db.timelineAI = vista.timelineAI; applicati.push('timelineAI'); }
         if (_pieno(vista.nodeSheet)) { stato.db.nodeSheet = vista.nodeSheet; applicati.push('nodeSheet'); }
+        /* 0078: la stessa regola di fusione. `pinned` marca i nodi CHE CI SONO
+           (per `String(id)`): va chiamata dopo che i nodi della cartella sono
+           in `db`. Un id che non c'è si ignora, un nodo non elencato resta
+           com'è; «pinned» è fra gli applicati solo se ha marcato qualcuno. */
+        if (cartellaCompleta()) {
+            CAMPI_DB_COMPLETA.forEach(function (k) {
+                if (_oggettoPieno(vista[k])) { stato.db[k] = vista[k]; applicati.push(k); }
+            });
+            if (Array.isArray(vista.pinned) && vista.pinned.length) {
+                var ids = Object.create(null);
+                vista.pinned.forEach(function (id) { if (id != null) ids[String(id)] = true; });
+                var marcati = 0;
+                (Array.isArray(stato.db.nodes) ? stato.db.nodes : []).forEach(function (n) {
+                    if (n && n.id != null && ids[String(n.id)] === true) { n.pinned = true; marcati++; }
+                });
+                if (marcati) applicati.push('pinned');
+            }
+        }
         return applicati;
+    }
+
+    /* ── LO STATO DI GENERAZIONE NON PASSA DA UNA MAPPA ALL'ALTRA (0078, §4.2) ──
+       «Apri cartella» e le aperture da INSEGNA rifanno il `db` ma lasciavano in
+       `appState` ciò che la generazione della mappa di PRIMA aveva scritto: la
+       disciplina (che vince sulla materia del vault e finiva nell'`index.yaml`
+       di questa mappa), il bollino «tarata», le pagine del PDF nelle citazioni,
+       i rapporti, la guida semantica, le bozze della revisione, i consumi.
+       `loadProject` non ha il problema: sostituisce tutto `appState`.
+       La lista è UNA (inv. 6); chi apre da cartella chiama `azzeraGenerazione`
+       PRIMA di leggere ciò che la cartella porta (consumi, vista, revisione),
+       così quello vince. Valori di base dove chi legge li vuole così
+       (`layoutMode`, `generationUsage`, `semanticGuidance`,
+       `generationDiscipline`); gli altri campi si TOLGONO — e `generationTuned`
+       con loro: con `false` la riga d'indice di questo progetto perderebbe il
+       suo bollino, assente la si rilegge (mappai-storage-lang.js, `tuned`).
+       Non tocca `db`, l'identità, le fonti, `focusTopic`, `studioProfile` né
+       il manifesto: quelli li decide chi apre. Pura: l'interruttore lo
+       controlla chi la chiama. */
+    var CAMPI_GENERAZIONE = ['generationDiscipline', 'generationTuned', '_qualityReport', '_coverageReport',
+        '_rerankerReport', '_judgeReport', '_giudiceReport', 'mmTriage', '_docOutline', 'semanticGuidance',
+        'layoutMode', '_pdfPagine', '_reviewLocalDraft', '_reviewDiskDraft', '_reviewRequested', '_generationId',
+        'generationUsage'];
+    var BASE_GENERAZIONE = { layoutMode: 'default', generationUsage: null, semanticGuidance: '', generationDiscipline: '' };
+    function azzeraGenerazione(stato) {
+        if (!stato || typeof stato !== 'object') return stato;
+        CAMPI_GENERAZIONE.forEach(function (k) {
+            if (Object.prototype.hasOwnProperty.call(BASE_GENERAZIONE, k)) stato[k] = BASE_GENERAZIONE[k];
+            else delete stato[k];
+        });
+        return stato;
     }
 
     /* ── IL CASSETTO TIENE SOLO CIÒ CHE NON È GIÀ SUL DISCO (0076, ADR 0018) ──
@@ -227,6 +330,7 @@
     return {
         SCHEMA: SCHEMA, raccogli: raccogli, applica: applica, statoSnello: statoSnello,
         snelloDaVoce: snelloDaVoce, schedaPartita: schedaPartita, pianoLiberaSpazio: pianoLiberaSpazio,
-        residuo: residuo, CAMPI_DALLA_CARTELLA: CAMPI_DALLA_CARTELLA
+        residuo: residuo, CAMPI_DALLA_CARTELLA: CAMPI_DALLA_CARTELLA,
+        cartellaCompleta: cartellaCompleta, azzeraGenerazione: azzeraGenerazione, CAMPI_GENERAZIONE: CAMPI_GENERAZIONE
     };
 }));
