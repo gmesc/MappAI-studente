@@ -8,6 +8,32 @@
 
 ## 0. Dove si riprende
 
+**⟵ 7/10 sera, sincronizzata 1 copia da MappAI re `b6fb2c8a`** (dalla voce qui sotto, `2137159f`): `en_translations`,
+dai commit `ec95f24d` e `377d7564` (0075, G1 per nodo con la veste, merge `deece255` entrato in re subito dopo il commit
+dello 0083), `?v=sync-20261007c`. **Nel reader non cambia niente:** 96 chiavi nuove (`rv_veste_*`, `aff_count*`), 11
+tolte e 2 cambiate, tutte del Banco del docente; nessuna usata nel reader, `index.html` compreso (dizionari caricati e
+confrontati: 3717 → 3802). Le altre copie che lo 0075 cambia in re (`mappai-review.js`, `mappai-banco-*`,
+`mappai-affermazioni-ui.js`, il CSS del Banco) non sono nell'elenco: `--verifica` 128 uguali. `--confronta`: `map-view`
+resta DIVERSO per costruzione. Test 45/45. Provato nel browser con l'interfaccia in inglese: «La carta» si apre, Vista
+studio su, nessun errore.
+
+**⟵ 7/10, sincronizzate 5 copie da MappAI re `2137159f`** (dall'ultima, `a2669669`): `it_translations`,
+`en_translations`, `context-menu`, `flashcards-sr`, `study-session`, tutte dal solo commit `2c9cb459` (0083 con lo 0084,
+merge `d13219d8`: via «Espandi da Fonte» e le quattro voci «Spaced Repetition» con «Configura Quiz»),
+`?v=sync-20261007b`. Lo 0075 non è ancora in `main` di MappAI re: resta per `lavoro/sync-0075`. **Nel reader non cambia
+niente di visibile:** le voci tolte dal menu del nodo erano già dietro `!appState.studentMode` (l'allievo vede le stesse
+6 voci: lettura, lettura veloce, quattro semafori); le funzioni tolte da `study-session` (`openStudyConfigModal`,
+`selectStudyQuantity`, `startStudySession`, `generateGlobalQuiz/Flashcards`) non hanno chiamanti nel reader né nei test;
+resta apposta `closeStudyConfigModal`, che Esc chiama sul nostro `#study-config-modal` vuoto (`hidden` come attributo,
+non come classe: `closeActiveModals` lo vede «aperto»). Dai dizionari escono 30 chiavi (24 in `it`, 30 in `en`),
+nessuna usata nel reader, `index.html` compreso; tre testi cambiano (`guide_step5_desc`, `study_sr_desc`,
+`tst_set_no_material`): i primi due il reader non li mostra, il terzo è dentro «Rigenera», potato. `mappai-contextual-ai.js`
+il reader non l'ha mai avuto. `studente/pota.js › CTX_OK` nomina ancora `test_flashcard` e `test_flashcard_branch`: voci
+morte e innocue, non toccate (fuori perimetro). `--confronta`: `map-view` resta DIVERSO per costruzione. Test 45/45.
+Provato nel browser con «La carta»: le cinque copie col `?v=` nuovo, `openStudyConfigModal`/`startStudySession` assenti,
+`closeStudyConfigModal` presente; menu del nodo dell'allievo con le sue 6 voci e senza «Spaced Repetition»; Esc →
+`closeStudyConfigModal` sul `div` vuoto, nessun errore; flashcard, player «1 / 9» (il mazzo ha 9 carte). Nessun errore.
+
 **⟵ 7/10, sincronizzate 4 copie da MappAI re `a2669669`** (dall'ultima, `5d989b91`): `vista-core`, `vault-manager`,
 `vault-io`, `storage-lang`, tutte dal solo commit `1c7e73eb` (0078, merge `662e101e`: la cartella ha tutto quello che ha
 la copia nel cassetto), `?v=sync-20261007`. Interruttore `mappai_cartella_completa`, acceso di default. **Nel reader

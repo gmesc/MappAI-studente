@@ -245,7 +245,7 @@ window.regenerateStudySet = async function (setId) {
     const set = appState.db.studySets.find(s => s.id === setId);
     if (!set) return;
     if (!set.material) {
-        window.showToast(window.t('tst_set_no_material', "Set storico senza materiale salvato: non rigenerabile. Rigeneralo dal nodo/ramo."), "warning");
+        window.showToast(window.t('tst_set_no_material', "Set storico senza materiale salvato: non rigenerabile. Creane uno nuovo da ELABORA › «Crea nuovo»."), "warning");
         return;
     }
     const apiKey = window.getSystemKey();
