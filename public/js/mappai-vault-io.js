@@ -33,6 +33,21 @@ function _contestoDellaMappa() {
         /* la generazione può aver dichiarato una disciplina sua (il modale
            classe+disciplina di `ensureGenerationContext`): quella vince, è la
            materia con cui la mappa è stata pensata */
+        /* 0082 (gate 3 del 08/10; Giacomo: «1 a»): col cassetto solo indice acceso
+           la cartella si scrive da sola anche solo aprendo una mappa, e la classe e
+           la materia ATTIVE di chi guarda finivano nell'`index.yaml` di una mappa di
+           un'altra classe (una cartella sotto 2A che dichiarava 1A). Ad acceso la
+           mappa porta le sue: quelle della RIGA del progetto aperto (`cls`, `disc`,
+           fissate quando è nato; mai la riga di un altro progetto, inv. 20-bis). Una
+           riga che non le ha (mappa appena generata, voce vecchia): come prima. */
+        var VCc = window.MappAIVistaCore;
+        if (VCc && VCc.cassettoSoloIndice && VCc.cassettoSoloIndice() && typeof StorageManager !== 'undefined' && StorageManager.currentProjectId) {
+            var riga = (JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]') || []).filter(function (p) {
+                return p && p.id === StorageManager.currentProjectId;
+            })[0];
+            if (riga && riga.cls) out.classe = String(riga.cls);
+            if (riga && riga.disc) out.materia = String(riga.disc);
+        }
         if (appState && appState.generationDiscipline) out.materia = appState.generationDiscipline;
     } catch (e) { }
     /* un vault RIAPERTO porta già le sue: non si sovrascrivono con il contesto di
@@ -290,8 +305,26 @@ window.ensureProjectVault = async function (opts) {
         //     a vicenda: con un allievo la mappa è sua, con una classe si annida
         //     per classe/disciplina, senza nessuno dei due va in Mappe/Generico/ (FilesCore.GENERICO, 15/8 sera).
         var cls = null, allievo = '';
-        try { cls = (window.MappAIClasses && window.MappAIClasses.getActive()) || null; } catch (e) { cls = null; }
-        try { allievo = (window.MappAIClasses && window.MappAIClasses.activeStudentName) ? window.MappAIClasses.activeStudentName() : ''; } catch (e) { allievo = ''; }
+        /* 0082 (B1 (a), B2 (a)): chi riapre un progetto senza cartella («Riprendi»,
+           col cassetto solo indice acceso) passa la classe della SUA riga
+           (`opts.clsId`, letta prima che lo stato si sostituisca): la cartella nasce
+           lì, non sotto la classe attiva in quel momento, e l'allievo attivo non
+           conta. Una riga senza classe, o con una classe che non esiste più, va in
+           `Generico` come «Riordina». Ma se l'elenco delle classi è ancora vuoto e la
+           riga HA una classe (non caricato: `get` darebbe null anche per una classe
+           che c'è) la cartella non nasce: la copia resta, e ci si riprova alla
+           prossima apertura. Una riga SENZA classe va in `Generico` anche con
+           l'elenco vuoto: è il docente senza classi (Giacomo, 07/10: «Va in
+           «Generico»»). Senza la chiave `clsId`, tutto come prima. */
+        if (Object.prototype.hasOwnProperty.call(opts, 'clsId')) {
+            var elenco = [];
+            try { elenco = (window.MappAIClasses && window.MappAIClasses.list) ? (window.MappAIClasses.list() || []) : []; } catch (e) { elenco = []; }
+            if (opts.clsId != null && (!Array.isArray(elenco) || !elenco.length)) return null;
+            try { cls = (opts.clsId != null && window.MappAIClasses.get) ? (window.MappAIClasses.get(opts.clsId) || null) : null; } catch (e) { cls = null; }
+        } else {
+            try { cls = (window.MappAIClasses && window.MappAIClasses.getActive()) || null; } catch (e) { cls = null; }
+            try { allievo = (window.MappAIClasses && window.MappAIClasses.activeStudentName) ? window.MappAIClasses.activeStudentName() : ''; } catch (e) { allievo = ''; }
+        }
         var info = await window.electronAPI.filesRootGet();
         var base = info && info.mapsBaseDir;
         if (!base) return null;

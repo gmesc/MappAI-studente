@@ -4048,4 +4048,6 @@ const en_translations = {
     rv_veste_g1_controllo_fuori: "Sentences kept out of the materials",
     rv_veste_g1_controllo_bozza: "Saved draft",
     rv_veste_g1_controllo_tecnici: "Technical details of the check",
+    // 0082 (ADR 0018 rev. 1, C3): beyond the cap of the documents list, an entry with its text never leaves
+    sdoc_oltre_tetto: "The list of documents has more than {n} entries: the documents that live only in the app's quick memory stay in the list until they are in the map folder.",
 };

@@ -184,6 +184,38 @@
         try { if (window.MappAIErrori && window.MappAIErrori.registra) window.MappAIErrori.registra({ dove: 'documenti', messaggio: msg }); } catch (e) { }
     }
     function _avviso(msg) { try { if (typeof window.showToast === 'function') window.showToast(msg, 'error'); } catch (e) { } }
+    /* 0082 (B3 (a); ADR 0018 rev. 1, C3): il taglio oltre il tetto, per i due posti
+       che mettono una voce in testa all'elenco. Oggi esce la voce più vecchia anche
+       quando porta il testo (l'unica copia del documento, senza file nella
+       cartella). Con `mappai_cassetto_solo_indice` acceso (lettore unico in
+       `MappAIVistaCore`, inv. 6) e col core, decide `oltreIlTetto`: escono prima le
+       voci snelle (il loro file è nella cartella), una col testo mai. La voce in
+       testa è quella che si sta salvando: resta fuori dal conto, come col taglio di
+       oggi (che non la toglie mai). Se l'elenco passa il tetto lo dice un avviso,
+       una volta nella sessione: si ripeterebbe a ogni salvataggio. Spento, o senza
+       uno dei due core (il reader non ha `mappai-documenti-core.js`): il taglio di
+       oggi. Toglie da `arr` (sul posto, come `splice`) e restituisce chi è uscito. */
+    let _oltreDetto = false;
+    function _taglia(arr) {
+        const VC = window.MappAIVistaCore, DC = _DC();
+        let solo = false;
+        try { solo = !!(VC && VC.cassettoSoloIndice && VC.cassettoSoloIndice()); } catch (e) { solo = false; }
+        if (!solo || !DC || typeof DC.oltreIlTetto !== 'function') return arr.length > DOCS_CAP ? arr.splice(DOCS_CAP) : [];
+        if (arr.length <= DOCS_CAP) return [];
+        const r = DC.oltreIlTetto(arr.slice(1), DOCS_CAP - 1);
+        arr.splice.apply(arr, [1, arr.length - 1].concat(r.voci));
+        if (r.oltre && !_oltreDetto) {
+            _oltreDetto = true;
+            _registro('L\'elenco dei documenti ha ' + arr.length + ' voci, oltre il tetto di ' + DOCS_CAP +
+                ': le voci col testo non escono finché il loro file non è nella cartella della mappa.');
+            try {
+                if (typeof window.showToast === 'function') window.showToast(_t('sdoc_oltre_tetto',
+                    'L\'elenco dei documenti ha più di {n} voci: i documenti che stanno solo nella memoria rapida dell\'app restano nell\'elenco finché non sono nella cartella della mappa.')
+                    .replace('{n}', DOCS_CAP), 'warning');
+            } catch (e) { }
+        }
+        return r.via;
+    }
     function _progettoAttuale() {
         try { return (typeof StorageManager !== 'undefined' && StorageManager) ? StorageManager.currentProjectId : null; }
         catch (e) { return null; }
@@ -381,7 +413,7 @@
         const vecchia = j >= 0 ? arr[j] : null;
         if (j >= 0) arr.splice(j, 1);
         arr.unshift(DC.voceSnella(entry, w.rel));
-        const via = arr.length > DOCS_CAP ? arr.splice(DOCS_CAP) : [];
+        const via = _taglia(arr);   // 0082: spento, il taglio di oggi
         if (_docsWrite(arr) <= 0) {
             if (vecchia && vecchia.id === id && vecchia.rel === w.rel && !vecchia.html && !vecchia.pdf) {
                 /* la voce snella di prima punta già a questo file, che ora porta la versione nuova */
@@ -498,8 +530,9 @@
         const ver = _nuovaVersione(entry.id);
         arr.unshift(entry);
         /* oltre il tetto la voce più vecchia esce dall'elenco; il suo file, se
-           c'è, resta nella cartella (niente si cancella) */
-        const via = arr.length > DOCS_CAP ? arr.splice(DOCS_CAP) : [];
+           c'è, resta nella cartella (niente si cancella). 0082: con il cassetto
+           solo indice acceso esce prima una voce snella, mai una col testo */
+        const via = _taglia(arr);
         /* `_docsWrite` torna 0 quando la lista non entra, e allora non ha toccato
            niente (B4). Dirlo con `null` permette al chiamante di non promettere un
            archivio che non c'è. */
