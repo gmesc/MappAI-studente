@@ -327,10 +327,224 @@
         return { voci: voci, byte: byte };
     }
 
+    /* ── 0082 (ADR 0018, revisione 2): IL CASSETTO TIENE SOLO L'INDICE ──────────
+       Con `mappai_cassetto_solo_indice` = '1' il salvataggio automatico scrive la
+       cartella del progetto aperto e poi toglie la copia dal cassetto; «Riprendi»
+       senza copia ritrova la cartella per id, per percorso, per posizione. Qui le
+       regole pure; le monta `StorageManager` (mappai-storage-lang.js), che fa l'I/O.
+
+       Il lettore UNICO dell'interruttore (inv. 6): spento di default (solo '1'
+       accende), vale solo con `mappai_cartella_completa` acceso (la cartella deve
+       saper ridare chat, Catena dei perché e copie dei documenti, 0078) e mai nel
+       reader (`electronAPI.__studente`: lì la `saveVault` scrive solo la vista e
+       non deve mai togliere una copia). Legge il `localStorage` e il `window` del
+       luogo in cui gira; dove mancano (Node) o lanciano, vale spento: un difetto
+       di lettura non deve togliere niente dal cassetto. */
+    var CHIAVE_SOLO_INDICE = 'mappai_cassetto_solo_indice';
+    function cassettoSoloIndice() {
+        var v = null;
+        try {
+            if (typeof localStorage === 'undefined' || !localStorage || typeof localStorage.getItem !== 'function') return false;
+            v = localStorage.getItem(CHIAVE_SOLO_INDICE);
+        } catch (e) { return false; }
+        if (v !== '1') return false;
+        if (!cartellaCompleta()) return false;
+        try {
+            if (typeof window !== 'undefined' && window && window.electronAPI && window.electronAPI.__studente) return false;
+        } catch (e) { return false; }
+        return true;
+    }
+
+    /* La FIRMA delle chat del Tutor (B6 (a)): un testo corto che cambia a ogni modo
+       in cui il Tutor cambia le sue chat — un messaggio nuovo (anche la risposta del
+       modello, che allunga l'ultimo), un reset (storia vuotata, chat di nodo tolta),
+       un cambio di modalità, una chat di nodo nuova anche vuota. Serve solo a
+       SVEGLIARE il salvataggio della cartella prima del giro di 120 s: chi decide se
+       la cartella è indietro confronta il testo intero (`cartellaIndietro`). Per la
+       barra laterale e per ogni nodo (id in ordine, così l'ordine delle chiavi non
+       conta): numero di messaggi, lunghezza del testo dell'ultimo, modalità. Niente
+       `JSON.stringify` della storia: la si legge ogni 5 s. Il composto passa da due
+       FNV-1a a 32 bit, così la firma resta corta anche con cento chat di nodo; una
+       collisione ritarda la scrittura al giro di 120 s, non la perde. Uno stato
+       assente o malformato dà la firma del vuoto. */
+    function _lunghezzaMessaggio(m) {
+        if (!m || typeof m !== 'object') return 0;
+        if (Array.isArray(m.parts)) {
+            var n = 0;
+            for (var i = 0; i < m.parts.length; i++) {
+                var p = m.parts[i];
+                if (p && typeof p.text === 'string') n += p.text.length;
+            }
+            return n;
+        }
+        return typeof m.text === 'string' ? m.text.length : 0;
+    }
+    function _firmaDiUnaChat(c) {
+        var h = (c && typeof c === 'object' && Array.isArray(c.history)) ? c.history : [];
+        var modo = (c && typeof c === 'object' && c.mode != null) ? String(c.mode) : '';
+        return h.length + '.' + (h.length ? _lunghezzaMessaggio(h[h.length - 1]) : 0) + '.' + modo;
+    }
+    function _fnv(s, seme) {
+        var h = seme >>> 0;
+        for (var i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 16777619) >>> 0;
+        }
+        return ('0000000' + h.toString(16)).slice(-8);
+    }
+    function firmaChat(stato) {
+        var st = _oggetto(stato) ? stato : {};
+        var parti = ['S' + _firmaDiUnaChat(_oggetto(st.sidebar) ? st.sidebar : null)];
+        var nodi = _oggetto(st.nodes) ? st.nodes : {};
+        var ids = Object.keys(nodi).sort();
+        for (var i = 0; i < ids.length; i++) parti.push(ids[i] + '=' + _firmaDiUnaChat(nodi[ids[i]]));
+        var tutto = parti.join('|');
+        return ids.length + ':' + _fnv(tutto, 2166136261) + _fnv(tutto, 0x811c9dc5 ^ 0x5bd1e995);
+    }
+
+    /* La cartella è INDIETRO rispetto allo stato vivo? Sul TESTO della copia e su
+       quello delle chat dell'ultima scrittura riuscita (l'impronta), mai sulla
+       presenza della copia nel cassetto: una copia rimasta non deve far riscrivere
+       la cartella a ogni giro. Senza impronta (dopo un riavvio, o un altro
+       progetto) è indietro: la prima scrittura si fa comunque. */
+    function cartellaIndietro(impronta, id, testoCopia, testoChat) {
+        if (!_oggetto(impronta) || impronta.id !== id) return true;
+        return testoCopia !== impronta.copia || testoChat !== impronta.chat;
+    }
+
+    /* `_scrivi` può NON rimettere la copia nel cassetto solo se la copia lì non c'è
+       (è uscita dopo una scrittura della cartella), l'impronta è di questo progetto
+       e il testo è proprio quello scritto nella cartella. Una copia vecchia rimasta
+       nel cassetto si riscrive sempre: altrimenti «Riprendi» riaprirebbe quella. */
+    function saltaCopia(impronta, id, testo, copiaNelCassetto) {
+        return copiaNelCassetto === null && _oggetto(impronta) && impronta.id === id && testo === impronta.copia;
+    }
+
+    /* Il salvataggio automatico scrive solo una cartella che ha `index.yaml` (la
+       `saveVault` creerebbe la cartella che manca: una riga rovinata scriverebbe la
+       mappa dentro la cartella di una classe) e che non dichiara un altro progetto
+       (inv. 20, ADR 0013). `idLetto` = l'id valido della riga `projectId:` in
+       colonna 0, o '' (`MappAIDocumentiCore.idDaIndice`). */
+    function cartellaScrivibile(esiste, idLetto, id) {
+        return !!esiste && (!idLetto || idLetto === id);
+    }
+
+    /* La copia si toglie dal cassetto solo se la cartella sa ridare tutto quello
+       che la copia porta (inv. 13: niente si perde per strada). Le condizioni, nel
+       loro ordine, ognuna col suo motivo (per il registro):
+         progetto       — il progetto aperto e il suo percorso sono quelli scritti;
+         nessuna-copia  — non c'era una copia quando la scrittura è partita;
+         copia-cambiata — la copia di adesso non è quella di T0 (più nuova, o tolta);
+         id             — la cartella dichiara l'id (letto o appena scritto);
+         fonti          — `Fonti/fonti.json` c'è, o non ci sono fonti in memoria;
+         set            — nessun set della mappa resta fuori dalla cartella;
+         bozze          — nessuna bozza della revisione docente.
+       → { togli, motivo } */
+    function copiaDaTogliere(o) {
+        var x = _oggetto(o) ? o : {};
+        if (!x.stessoProgetto) return { togli: false, motivo: 'progetto' };
+        if (x.copiaT0 == null) return { togli: false, motivo: 'nessuna-copia' };
+        if (x.copiaOra !== x.copiaT0) return { togli: false, motivo: 'copia-cambiata' };
+        if (!x.idConfermato) return { togli: false, motivo: 'id' };
+        if (!x.fontiOk) return { togli: false, motivo: 'fonti' };
+        if (x.setsFuori === true || Number(x.setsFuori) > 0) return { togli: false, motivo: 'set' };
+        if (x.bozze) return { togli: false, motivo: 'bozze' };
+        return { togli: true, motivo: null };
+    }
+
+    /* Il campo `cartella` della riga d'indice: il percorso della cartella del
+       progetto RELATIVO alla radice dei file quando ci sta dentro (DAL Protocol,
+       inv. 7), intero quando sta fuori (Analisi, Scrivania) o la radice è ignota.
+       I confronti sulla stessa forma (trappola 50): `\` diventa `/` sui due lati, e
+       la radice vale solo come cartella intera (un prefisso «…fileX» non è dentro
+       «…file»). */
+    function _barre(s) { return String(s).replace(/\\/g, '/'); }
+    function percorsoRiga(full, rootDir) {
+        if (full == null || String(full) === '') return null;
+        if (rootDir == null || String(rootDir) === '') return String(full);
+        var f = _barre(full), r = _barre(rootDir).replace(/\/+$/, '');
+        if (r && f.indexOf(r + '/') === 0) {
+            var rel = f.slice(r.length + 1).replace(/^\/+|\/+$/g, '');
+            if (rel) return rel;
+        }
+        return String(full);
+    }
+    /* Il ritorno: un percorso intero (che comincia con `/`, `\` o una lettera di
+       unità) resta com'è; uno relativo si appoggia alla radice. Un relativo senza
+       radice, o che risale (`..`), non porta da nessuna parte: null. */
+    function percorsoDaRiga(cartella, rootDir) {
+        if (cartella == null) return null;
+        var c = String(cartella);
+        if (!c) return null;
+        if (/^[\\/]/.test(c) || /^[A-Za-z]:[\\/]/.test(c)) return c;
+        var segs = _barre(c).split('/').filter(Boolean);
+        if (!segs.length || segs.some(function (s) { return s === '..'; })) return null;
+        if (rootDir == null || String(rootDir) === '') return null;
+        var r = String(rootDir).replace(/[\\/]+$/, '');
+        return r + '/' + segs.join('/');
+    }
+
+    /* §4.9 — `qualita.json` non si svuota. `R.persistQuality` riscrive il file coi
+       rapporti in memoria; dopo un'apertura dalla cartella sono azzerati
+       (`azzeraGenerazione`) e il file perdeva ancora, copertura, giudice e reranker.
+       Un rapporto che in memoria è null o assente prende il valore del file, solo
+       se il file è un oggetto JSON con lo stesso `schema`; uno presente in memoria
+       vince sempre. Un file che manca, illeggibile o di un altro schema non aggiunge
+       niente (e non blocca la scrittura: chi chiama scrive comunque). Non muta
+       `dati`: restituisce una copia. Vale sempre, anche a interruttore spento
+       (decisione di Giacomo, 07/10). */
+    var RAPPORTI_QUALITA = ['ancora', 'copertura', 'giudice', 'reranker'];
+    function unisciQualita(testoFile, dati) {
+        if (!_oggetto(dati)) return dati;
+        var out = Object.assign({}, dati);
+        var f = null;
+        try { f = (typeof testoFile === 'string' && testoFile) ? JSON.parse(testoFile) : null; } catch (e) { f = null; }
+        if (!_oggetto(f) || !dati.schema || f.schema !== dati.schema) return out;
+        /* i rapporti appartengono a una GENERAZIONE: quelli di un'altra non entrano
+           (revisione avversaria, 07/10). Senza generazione in memoria (dopo
+           un'apertura dalla cartella `_generationId` è azzerato) si tengono quella
+           del file e il suo modello, così i rapporti non restano senza la loro. */
+        if (f.generationId != null && out.generationId != null && f.generationId !== out.generationId) return out;
+        if (out.generationId == null && f.generationId != null) out.generationId = f.generationId;
+        if (!out.modello && f.modello) out.modello = f.modello;
+        RAPPORTI_QUALITA.forEach(function (k) {
+            if (out[k] == null && f[k] != null) out[k] = f[k];
+        });
+        return out;
+    }
+
+    /* Le FONTI che la cartella sa ridare (revisione avversaria, 07/10): non basta che
+       `Fonti/fonti.json` esista. Ogni fonte in memoria (chi chiama passa solo quelle
+       che l'indice scrive: `MappAIFontiCore.vociScrivibili`, fuori quelle di
+       `Allegati/`) deve starci per `id`, e una fonte col testo — più di 40 caratteri,
+       la soglia oltre cui `salvaIndiceFonti` scrive il `.txt` — col suo `testoRel`.
+       Un «Aggiungi PDF» il cui indice non si è riscritto lascerebbe la fonte solo
+       nella copia. Senza fonti in memoria è vero; senza indice, o illeggibile, falso. */
+    function fontiCoperte(testoIndice, fonti) {
+        var lista = Array.isArray(fonti) ? fonti.filter(Boolean) : [];
+        if (!lista.length) return true;
+        var idx = null;
+        try { idx = (typeof testoIndice === 'string' && testoIndice) ? JSON.parse(testoIndice) : null; } catch (e) { idx = null; }
+        if (!_oggetto(idx) || !Array.isArray(idx.fonti)) return false;
+        var perId = {};
+        idx.fonti.forEach(function (v) { if (_oggetto(v) && v.id != null && String(v.id) !== '') perId[String(v.id)] = v; });
+        return lista.every(function (s) {
+            if (s.id == null || String(s.id) === '') return false;
+            var v = perId[String(s.id)];
+            if (!v) return false;
+            if (String(s.content == null ? '' : s.content).length > 40 && !v.testoRel) return false;
+            return true;
+        });
+    }
+
     return {
         SCHEMA: SCHEMA, raccogli: raccogli, applica: applica, statoSnello: statoSnello,
         snelloDaVoce: snelloDaVoce, schedaPartita: schedaPartita, pianoLiberaSpazio: pianoLiberaSpazio,
         residuo: residuo, CAMPI_DALLA_CARTELLA: CAMPI_DALLA_CARTELLA,
-        cartellaCompleta: cartellaCompleta, azzeraGenerazione: azzeraGenerazione, CAMPI_GENERAZIONE: CAMPI_GENERAZIONE
+        cartellaCompleta: cartellaCompleta, azzeraGenerazione: azzeraGenerazione, CAMPI_GENERAZIONE: CAMPI_GENERAZIONE,
+        cassettoSoloIndice: cassettoSoloIndice, firmaChat: firmaChat, cartellaIndietro: cartellaIndietro,
+        saltaCopia: saltaCopia, cartellaScrivibile: cartellaScrivibile, copiaDaTogliere: copiaDaTogliere,
+        percorsoRiga: percorsoRiga, percorsoDaRiga: percorsoDaRiga, unisciQualita: unisciQualita,
+        fontiCoperte: fontiCoperte
     };
 }));

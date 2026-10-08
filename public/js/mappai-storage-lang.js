@@ -221,6 +221,23 @@ const StorageManager = {
                     || null)
         };
 
+        /* 0082 (§4.4): col cassetto solo indice acceso la riga porta `cartella`, il
+           percorso della cartella del progetto relativo alla radice dei file quando
+           ci sta dentro, intero quando sta fuori (Analisi): «Riprendi» senza copia la
+           ritrova anche fuori da `Mappe/`. La radice (`_radice`) la leggono
+           `allineaCartella` e `loadProject` da `filesRootGet`, e resta: finché non è
+           nota, se la cartella è quella della riga di prima il valore resta il suo.
+           Spento: nessun campo nuovo. */
+        const VCs = window.MappAIVistaCore;
+        const soloIndice = !!(VCs && VCs.cassettoSoloIndice && VCs.cassettoSoloIndice());
+        if (soloIndice) {
+            const nfcV = s => { try { return String(s || '').normalize('NFC'); } catch (e) { return String(s || ''); } };
+            if (!appState.activeVaultPath) pMeta.cartella = null;
+            else if (this._radice) pMeta.cartella = VCs.percorsoRiga(appState.activeVaultPath, this._radice);
+            else if (existing && existing.vault && pMeta.vault && nfcV(existing.vault) === nfcV(pMeta.vault) && existing.cartella !== undefined) pMeta.cartella = existing.cartella;
+            else pMeta.cartella = VCs.percorsoRiga(appState.activeVaultPath, null);
+        }
+
         if (idx >= 0) projects[idx] = pMeta;
         else projects.push(pMeta);
 
@@ -245,15 +262,28 @@ const StorageManager = {
         let snello = false;
         try { snello = localStorage.getItem('mappai_cassetto_snello') === '1'; } catch (e) { snello = false; }
         const _scrivi = () => {
-            /* SNELLO (15/8): dopo il disegno D3 ogni arco porta dentro l'intero
-               nodo di partenza e di arrivo — misurato su un foglio vero: 120 KB
-               di link per 8,8 KB di dati. I link tornano coppie di id (il
-               caricamento li accetta già così: è la forma dei vault). */
-            const daScrivere = (window.MappAIVistaCore && window.MappAIVistaCore.statoSnello)
-                ? (snello ? window.MappAIVistaCore.statoSnello(appState, { snello: true }) : window.MappAIVistaCore.statoSnello(appState))
-                : appState;
-            localStorage.setItem(this.currentProjectId, JSON.stringify(daScrivere));
+            /* 0082: il testo della copia si calcola in UN posto (`_testoCopia`), lo
+               stesso che `allineaCartella` ricorda nell'impronta (inv. 6). */
+            const testo = this._testoCopia();
+            const id = this.currentProjectId;
+            /* 0082 (§4.2): acceso, la copia non si rimette nel cassetto solo se lì non
+               c'è (è uscita dopo una scrittura della cartella) e il testo è quello
+               dell'impronta: la cartella ha già questo stato. In ogni altro caso si
+               scrive come oggi; la riga d'indice si scrive sempre. Una copia DIVERSA
+               dall'impronta vuol dire che la mappa è cambiata: si chiede la scrittura
+               della cartella fra ~10 s (§4.3-bis), non a ogni `renderGraph`. */
+            let salta = false, diversa = false;
+            if (soloIndice) {
+                let nelCassetto = null;
+                try { nelCassetto = localStorage.getItem(id); } catch (e) { nelCassetto = undefined; }
+                salta = VCs.saltaCopia(this._impronta, id, testo, nelCassetto);
+                const imp = this._impronta;
+                diversa = !(imp && imp.id === id && imp.copia === testo);
+            }
+            if (!salta) localStorage.setItem(id, testo);
             localStorage.setItem('tutor_ai_projects', JSON.stringify(projects));
+            /* (un progetto senza cartella non ha niente da scrivere: niente timer) */
+            if (soloIndice && !salta && diversa && appState.activeVaultPath) this._chiediAllineamento();
         };
         try {
             _scrivi();
@@ -300,9 +330,12 @@ const StorageManager = {
                 }
             } catch (e2) {
                 /* nemmeno potando ci sta: si dice FORTE — un salvataggio perso
-                   in silenzio è il guasto peggiore di questo file. Il vault su
-                   disco resta la rete (l'autosave JSON qui sotto è già partito
-                   nelle chiamate precedenti). */
+                   in silenzio è il guasto peggiore di questo file. La rete è la
+                   cartella del progetto, quando c'è (il ramo del cassetto pieno qui
+                   sotto la scrive, e col cassetto solo indice la scrive anche il
+                   salvataggio automatico, 0082). Il `mm_*.json` qui sotto non è una
+                   rete: nessuno lo rilegge, e da qui non si arriva nemmeno a
+                   scriverlo (questo ramo esce prima). */
                 console.error('[Storage] salvataggio non riuscito, quota piena:', e2 && e2.message);
                 /* Il guasto peggiore di questo file, e finora lasciava traccia
                    SOLO in console: un tester non la apre, e la segnalazione
@@ -358,7 +391,10 @@ const StorageManager = {
         // NON passare appState raw: dopo la simulazione D3 i nodi contengono
         // riferimenti circolari non serializzabili (Structured Clone crash).
         // Passiamo solo i campi che saveMapJSON usa effettivamente.
-        if (window.electronAPI) {
+        /* 0082 (§4.8): col cassetto solo indice acceso il `mm_*.json` nella radice di
+           `Mappe/` non si scrive più — nessuno lo rilegge, e la cartella del progetto
+           è la verità. Restano l'IPC e «Esporta JSON». Spento, come prima. */
+        if (window.electronAPI && !soloIndice) {
             try {
                 window.electronAPI.saveMapJSON({
                     extractionMode: appState.extractionMode,
@@ -377,6 +413,300 @@ const StorageManager = {
                 console.warn('[MappAI] saveMapJSON fallito:', e.message);
             }
         }
+    },
+
+    /* ── IL CASSETTO TIENE SOLO L'INDICE (0082, ADR 0018 revisione 2) ────────────
+       Con `mappai_cassetto_solo_indice` = '1' (lettore unico:
+       `MappAIVistaCore.cassettoSoloIndice`, che vale spento senza
+       `mappai_cartella_completa` e nel reader) il salvataggio automatico scrive la
+       cartella del progetto aperto dallo stato VIVO, ~10 s dopo che la mappa o le
+       chat del Tutor sono cambiate e al più ogni 120 s come rete, e poi toglie la
+       copia dal cassetto: resta la riga d'indice. Prima la cartella si scriveva solo
+       a HOME, a ⌘Q, a fine generazione e con pochi altri gesti, e una modifica fatta
+       dopo l'ultimo stava solo nella finestra e nella copia. Le regole sono pure
+       (inv. 4, mappai-vista-core.js); qui l'I/O. Spento: niente di tutto questo.
+
+       Il testo della COPIA, in un posto solo (inv. 6): quello che `_scrivi` mette nel
+       cassetto e che `allineaCartella` ricorda nell'impronta. SNELLO (15/8): dopo il
+       disegno D3 ogni arco porta dentro l'intero nodo di partenza e di arrivo —
+       misurato su un foglio vero: 120 KB di link per 8,8 KB di dati. I link tornano
+       coppie di id (il caricamento li accetta già così: è la forma dei vault).
+       0076: con `mappai_cassetto_snello` = '1' la copia non porta ciò che è già
+       nella cartella (la regola sta in MappAIVistaCore). */
+    _testoCopia: function () {
+        let snello = false;
+        try { snello = localStorage.getItem('mappai_cassetto_snello') === '1'; } catch (e) { snello = false; }
+        const VC = window.MappAIVistaCore;
+        const daScrivere = (VC && VC.statoSnello)
+            ? (snello ? VC.statoSnello(appState, { snello: true }) : VC.statoSnello(appState))
+            : appState;
+        return JSON.stringify(daScrivere);
+    },
+
+    /* L'IMPRONTA dell'ultima scrittura riuscita della cartella (in memoria, null
+       all'avvio): { id, copia, chat, firma } — il testo della copia, quello delle
+       chat e la loro firma in quell'istante. Dice se la cartella è indietro (sul
+       testo, mai sulla presenza della copia) e se `_scrivi` può non rimettere una
+       copia uscita. `_radice`: la radice dei file (`filesRootGet().rootDir`), letta
+       una volta e tenuta, per il campo `cartella` della riga. `_firmaVista`: la firma
+       delle chat vista per ultima da `_guardaChat`. `_rinvio`: il setTimeout di 10 s.
+       `_alInVolo`: una scrittura sola in volo. `_cartellaDette`: le righe di
+       registro già scritte nella sessione (una per percorso, una per progetto). */
+    _impronta: null,
+    _radice: null,
+    _firmaVista: null,
+    _rinvio: null,
+    _alInVolo: false,
+    _cartellaDette: {},
+
+    /* §4.3 — il salvataggio automatico scrive la cartella e toglie la copia.
+       1. pause: spento; revisione in ripristino o in errore; generazione; pipeline;
+          cassetto pieno in volo; riapertura dalla cartella; una scrittura sua in
+          volo; niente cartella, id o nodi (come `saveCurrentProject`); IPC mancanti.
+       2. indietro? (sul testo della copia e delle chat). Se no e la copia c'è
+          (rimasta dopo un rifiuto, o rimessa dal residuo del cassetto pieno), si
+          prova SOLO a toglierla, con letture fresche di `index.yaml` e `Fonti/`.
+       3. scrivibile? `index.yaml` c'è e non dichiara un altro progetto (la
+          `saveVault` creerebbe la cartella che manca: inv. 20, ADR 0013).
+       4. id, percorso, copia di T0, testo della copia, stato e chat nello STESSO
+          giro della `saveVault`, senza attese in mezzo: una scrittura di HOME o ⌘Q
+          arrivata durante il passo 3 non viene coperta da una più vecchia.
+       5. riuscita (`success`, non `soloVista`): l'impronta; la copia si toglie solo
+          alle condizioni di `copiaDaTogliere` (inv. 13). Non riuscita
+          (`review-conflict` compreso): niente si toglie e l'impronta non cambia.
+       6. nessuna finestra e nessun toast: il registro, una riga per percorso e una
+          per progetto nella sessione. */
+    allineaCartella: async function () {
+        const VC = window.MappAIVistaCore;
+        if (!(VC && VC.cassettoSoloIndice && VC.cassettoSoloIndice())) return;
+        const api = window.electronAPI;
+        const ferma = () => {
+            if (typeof appState === 'undefined' || !appState) return true;
+            if (appState._reviewRestoring || appState._reviewRestoreError) return true;
+            try { if (window.MappAIGen && window.MappAIGen.attiva && window.MappAIGen.attiva()) return true; } catch (e) { return true; }
+            try { if (window.MappAIPipeline && window.MappAIPipeline.occupata && window.MappAIPipeline.occupata()) return true; } catch (e) { return true; }
+            if (this._cp && this._cp.inVolo) return true;
+            if (this._apreDallaCartella) return true;
+            if (!appState.activeVaultPath || !this.currentProjectId) return true;
+            if (!appState.db || !Array.isArray(appState.db.nodes) || !appState.db.nodes.length) return true;
+            return false;
+        };
+        if (this._alInVolo || ferma()) return;
+        if (!api || !api.saveVault || !api.readVaultFile || !window.buildVaultMapData) return;
+
+        const id = this.currentProjectId, percorso = appState.activeVaultPath;
+        const nome = String(percorso).split(/[\\/]/).filter(Boolean).pop() || '';
+        /* il registro: una riga per chiave nella sessione, col nome della cartella
+           (mai il percorso intero: la riga viaggia nelle segnalazioni) */
+        const registra = (chiave, msg) => {
+            if (this._cartellaDette[chiave]) return;
+            this._cartellaDette[chiave] = true;
+            try { if (window.MappAIErrori && window.MappAIErrori.registra) window.MappAIErrori.registra({ dove: 'cassetto', messaggio: msg }); } catch (e) { }
+        };
+        /* passo 2: le chat come le scrive `buildVaultMapData` (typeof: nei test che
+           ritagliano `StorageManager` il Tutor non c'è) */
+        let chatOra;
+        try {
+            chatOra = (typeof tutorState !== 'undefined' && typeof serializeTutorState === 'function')
+                ? JSON.stringify(serializeTutorState(tutorState)) : undefined;
+        } catch (e) { chatOra = undefined; }
+        const indietro = VC.cartellaIndietro(this._impronta, id, this._testoCopia(), chatOra);
+        let copiaPrima = null;
+        try { copiaPrima = localStorage.getItem(id); } catch (e) { copiaPrima = null; }
+        if (!indietro && copiaPrima === null) return;
+
+        const leggi = async (rel) => {
+            let r = null;
+            try { r = await api.readVaultFile({ vaultPath: percorso, relPath: rel }); } catch (e) { r = null; }
+            if (!r || !r.ok) return null;
+            try {
+                return r.text != null ? String(r.text)
+                    : new TextDecoder().decode(Uint8Array.from(atob(r.base64 || ''), c => c.charCodeAt(0)));
+            } catch (e) { return null; }
+        };
+        /* i set della mappa (per id, distinti) che `save-vault` lascia fuori dalla
+           cartella: la regola è quella di `MappAIFilesCore.setsDelVault`, non una
+           copia (inv. 6). Senza il core nessuno dice che ci sono: restano «fuori». */
+        const setsFuori = (sets, titolo) => {
+            const tutti = Array.isArray(sets) ? sets.filter(Boolean) : [];
+            if (!tutti.length) return 0;
+            const FC = window.MappAIFilesCore;
+            if (!FC || !FC.setsDelVault) return tutti.length;
+            const dentro = FC.setsDelVault(tutti, titolo) || [];
+            const chiave = s => (s && s.id != null) ? String(s.id).trim() : '';
+            const idDentro = {};
+            dentro.forEach(s => { const k = chiave(s); if (k) idDentro[k] = true; });
+            const visti = {};
+            let n = 0;
+            tutti.forEach(s => {
+                const k = chiave(s);
+                if (k) { if (!idDentro[k] && !visti[k]) { visti[k] = true; n++; } }
+                else if (dentro.indexOf(s) < 0) n++;
+            });
+            return n;
+        };
+        const MOTIVI = {
+            'progetto': 'il progetto aperto è cambiato durante la scrittura',
+            'copia-cambiata': 'la copia è cambiata durante la scrittura',
+            'id': 'la cartella non dichiara l\'id del progetto',
+            'fonti': 'la cartella non ha Fonti/ e ci sono fonti in memoria',
+            'set': 'un set di domande resta fuori dalla cartella',
+            'bozze': 'c\'è una bozza della revisione docente'
+        };
+        /* passo 5, l'uscita della copia: le condizioni lette ADESSO, e fra la lettura
+           della copia e la sua uscita nessuna attesa */
+        const togli = async (copiaT0, idConfermato, titolo) => {
+            /* le fonti: ognuna nell'indice di `Fonti/` per id, col suo testo
+               (`fontiCoperte`); quelle di `Allegati/` l'indice non le scrive
+               (`vociScrivibili`). Senza il core delle fonti si chiedono tutte. */
+            const FO = window.MappAIFontiCore;
+            const tutte = Array.isArray(appState.sources) ? appState.sources.filter(Boolean) : [];
+            const daCoprire = (FO && FO.vociScrivibili) ? FO.vociScrivibili(tutte) : tutte;
+            let fontiOk = !daCoprire.length;
+            if (!fontiOk) fontiOk = VC.fontiCoperte(await leggi('Fonti/fonti.json'), daCoprire);
+            const st = appState;
+            let copiaOra = null;
+            try { copiaOra = localStorage.getItem(id); } catch (e) { copiaOra = undefined; }
+            const d = VC.copiaDaTogliere({
+                stessoProgetto: this.currentProjectId === id && !!st && st.activeVaultPath === percorso,
+                copiaOra: copiaOra, copiaT0: copiaT0, idConfermato: idConfermato, fontiOk: fontiOk,
+                setsFuori: setsFuori(st && st.db && st.db.studySets, titolo),
+                bozze: !!(st && (st._reviewLocalDraft || st._reviewDiskDraft))
+            });
+            if (d.togli) {
+                try { localStorage.removeItem(id); } catch (e) { }
+                return;
+            }
+            /* una riga per motivo e per progetto nella sessione; i motivi passeggeri
+               (il docente ha cambiato mappa o modificato durante la scrittura) non
+               ne scrivono: al giro dopo la copia esce */
+            if (['nessuna-copia', 'progetto', 'copia-cambiata'].indexOf(d.motivo) < 0) {
+                registra('copia|' + d.motivo + '|' + id, 'Salvataggio automatico: la cartella «' + nome + '» è scritta, ma la copia del progetto resta ' +
+                    'nella memoria rapida (' + (MOTIVI[d.motivo] || d.motivo) + ').');
+            }
+        };
+
+        this._alInVolo = true;
+        try {
+            if (!this._radice && api.filesRootGet) {
+                try { const info = await api.filesRootGet(); if (info && info.rootDir) this._radice = info.rootDir; } catch (e) { }
+            }
+            /* passo 3 */
+            const DC = window.MappAIDocumentiCore;
+            const indice = await leggi('index.yaml');
+            const idLetto = (indice !== null && DC && DC.idDaIndice) ? DC.idDaIndice(indice) : '';
+            const scrivibile = !!(DC && DC.idDaIndice) && VC.cartellaScrivibile(indice !== null, idLetto, id);
+            if (!scrivibile) {
+                registra('percorso|' + percorso, 'Salvataggio automatico: la cartella «' + nome + '» non si scrive (manca index.yaml, ' +
+                    'o dichiara un altro progetto). La copia resta nella memoria rapida.');
+                return;
+            }
+            if (this.currentProjectId !== id || appState.activeVaultPath !== percorso || ferma()) return;
+            if (!indietro) {
+                /* cartella pari, copia rimasta: si prova solo a toglierla */
+                await togli(copiaPrima, idLetto === id, appState.rootNodeLabel);
+                return;
+            }
+            /* passo 4: nello stesso giro, senza attese fino alla chiamata */
+            let copiaT0 = null;
+            try { copiaT0 = localStorage.getItem(id); } catch (e) { copiaT0 = null; }
+            let testoCopia, mapData, testoChat, firma;
+            try {
+                testoCopia = this._testoCopia();
+                firma = VC.firmaChat ? VC.firmaChat(window.tutorState) : null;
+                mapData = window.buildVaultMapData();
+                testoChat = JSON.stringify(mapData.tutorState);
+            } catch (e) {
+                registra('scrittura|' + id, 'Salvataggio automatico: la cartella «' + nome + '» NON è stata scritta (' + (e && e.message || '') + ').');
+                return;
+            }
+            let res;
+            try { res = await api.saveVault({ folderPath: percorso, mapData: mapData }); }
+            catch (e) { res = { success: false, error: e && e.message }; }
+            if (!res || !res.success || res.soloVista) {
+                registra('scrittura|' + id, 'Salvataggio automatico: la cartella «' + nome + '» NON è stata scritta (' +
+                    ((res && res.error) || (res && res.soloVista ? 'solo la vista' : '')) + '). La copia resta nella memoria rapida.');
+                return;
+            }
+            this._impronta = { id: id, copia: testoCopia, chat: testoChat, firma: firma };
+            this._firmaVista = firma;
+            const FCc = window.MappAIFilesCore;
+            const idConfermato = idLetto === id
+                || (mapData.projectId === id && !!(FCc && FCc.idProgettoValido && FCc.idProgettoValido(id)));
+            await togli(copiaT0, idConfermato, mapData.rootNodeLabel);
+        } finally {
+            this._alInVolo = false;
+        }
+    },
+
+    /* §4.3-bis — IL RINVIO DI 10 S (B6 (a)): la cartella si scrive poco dopo
+       l'ultima modifica, non solo al giro di 120 s (che resta come rete). Un rinvio
+       solo per volta, azzerato e riarmato a ogni richiesta. Allo scadere, con una
+       scrittura in volo si riarma; se una pausa del passo 1 ferma `allineaCartella`
+       (generazione, pipeline, ripristino) non si riarma: ci pensa il giro di 120 s.
+       Lo chiedono `_scrivi` (una copia diversa dall'impronta) e `_guardaChat`. */
+    _chiediAllineamento: function () {
+        const VC = window.MappAIVistaCore;
+        if (!(VC && VC.cassettoSoloIndice && VC.cassettoSoloIndice())) return;
+        if (this._rinvio !== null) { try { clearTimeout(this._rinvio); } catch (e) { } }
+        this._rinvio = setTimeout(() => {
+            this._rinvio = null;
+            if (this._alInVolo) { this._chiediAllineamento(); return; }
+            try {
+                const p = this.allineaCartella();
+                if (p && typeof p.catch === 'function') p.catch(e => console.warn('[Storage] allineaCartella:', e && e.message));
+            } catch (e) { }
+        }, 10000);
+    },
+
+    /* Lo sguardo sulle chat (B6 (a)), ogni 5 s da un setInterval qui sotto: le chat
+       del Tutor non passano da `saveCurrentProject`, e una domanda al Tutor senza
+       altre modifiche aspettava il giro di 120 s. Legge `window.tutorState` (lo
+       stesso oggetto di `tutorState`, anche dopo `setTutorState`), ne fa la firma
+       (pura, senza serializzare la storia) e, se è cambiata dall'ultima vista, la
+       ricorda e chiede il rinvio. La prima volta la registra e basta. Spento, o con
+       la revisione in ripristino: niente. */
+    _guardaChat: function () {
+        const VC = window.MappAIVistaCore;
+        if (!(VC && VC.cassettoSoloIndice && VC.cassettoSoloIndice() && VC.firmaChat)) return;
+        if (typeof appState === 'undefined' || !appState || appState._reviewRestoring) return;
+        const ts = window.tutorState;
+        if (ts === undefined) return;
+        const f = VC.firmaChat(ts);
+        if (this._firmaVista === null) { this._firmaVista = f; return; }
+        if (f === this._firmaVista) return;
+        this._firmaVista = f;
+        this._chiediAllineamento();
+    },
+
+    /* «Riprendi» dalla cartella (ad acceso, revisione avversaria del 07/10):
+       `directLoadVault` azzera lo stato di generazione della mappa di prima (0078,
+       `azzeraGenerazione`), `generationDiscipline` compresa. Senza, in `index.yaml`
+       vincerebbe la disciplina ATTIVA del docente (`_contestoDellaMappa`), e la
+       scrittura automatica ~10 s dopo la riapertura la metterebbe nella cartella di
+       una mappa di un'altra materia. Si rimette quella di QUESTO progetto: la `disc`
+       della sua riga, o quella che la cartella dichiara (`vaultMateria`). Solo se il
+       progetto aperto è ancora questo e la disciplina è vuota. */
+    _disciplinaDellaRiga: function (id, disc) {
+        try {
+            if (this.currentProjectId !== id || typeof appState === 'undefined' || !appState || appState.generationDiscipline) return;
+            const d = disc || appState.vaultMateria || '';
+            if (d) appState.generationDiscipline = d;
+        } catch (e) { }
+    },
+
+    /* B4 (a) — chi dopo «Riprendi» agisce sulla mappa (ELABORA apre i documenti,
+       INSEGNA Lavagna o Live) passa da qui, così la regola sta in un posto solo
+       (inv. 6). Col cassetto solo indice acceso un progetto senza copia si apre dalla
+       cartella e la mappa cambia dopo la lettura del disco: `fn` aspetta la promessa
+       di `loadProject` (anche rifiutata). Spento, o senza promessa: `fn` subito,
+       come prima. */
+    dopoApertura: function (promessa, fn) {
+        const VC = window.MappAIVistaCore;
+        let acceso = false;
+        try { acceso = !!(VC && VC.cassettoSoloIndice && VC.cassettoSoloIndice()); } catch (e) { acceso = false; }
+        if (acceso && promessa && typeof promessa.then === 'function') promessa.then(fn, fn);
+        else fn();
     },
 
     /* ── IL CASSETTO PIENO (0076, ADR 0018 punto 4) ─────────────────────────
@@ -583,6 +913,19 @@ const StorageManager = {
         /* 0076: lo stato di prima, finché una riapertura dalla cartella (residuo o
            copia «superata») non è riuscita — per rimetterlo se qualcosa si ferma */
         let prima = null;
+        /* 0082 (§4.5-4.6): l'interruttore del cassetto solo indice (lettore unico nel
+           core della vista) e la classe della RIGA, letta qui in testa: dopo, il
+           primo salvataggio col primo disegno scriverebbe la classe attiva in una
+           riga che non ne ha (`clsId` di `saveCurrentProject`), e la cartella che
+           manca nascerebbe sotto la classe sbagliata. Nessuna attesa in più. */
+        const soloIndice = !!(window.MappAIVistaCore && window.MappAIVistaCore.cassettoSoloIndice
+            && window.MappAIVistaCore.cassettoSoloIndice());
+        let clsDellaRiga = null, discDellaRiga = null;
+        try {
+            const r0 = (JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]') || []).find(x => x && x.id === id);
+            clsDellaRiga = (r0 && r0.clsId) || null;
+            discDellaRiga = (r0 && r0.disc) || null;
+        } catch (e) { clsDellaRiga = null; discDellaRiga = null; }
         try {
             const data = localStorage.getItem(id);
             /* Senza snapshot ma con un VAULT, la mappa non è persa: si apre
@@ -597,8 +940,81 @@ const StorageManager = {
                        cartella scritta a cassetto pieno — anche fuori da `Mappe/`,
                        dove la ricerca per nome qui sotto non arriva */
                     if (p && p.superata && p.superata.cartella && window.directLoadVault) {
+                        if (soloIndice) {
+                            /* 0082 (B4 (a)): acceso, si risponde DOPO l'apertura */
+                            try { await window.directLoadVault(String(p.superata.cartella)); } catch (e) { }
+                            this._disciplinaDellaRiga(id, p.disc);
+                            return true;
+                        }
                         window.directLoadVault(String(p.superata.cartella));
                         return true;
+                    }
+                    /* 0082 (§4.5): col cassetto solo indice acceso la copia esce quando la
+                       cartella è scritta, e «Riprendi» senza copia diventa la strada di
+                       ogni giorno. L'ordine, alla prima che risponde:
+                         1. il segno «superata» (0076), qui sopra;
+                         2. l'ID: la cartella che dichiara il `projectId` della riga, se è
+                            una sola (inv. 20, ADR 0013: l'id prima del percorso);
+                         3. il campo `cartella` della riga, riportato a percorso intero, se
+                            è una mappa di questo progetto (`index.yaml` c'è e non dichiara
+                            un altro id: mai la cartella di una classe) — anche fuori da
+                            `Mappe/`, dove l'elenco non arriva;
+                         4. la POSIZIONE e il ripiego, come prima.
+                       E si risponde DOPO `directLoadVault` (B4 (a)): ELABORA e INSEGNA
+                       aspettano la mappa. Se l'apertura non riesce si risponde `true` lo
+                       stesso (`directLoadVault` non ha un esito: limite dichiarato fino
+                       ad A4). Spento: l'ordine e i tempi di prima, qui sotto. */
+                    /* La POSIZIONE, per le due strade. NFC sui due lati: il nome viene
+                       dal DISCO (scomposto) e p.vault dalla memoria (composto) — guida
+                       §8.25 */
+                    const _n = (x) => (window.MappAITeachCore && window.MappAITeachCore.nfc)
+                        ? window.MappAITeachCore.nfc(x) : String(x == null ? '' : x);
+                    const stessaPos = (v) => v && _n(v.folderName) === _n(p.vault)
+                        && _n(v.classDir || '') === _n(p.classDir || '')
+                        && _n(v.discDir || '') === _n(p.discDir || '') && !v.studentDir;
+                    const api0 = window.electronAPI;
+                    if (soloIndice && p && api0 && api0.filesRootGet && window.directLoadVault) {
+                        const apri = async (fp) => { try { await window.directLoadVault(fp); } catch (e) { } this._disciplinaDellaRiga(id, p.disc); return true; };
+                        let all = [];
+                        if (api0.getAllVaults) { try { all = (await api0.getAllVaults()) || []; } catch (e) { all = []; } }
+                        const sue = all.filter(v => v && v.projectId === id && v.fullPath);
+                        if (sue.length === 1) return await apri(sue[0].fullPath);
+                        let info = null;
+                        const radice = async () => {
+                            if (this._radice) return this._radice;
+                            try { info = info || (await api0.filesRootGet()); } catch (e) { info = null; }
+                            if (info && info.rootDir) this._radice = info.rootDir;
+                            return this._radice || null;
+                        };
+                        const VCr = window.MappAIVistaCore, DCr = window.MappAIDocumentiCore;
+                        if (p.cartella && VCr.percorsoDaRiga && api0.readVaultFile && DCr && DCr.idDaIndice) {
+                            const fp = VCr.percorsoDaRiga(p.cartella, await radice());
+                            if (fp) {
+                                let r = null;
+                                try { r = await api0.readVaultFile({ vaultPath: fp, relPath: 'index.yaml' }); } catch (e) { r = null; }
+                                let testo = null;
+                                if (r && r.ok) {
+                                    try {
+                                        testo = r.text != null ? String(r.text)
+                                            : new TextDecoder().decode(Uint8Array.from(atob(r.base64 || ''), c => c.charCodeAt(0)));
+                                    } catch (e) { testo = null; }
+                                }
+                                if (testo !== null) {
+                                    const idLetto = DCr.idDaIndice(testo);
+                                    if (!idLetto || idLetto === id) return await apri(fp);
+                                }
+                            }
+                        }
+                        if (p.vault) {
+                            const hit = all.find(stessaPos);
+                            if (hit && hit.fullPath) return await apri(hit.fullPath);
+                            try { info = info || (await api0.filesRootGet()); } catch (e) { info = null; }
+                            if (!info || !info.mapsBaseDir) return true;
+                            const FC = window.MappAIFilesCore;
+                            const parents = (FC && FC.mapVaultParents) ? FC.mapVaultParents(p.classDir || '', p.discDir || '') : [];
+                            return await apri([info.mapsBaseDir].concat(parents, [p.vault]).join('/'));
+                        }
+                        return false;
                     }
                     if (p && p.vault && window.electronAPI && window.electronAPI.filesRootGet && window.directLoadVault) {
                         /* La POSIZIONE la dice il disco (get-all-vaults), non si
@@ -606,13 +1022,6 @@ const StorageManager = {
                            può stare in Mappe/Generico/ oppure piatto (preesistente),
                            e solo l'elenco sa quale dei due. Ripiego: il nesting di
                            FilesCore, se l'elenco non è disponibile. */
-                        /* NFC sui due lati: il nome viene dal DISCO (scomposto)
-                           e p.vault dalla memoria (composto) — guida §8.25 */
-                        const _n = (x) => (window.MappAITeachCore && window.MappAITeachCore.nfc)
-                            ? window.MappAITeachCore.nfc(x) : String(x == null ? '' : x);
-                        const stessaPos = (v) => v && _n(v.folderName) === _n(p.vault)
-                            && _n(v.classDir || '') === _n(p.classDir || '')
-                            && _n(v.discDir || '') === _n(p.discDir || '') && !v.studentDir;
                         const daElenco = window.electronAPI.getAllVaults
                             ? window.electronAPI.getAllVaults().then(all => (all || []).find(stessaPos)).catch(() => null)
                             : Promise.resolve(null);
@@ -888,6 +1297,14 @@ const StorageManager = {
                quella (gesto `apri`) invece di farne una « · 02». Non parte per una
                voce che ha appena lasciato la cartella di un'altra mappa (`staccata`). */
             if (!appState.activeVaultPath && window.ensureProjectVault && !staccata) {
+                /* 0082 (B1 (a), §4.6): acceso, la cartella nasce con la classe della
+                   riga letta in testa (null = Generico); spento, come prima */
+                const apertura = soloIndice ? { reason: 'open', clsId: clsDellaRiga } : { reason: 'open' };
+                /* gate 3 del 08/10, gesto (6): la cartella nasce sotto la disciplina del
+                   progetto (`generationDiscipline`, da `ensureProjectVault`). Una copia nata
+                   da un'apertura dalla cartella l'ha azzerata (0078): si rimette quella della
+                   riga, o quella che la copia ricorda (`vaultMateria`). Solo se è vuota. */
+                if (soloIndice) this._disciplinaDellaRiga(id, discDellaRiga);
                 setTimeout(() => {
                     try {
                         const FCb = window.MappAIFilesCore;
@@ -895,9 +1312,9 @@ const StorageManager = {
                             window.electronAPI.getAllVaults().then(all => {
                                 const sue = (all || []).filter(v => v && v.projectId === id && v.fullPath);
                                 if (sue.length === 1 && window.directLoadVault) window.directLoadVault(sue[0].fullPath);
-                                else window.ensureProjectVault({ reason: 'open' });
-                            }).catch(() => { try { window.ensureProjectVault({ reason: 'open' }); } catch (e) { } });
-                        } else window.ensureProjectVault({ reason: 'open' });
+                                else window.ensureProjectVault(apertura);
+                            }).catch(() => { try { window.ensureProjectVault(apertura); } catch (e) { } });
+                        } else window.ensureProjectVault(apertura);
                     } catch (e) { }
                 }, 400);
             }
@@ -1156,8 +1573,11 @@ const StorageManager = {
     }
 };
 
+/* 0082 (B4 (a)): restituisce la promessa di `loadProject` — col cassetto solo
+   indice acceso, senza copia, si risolve dopo l'apertura dalla cartella, e ELABORA
+   la aspetta prima di aprire i documenti. Chi la ignora fa quello che faceva. */
 window.loadSavedProject = function (id) {
-    StorageManager.loadProject(id);
+    return StorageManager.loadProject(id);
 };
 
 // toggleProjectsBar — no-op retrocompatibile. Il drawer #projects-bar è stato
@@ -1175,7 +1595,20 @@ setInterval(() => {
     if (window.MappAIGen && window.MappAIGen.attiva()) return;
     if (window.MappAIPipeline && window.MappAIPipeline.occupata && window.MappAIPipeline.occupata()) return;
     StorageManager.saveCurrentProject();
+    /* 0082: col cassetto solo indice acceso, dopo la copia la cartella (la rete del
+       rinvio di 10 s); spento esce subito */
+    try {
+        const p = StorageManager.allineaCartella();
+        if (p && typeof p.catch === 'function') p.catch(e => console.warn('[Storage] allineaCartella:', e && e.message));
+    } catch (e) { }
 }, 120000); // periodic background save just in case
+
+/* 0082 (B6 (a)): ogni 5 s uno sguardo alle chat del Tutor, che non passano da
+   `saveCurrentProject`: se la loro firma è cambiata, la cartella si scrive ~10 s
+   dopo. Spento, il metodo esce subito. */
+setInterval(() => {
+    try { StorageManager._guardaChat(); } catch (e) { }
+}, 5000);
 
 // Aggiungo il gestore lingue per i modali
 window.currentLanguage = localStorage.getItem('mappai_language') || 'it';

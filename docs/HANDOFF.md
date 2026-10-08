@@ -8,6 +8,27 @@
 
 ## 0. Dove si riprende
 
+**⟵ 8/10, sincronizzate 5 copie da MappAI re `0a205769`** (dall'ultima, `b6fb2c8a`): `en_translations`,
+`storage-lang`, `study-export-core`, `vista-core`, `vault-io`, tutte dal solo commit `e0e74f1d` (0082, merge `dc631a23`:
+il cassetto tiene solo l'indice, la cartella si scrive da sola), `?v=sync-20261008`. **Nel reader non cambia niente.**
+L'interruttore `mappai_cassetto_solo_indice` ha un lettore solo, `MappAIVistaCore.cassettoSoloIndice()`, che restituisce
+falso con `electronAPI.__studente` (l'adapter lo dichiara): anche con la chiave a `'1'` resta spento. Tutto il nuovo di
+`storage-lang` sta dietro quel lettore: `allineaCartella`, `_chiediAllineamento` (il rinvio di 10 s), `_guardaChat` (il
+nuovo `setInterval` di 5 s, che qui esce subito come il giro di 120 s), `dopoApertura` (chiama subito, come prima), il
+campo `cartella` della riga, il salto della copia, lo stop al `mm_*.json`; il ramo nuovo di «Riprendi» è in
+`loadProject`, che il reader non raggiunge. `_scrivi` calcola la copia in `_testoCopia`, con le stesse regole di prima.
+`study-export-core › _taglia` e `vault-io` (classe e materia della riga, `opts.clsId`) sono dietro lo stesso lettore o
+dietro una chiave che passa solo «Riprendi». «`qualita.json` non si svuota» vale anche a interruttore spento, ma vive in
+`mappai-review.js › persistQuality`, che il reader non ha: `unisciQualita` (in `vista-core`, copiato) qui non la chiama
+nessuno. `en_translations`: una chiave nuova (`sdoc_oltre_tetto`), dietro lo stesso interruttore. `--confronta`:
+`map-view` resta DIVERSO per costruzione. Test 45/45. Provato nel browser con «La carta» e `mappai_cassetto_solo_indice`
+= `'1'` per tutta la prova: `cassettoSoloIndice()` falso; mappa aperta, Vista studio su; `allineaCartella`,
+`_guardaChat`, `_chiediAllineamento` a mano: nessun rinvio, nessuna impronta, zero `saveVault`, copia nel cassetto
+intatta (46 KB); «Torna a STUDIA» → una sola `saveVault` (`soloVista`: `vista.json` con `studioProfile`), la cartella ha
+ancora i suoi 14 nodi, la copia resta; pagina ricaricata, mappa riaperta, Vista studio su. Nessun errore; i due avvisi
+di sempre alla riapertura (`saveMapJSON`, `[StudioView] rientro`), già visti uguali sul `main` con lo 0078. Chiave di
+prova tolta.
+
 **⟵ 7/10 sera, sincronizzata 1 copia da MappAI re `b6fb2c8a`** (dalla voce qui sotto, `2137159f`): `en_translations`,
 dai commit `ec95f24d` e `377d7564` (0075, G1 per nodo con la veste, merge `deece255` entrato in re subito dopo il commit
 dello 0083), `?v=sync-20261007c`. **Nel reader non cambia niente:** 96 chiavi nuove (`rv_veste_*`, `aff_count*`), 11
