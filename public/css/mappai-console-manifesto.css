@@ -37,12 +37,12 @@ html.manifesto {
     /* IL FILETTO sotto la topbar: un colore solo per tutte le superfici. Era
        `var(--mnc-hairline, #ebebeb)` con la variabile MAI dichiarata da nessuna
        parte — quindi valeva sempre il ripiego, e la testata della console usava
-       comunque `--mm-bordo` (#e2e8f0) sul secondo bordo: due linee di due colori
+       comunque `--mm-bordo` (allora #e2e8f0, dal 09/10/26 #cbd5e1) sul secondo bordo: due linee di due colori
        diversi. */
     /* DECISIONE D (13/9/26): UN filetto solo, `#e2e8f0` — lo stesso di `--mm-bordo` e dei
        192 `border-slate-200` del markup. Era `#ebebeb`, che compariva solo qui: due
        grigi di bordo a un passo l'uno dall'altro sulla stessa schermata. */
-    --mnc-hairline: var(--mm-bordo, #e2e8f0);
+    --mnc-hairline: var(--mm-bordo);
 }
 
 /* CABLAGGIO nell'app (classe `mn-bento-app` su <html>): via il chip e il
@@ -399,6 +399,15 @@ html.manifesto .mm-box--console .mm-tela > #elab-doc-host {
     min-height: 0;
     width: 100%;
     overflow: auto;
+}
+/* L'AREA DI EDITING arriva al bordo della console (09/10/26, packet 0087 lotto 7,
+   variante V2 scelta da Giacomo sul banco): fuori dal tetto di 1240 delle altre
+   righe dell'area, e senza il filetto in testa. Il foglio cresce col suo gradino
+   (×1,6 a 1880px, `--de-lad` in mappai-doc-editor.js): testo più grande, righe
+   uguali alla stampa. Il fondo bianco e il bordo delle card sono dell'editor. */
+html.manifesto .mm-box--console .mm-console__area > .mm-tela:has(> #elab-doc-host) {
+    max-width: none;
+    border-top-width: 0;
 }
 /* la tela che ospita l'editor non è un riquadro vuoto da centrare: è un
    contenitore verticale che gli lascia tutto lo spazio */
@@ -900,8 +909,10 @@ html.manifesto {
     --mnc-chip-bordo: transparent;
     --mnc-chip-fs: 12px;
     /* campi e tendine: la larghezza è una LEVA, non un caso — una tendina che si
-       allarga col testo più lungo fa ballare la riga a ogni scelta */
-    --mnc-campo-h: 32px;
+       allarga col testo più lungo fa ballare la riga a ogni scelta.
+       L'altezza è quella dei controlli gemelli (09/10, packet 0087 lotto 2):
+       era 32, ora la stessa del bottone e del campo del motore. */
+    --mnc-campo-h: var(--mm-ctl-h);
     --mnc-campo-r: 10px;
     --mnc-campo-min: 120px;
     --mnc-campo-max: 100%;

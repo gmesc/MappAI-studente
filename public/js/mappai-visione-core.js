@@ -289,6 +289,35 @@
         return righe.join('\n');
     }
 
+    /* ── LA SCHEDA COME TESTO DELLA SINTESI (0079) ───────────────────────────
+       Il documento di una scheda esce dal costruttore della SINTESI
+       (mappai-branch-synthesis), che legge un markdown ridotto: `##` → titolo
+       del blocco, un paragrafo «**Etichetta:** valore» per campo — il lettore
+       e il karaoke li trovano come in una sintesi. I blocchi che INTERPRETANO
+       lo dicono nel titolo. Nei valori si neutralizza ciò che quel markdown
+       leggerebbe come comando: `*` (corsivo), `[n]` e `[src-…]` (richiami di
+       nota), `$` e `\(` `\[` (formule: senza KaTeX il documento non uscirebbe).
+       Portata dal reader (studia-core, 5/10), che ora può usare questa. */
+    function markdownDaScheda(sch, blocchi) {
+        blocchi = blocchi || BLOCCHI;
+        if (!sch || !Array.isArray(blocchi)) return '';
+        var pulito = function (v) {
+            return _riga(v).replace(/\*/g, '∗').replace(/\[(\d+)\]/g, '($1)')
+                .replace(/\[{1,2}(src-[\w-]+)\]{1,2}/g, '($1)')
+                .replace(/\$/g, '＄').replace(/\\(?=[([])/g, '⧵');
+        };
+        var out = [];
+        blocchi.forEach(function (bl) {
+            var campi = sch[bl.id] || {};
+            var righe = (bl.campi || []).filter(function (c) { return pulito(campi[c.id]); })
+                .map(function (c) { return '**' + c.et + ':** ' + pulito(campi[c.id]); });
+            if (!righe.length) return;
+            out.push('## ' + bl.titolo + (bl.interpretativo ? ' (interpretazione)' : ''));
+            out.push(righe.join('\n\n'));
+        });
+        return out.join('\n\n');
+    }
+
     /* ── IL MATERIALE CHE VA AL GENERATORE ────────────────────────────────────
        L'UNICO compositore (invariante 6): lo usano le domande aperte, le
        flashcard e la sintesi, e un secondo qui divergerebbe al primo ritocco.
@@ -461,6 +490,7 @@
         promptAnalisi: promptAnalisi,
         normalizzaAnalisi: normalizzaAnalisi,
         testoBlocco: testoBlocco,
+        markdownDaScheda: markdownDaScheda,
         materialeDaScheda: materialeDaScheda,
         contestoBreve: contestoBreve,
         stimaDossier: stimaDossier,

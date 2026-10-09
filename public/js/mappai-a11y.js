@@ -2,8 +2,8 @@
 // STRUMENTI A11Y (sillabazione, zoom testo, floating actions, regola di contesto) — estratto da app.js
 // ==========================================
 // Caricato DOPO app.js. NB: isHyphenated/originalModalHtml (reset da closeSourceModal),
-// currentZoomIdx/zooms (scritti da applyDirectZoom, letti dal DOMContentLoaded finale di
-// app.js) sono let/const top-level qui: i riferimenti bare cross-script si risolvono a
+// currentZoomIdx/zooms (scritti da applyTextZoom qui sotto, letti dal DOMContentLoaded finale
+// di app.js) sono let/const top-level qui: i riferimenti bare cross-script si risolvono a
 // runtime via scope lessicale globale condiviso (pattern batches 2-6).
 let isHyphenated = false;
 let originalModalHtml = "";
@@ -69,6 +69,22 @@ document.addEventListener('click', (e) => {
    (packet 0039): se n'è andata con lui. */
 let currentZoomIdx = localStorage.getItem('mappai-a11y-zoom') ? parseInt(localStorage.getItem('mappai-a11y-zoom')) : 0;
 const zooms = [1.0, 1.5, 2.0];
+
+/* IL COMANDO «Aa» (09/10/26, packet 0087 lotto 6). Giacomo: «deve sempre essere
+   un bottone singolo 'Aa' con un ciclo loop di fattori di ingrandimento». A
+   schermo il bottone dice solo «Aa»; il fattore a cui si è arrivati lo dicono
+   l'aria-label e il suggerimento («Grandezza del testo: ×1,5»). I fattori sono
+   della superficie che lo monta; qui c'è soltanto come si scrive, in un posto
+   solo — virgola in italiano, punto in inglese (`aa_sep`). */
+window.MappAIAa = {
+    etichetta: 'Aa',
+    fattore: function (f) {
+        var n = Number(f) || 1;
+        var sep = window.t ? window.t('aa_sep', ',') : ',';
+        return '×' + String(n).replace('.', sep);
+    },
+    aria: function (nome, f) { return nome + ': ' + window.MappAIAa.fattore(f); }
+};
 
 window.cycleTextZoom = function () {
     window.applyTextZoom((currentZoomIdx + 1) % zooms.length);

@@ -966,79 +966,9 @@ window.setMode = function (mode) {
    comando, che c'era già qui accanto. Un solo comando per cosa (invariante 21).
    Nessun chiamante rimasto: il bottone della barra a11y è uscito con lei. */
 
-// Helper per applicare lo zoom programmaticamente senza ciclarlo
-window.applyDirectZoom = function (z) {
-    const btnModal = document.getElementById('btn-text-zoom-modal');
-    const btnPanel = document.getElementById('btn-text-zoom-panel');
-
-    const label = `Testo x${(z === 1.0 ? '1' : z)}`;
-
-    if (btnModal) btnModal.innerHTML = `<i data-lucide="zoom-in" class="w-6 h-6"></i>`;
-    if (btnPanel) btnPanel.innerHTML = `<i data-lucide="zoom-in" class="w-4 h-4"></i> ${label}`;
-
-    document.documentElement.style.setProperty('--app-zoom', z);
-
-    if (z > 1.0) {
-        document.body.classList.add('a11y-zoomed-modals');
-    } else {
-        document.body.classList.remove('a11y-zoomed-modals');
-    }
-
-    document.body.classList.remove('a11y-zoom-x1', 'a11y-zoom-x15', 'a11y-zoom-x2');
-    if (z === 1.0) {
-        document.body.classList.add('a11y-zoom-x1');
-    } else if (z === 1.5) {
-        document.body.classList.add('a11y-zoom-x15');
-    } else if (z === 2.0) {
-        document.body.classList.add('a11y-zoom-x2');
-    }
-
-    // Zoom per tutti i contenitori primari e modali con testo
-    const zoomSelectors = [
-        '#sidebar',
-        '#source-modal-content-box',
-        '#ai-modal-content-box',
-        '#study-player-modal > div',
-        '#quiz-modal-content',
-        '#app-guide-modal > div',
-        '#app-tutorial-modal > div',
-        '#config-ai-modal > div',
-        '#merge-confirm-modal > div',
-        '#validate-link-modal > div',
-        '#user-profile-box',
-        '#api-tutorial-modal > div',
-        '#alert-box',
-        '#prompt-box',
-        '#confirm-box',
-        '#study-config-modal > div',
-        '#vault-manager-box',
-        '#edit-node-box',
-        '#contextual-ai-extension-modal > div',
-        '#feedback-box'
-    ];
-
-    // Rimozione applicazione zoom inline (gestito via variabili CSS/rem)
-    zoomSelectors.forEach(sel => {
-        const el = document.querySelector(sel);
-        if (el) {
-            el.style.removeProperty('zoom');
-        }
-    });
-
-    // Rimuove stili di zoom residui dagli elementi esclusi gestiti via CSS
-    const drawer = document.getElementById('insegnai-drawer');
-    if (drawer) drawer.style.removeProperty('zoom');
-    const pbarContent = document.getElementById('projects-bar-content');
-    if (pbarContent) pbarContent.style.removeProperty('zoom');
-
-    document.documentElement.style.fontSize = '';
-
-    // Sincronizza l'indice per far funzionare bene il cycle successivi
-    currentZoomIdx = zooms.indexOf(z);
-    if (currentZoomIdx === -1) currentZoomIdx = 0;
-
-    window.safeCreateIcons();
-};
+/* `applyDirectZoom` tolta il 09/10/26 (packet 0087 lotto 6): nessun chiamante, e i due bottoni che
+   riscriveva («Testo x…») non esistono più. Lo zoom del testo è `cycleTextZoom`/`applyTextZoom`
+   in mappai-a11y.js, dietro il bottone «Aa» della fila di lettura. */
 
 window.addL1Input = function (defaultValue = "") {
     const container = document.getElementById('l1-inputs-container');

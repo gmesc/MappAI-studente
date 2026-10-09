@@ -8,6 +8,29 @@
 
 ## 0. Dove si riprende
 
+**⟵ 9/10, sincronizzate 26 copie da MappAI re `4b5c03a8`** (dall'ultima, `0a205769`) e ritoccato
+`studente/documenti.js`, `?v=sync-20261009` (copie) e `sync0079` (documenti.js). Le copie vengono dallo **0087**
+(ritocchi grafici, lotti 1-9a: grigi al token `--mm-bordo`, controlli 40/12, «Aa» unico a ciclo con `MappAIAa`, Pomodoro
+alto `--mm-ctl-h`, tolte `applyDirectZoom` e `changeFontScale`, senza chiamanti qui; le regole nuove dell'`index.html` di
+re stanno sotto `html[data-app="docente"]` e qui non scattano) e dallo **0079** (lotti A e B: il costruttore della
+sintesi prende `tipo` e `foto.src`, «Aa» dice solo «Aa», Evidenzia e Riga con icona e stato nell'aria-label, bottone
+«PDF»; `markdownDaScheda` entra in `visione-core`; «Proietta» e `buildAnalisiFonteHtml` il reader non li usa).
+**Nel reader cambia la scheda del dossier, ed è voluto** (Giacomo: «Tutti e cinque»), in `studente/documenti.js`:
+1. `vesti()`: il bottone del documento dice «Aa» (prima lo riscriveva «Aa x1», che col costruttore nuovo restava fermo
+   mentre la taglia girava), anche dopo ogni clic sui documenti vecchi;
+2. `lettoreApp › aa.leggi` dà il NUMERO del fattore: col `tts-reader` nuovo la stringa «×1.5» faceva dire all'aria-label
+   (VoiceOver) sempre «×1»;
+3. `lettoreApp › riga.leggi` legge lo stato dall'aria-label («Riga: stretta»), poi dal testo (documenti vecchi): il
+   bottone nuovo è solo un'icona e la fila dell'app perdeva no/stretta/media/larga;
+4. `apriScheda` passa `tipo` e `foto: { src }`: via la riscrittura di «Sintesi di ramo», il segno `SDFOTODELDOSSIER` e il
+   `%22` (i due ripieghi che dovevano sparire con lo 0079);
+5. il testo della scheda è `MappAIVisioneCore.markdownDaScheda` (neutralizza anche `$`: una scheda con «5$ … 3$» rompeva
+   il documento); quella di `studia-core` resta come ripiego, col suo test.
+`--confronta`: `map-view` resta DIVERSO per costruzione. Test 45/45. Provato nel browser col dossier «LA GUERRE… · 05» →
+«Scheda»: «Analisi della fonte» in titolo e testata, foto per indirizzo (blob), «Aa» dell'app ×1,5 → ×2 → ×1 con le
+classi del documento, «Aa» del documento fermo su «Aa», Riga stretta → media → larga; scheda con «5$ … 3$» costruita
+(`＄`); nessun errore. Sull'iPad da guardare: la scheda di un dossier e il lettore dell'app.
+
 **⟵ 8/10, sincronizzate 5 copie da MappAI re `0a205769`** (dall'ultima, `b6fb2c8a`): `en_translations`,
 `storage-lang`, `study-export-core`, `vista-core`, `vault-io`, tutte dal solo commit `e0e74f1d` (0082, merge `dc631a23`:
 il cassetto tiene solo l'indice, la cartella si scrive da sola), `?v=sync-20261008`. **Nel reader non cambia niente.**

@@ -212,15 +212,16 @@
             var st = d.createElement('style'); st.id = 'sd-veste';
             st.textContent = ':root{--ap-ui-k:1.05 !important}#ap-doc-brand{display:none}#ap-topbar{padding:8px 12px}';
             d.head.appendChild(st);
-            /* «Aa Dislessia» → «Aa x1» (Giacomo, 7/9): l'etichetta dice la TAGLIA del
-               testo (x1 · x1,5 · x2), non chi dovrebbe premerla. In MappAI re è cambiata alla fonte;
-               qui si riscrive per i documenti già sul disco dello studente — anche dopo
-               un giro completo dei tre stati, perché il ciclo la ripesca dal suo elenco. */
+            /* Il bottone dice solo «Aa» (packet 0079 di MappAI re, regola di Giacomo del
+               9/10): la taglia la dicono aria-label e suggerimento, mai la diagnosi
+               («Aa Dislessia», 7/9). I documenti nuovi escono già così; quelli vecchi sul
+               disco dello studente riciclano le loro etichette («Aa x1,5»…) a ogni clic,
+               quindi si riscrive anche dopo. */
             var aa = d.getElementById('ap-dys-btn');
             if (aa) {
-                aa.textContent = 'Aa x1';
+                aa.textContent = 'Aa';
                 aa.addEventListener('click', function () {
-                    setTimeout(function () { if (/dislessia|dyslexia/i.test(aa.textContent || '')) aa.textContent = 'Aa x1'; }, 0);
+                    setTimeout(function () { if ((aa.textContent || '') !== 'Aa') aa.textContent = 'Aa'; }, 0);
                 });
             }
             /* LA × VIVE NELLA BARRA DEL DOCUMENTO (7/9): la testata del pannello portava
@@ -293,13 +294,16 @@
             sganciabile: true,
             corpo: function () { return body; },
             /* la taglia la dicono le classi del documento, non l'etichetta (che
-               nei file vecchi era «Aa Dislessia») */
+               nei file vecchi era «Aa Dislessia»); la fila vuole il NUMERO del fattore
+               (0079: lo scrive lei, con `MappAIAa`) */
             aa: aa ? {
-                leggi: function () { var c = d.body.classList; return c.contains('ap-x2') ? '×2' : (c.contains('ap-x15') ? '×1.5' : '×1'); },
+                leggi: function () { var c = d.body.classList; return c.contains('ap-x2') ? 2 : (c.contains('ap-x15') ? 1.5 : 1); },
                 premi: function () { aa.click(); }
             } : null,
+            /* lo stato della Riga: nei documenti dello 0079 il bottone è un'icona e lo
+               stato sta nell'aria-label («Riga: stretta»); nei vecchi, nel testo */
             riga: riga ? {
-                leggi: function () { return { t: (riga.textContent || '').replace(/^[^:]*:\s*/, ''), on: riga.classList.contains('on') }; },
+                leggi: function () { return { t: (riga.getAttribute('aria-label') || riga.textContent || '').replace(/^[^:]*:\s*/, ''), on: riga.classList.contains('on') }; },
                 premi: function () { riga.click(); }
             } : null,
             veloce: window.MappAILetturaVeloce ? function () {
@@ -349,35 +353,36 @@
        che `studia-core › markdownDaScheda` gli scrive. Stessa barra `#ap-topbar`, stessi
        stili, e qui nel pannello la stessa veste (`vesti`) e lo stesso lettore dell'app
        (`lettoreApp`: ▶, velocità, effetto, Aa, Riga, lettura veloce, Stampa, ×) — una
-       strada sola per i due documenti. Il costruttore sa dire solo «Sintesi di ramo»:
-       l'etichetta del tipo si riscrive nel testo prodotto (titolo, marchio, testata).
-       La foto NON entra in base64 (8 MB di JPEG → 11 MB dentro l'HTML): il costruttore la
-       vuole in `foto.b64`, quindi gli si passa un segno (solo lettere: il costruttore
-       toglie ciò che non è base64) e lo si sostituisce con un indirizzo.
+       strada sola per i due documenti. Dal packet 0079 di MappAI re il costruttore
+       prende `tipo` (testata e <title>) e la foto per indirizzo (`foto.src`, che scappa
+       da sé): la foto NON entra in base64 (8 MB di JPEG → 11 MB dentro l'HTML). Il
+       testo della scheda è `MappAIVisioneCore.markdownDaScheda` (neutralizza anche `$`:
+       senza KaTeX una scheda con due prezzi non uscirebbe); quella di studia-core resta
+       come ripiego.
        · iPad: l'HTML si scrive in `Studio Attivo/` e si apre dal file vero — la stampa
          di iOS carica quello (`fileUri`), e la foto ci arriva per percorso relativo;
        · browser: l'HTML e la foto sono due blob, revocati alla chiusura.
        5/10: si apre nel pannello ACCANTO alla foto (`mostraFoto`, al posto della mappa).
        La foto resta nel documento — la stampa e il PDF la portano — ma a schermo si
        nasconde quando è già accanto (`@media screen`). */
-    var FOTO = /\.(png|jpe?g|webp|gif)$/i, SEGNO = 'SDFOTODELDOSSIER';
+    var FOTO = /\.(png|jpe?g|webp|gif)$/i;
     function apriScheda(vaultPath) {
         var s = S(), C = window.MappAIStudiaCore, VC = window.MappAIVisioneCore, SY = window.MappAISynthesis;
         var sch = (s && s.db && C && C.schedaDaNodi && VC) ? C.schedaDaNodi(s.db.nodes, VC.BLOCCHI) : null;
-        if (!sch || !SY || !SY.buildHtml || !C.markdownDaScheda) {
+        var md = (VC && VC.markdownDaScheda) ? VC.markdownDaScheda : (C && C.markdownDaScheda);
+        if (!sch || !SY || !SY.buildHtml || !md) {
             toast(t('st_scheda_manca', 'Questo dossier non porta una scheda da leggere.'), 'warning');
             return Promise.resolve(false);
         }
         var tipo = t('st_analisi_fonte', 'Analisi della fonte');
         var html = function (src) {
             var h = SY.buildHtml({
-                branchLabel: sch.titolo, mapName: sch.titolo, rawText: C.markdownDaScheda(sch, VC.BLOCCHI), sourcesArr: [],
-                classe: s.db.classe || undefined, materia: s.db.materia || undefined,
-                foto: src ? { b64: SEGNO, mime: 'image/jpeg', titolo: sch.titolo } : null
+                branchLabel: sch.titolo, mapName: sch.titolo, rawText: md(sch, VC.BLOCCHI), sourcesArr: [],
+                classe: s.db.classe || undefined, materia: s.db.materia || undefined, tipo: tipo,
+                foto: src ? { src: src, titolo: sch.titolo } : null
             });
-            h = h.split('Sintesi di ramo').join(tipo).replace('<title>Sintesi — ', '<title>' + tipo + ' — ');
             if (superficie && superficie.vp === vaultPath) h = h.replace('</head>', '<style id="sd-foto-accanto">@media screen{.bs-fonte{display:none}}</style></head>');
-            return src ? h.split('data:image/jpeg;base64,' + SEGNO).join(src.replace(/"/g, '%22')) : h;
+            return h;
         };
         var FSP = window.MappAIStudenteFS && window.MappAIStudenteFS.plugin;
         var Fs = FSP ? FSP('Filesystem') : null, Cap = window.Capacitor;

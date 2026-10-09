@@ -486,7 +486,7 @@ const en_translations = {
     sp_save_failed: "The path could not be saved.",
     sp_archive_failed: "File saved in the folder; document archive was not updated.",
     sp_print: "Print",
-    sp_large: "Large text",
+    sp_large: "Text size",
     sp_download: "Download answers",
     sp_answer: "Your answer",
     sp_choice: "Choose one answer",
@@ -1689,6 +1689,7 @@ const en_translations = {
     tts_fx_parola: "Effect: only the spoken word in full",
     tts_fx_rsvp: "Effect: one word at a time",
     tts_scale: "Text size",
+    aa_sep: ".",
     rsvp_titolo: "Speed reading",
     ctx_rsvp: "Speed reading",
     rsvp_velocita: "Speed (words per minute)",
@@ -1704,12 +1705,12 @@ const en_translations = {
     bs_audio_need: "Generate a synthesis first",
     /* Il comando «Aa» dentro il documento stampabile: un ciclo a tre stati.
        Le etichette si risolvono nel BUILDER, non nel documento — quel file è
-       autoconsistente e non carica `window.t`. ⚠️ `x15` è una chiave e non una
-       stringa fissa proprio per il separatore decimale, che cambia lingua. */
-    bs_doc_dys: "Aa x1",
-    bs_doc_dys_x15: "Aa x1.5",
-    bs_doc_dys_x2: "Aa x2",
+       autoconsistente e non carica `window.t`. Dallo 0079 il bottone dice solo
+       «Aa»: la taglia la dicono aria-label e suggerimento, scritti con
+       `tts_scale` e `aa_sep` (qui sopra), come la regola di `MappAIAa`. */
     bs_doc_dys_tip: "High-readability mode: one click for 1.5× text, another for 2×, a third to go back to normal",
+    // 0079: il bottone di stampa dice solo «PDF»; il suggerimento dice che cosa fa
+    bs_doc_pdf_tip: "Print or save as PDF",
     /* L'evidenziazione della frase che si sta ascoltando: finora era sempre
        accesa e non c'era modo di spegnerla. Con essa si spegne anche lo
        scorrimento che la segue — è la stessa cosa, «seguire la lettura». */
@@ -3604,6 +3605,14 @@ const en_translations = {
     pj_scheda: "Grid",
     pj_sel_oq: "Open questions\u2026",
     pj_sel_fc: "Flashcards\u2026",
+    // 0079: la scheda di un dossier esce dal costruttore della sintesi, col suo nome
+    qp_tipo_analisi: "Source analysis",
+    // 0079, lotto B: il divisore fra immagine e scheda, e «Aa» della proiezione
+    pj_split_move: "Move the boundary between image and grid; past an edge that side closes",
+    pj_split_open_img: "Reopen the image: drag or click",
+    pj_split_open_mat: "Reopen the grid: drag or click",
+    pj_aa_tip: "one click for the next size; after the largest it goes back to ×1",
+    pj_pct_tip: "Click: the image fits the area · double click: 100%",
     ec_foto_apri: "Open the analysis grid",
     lt_cons_proietta: "Project",
     lt_cons_tip_proietta: "The photograph full-screen for the lesson, with the grid and the questions alongside.",

@@ -393,7 +393,7 @@
         ov = document.createElement('div');
         ov.id = 'studio-overlay';
         ov.style.cssText = 'position:absolute;inset:0;z-index:5;background:#fafbff;' +
-            'background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:22px 22px;';
+            'background-image:radial-gradient(var(--mm-bordo, #cbd5e1) 1px,transparent 1px);background-size:22px 22px;';
         ov.innerHTML = '<svg id="studio-svg" style="width:100%;height:100%;display:block;cursor:grab"></svg>';
         host.appendChild(ov);
         return ov;
@@ -1033,7 +1033,7 @@
             // una riga sola, mai a capo: se la testata crescesse si mangerebbe
             // l'altezza del disegno (flex:1 → 0 in un contenitore basso)
             '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;' +
-            'border-bottom:1px solid #e2e8f0;background:rgba(255,255,255,.94);' +
+            'border-bottom:1px solid var(--mm-bordo, #cbd5e1);background:rgba(255,255,255,.94);' +
             'flex-wrap:nowrap;flex:0 0 auto;overflow:hidden">' +
             '<span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;' +
             'text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;background:#eef2ff;' +
@@ -1043,7 +1043,7 @@
             '<span id="sv-focus-sub" style="font-size:11px;color:#64748b;font-weight:700;' +
             'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto"></span>' +
             '<button type="button" id="sv-f-close" style="margin-left:auto;flex:0 0 auto;font:inherit;font-size:11px;' +
-            'font-weight:700;color:#475569;background:#fff;border:1px solid #e2e8f0;border-radius:9px;' +
+            'font-weight:700;color:#475569;background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:9px;' +
             'padding:6px 11px;cursor:pointer">' + t('sv_focus_exit', 'Chiudi il focus') + '</button>' +
             '</div>' +
             '<svg id="sv-focus-svg" style="flex:1;min-height:0;width:100%;display:block;cursor:grab"></svg>';

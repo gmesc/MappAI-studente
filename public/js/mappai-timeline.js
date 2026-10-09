@@ -1008,7 +1008,7 @@ window._renderTimeline = function (uniqueEvents, mapName, opts) {
         '    --pdf-card-padding: 18pt; --pdf-card-border-radius: 8pt;',
         '    --pdf-accent-color: #4f46e5; --pdf-text-primary: #1e293b;',
         '    --pdf-text-secondary: #475569; --pdf-text-muted: #94a3b8;',
-        '    --pdf-border: #e2e8f0; --pdf-bg-subtle: #f8fafc;',
+        '    --pdf-border: var(--mm-bordo, #cbd5e1); --pdf-bg-subtle: #f8fafc;',
         '}',
         // Cornice ALLINEATA agli altri fogli stampabili (quiz, flashcard, sintesi):
         // stessa header card, stesso badge pillola, stesso piè di pagina. Cambia
@@ -1042,7 +1042,7 @@ window._renderTimeline = function (uniqueEvents, mapName, opts) {
         '.tl-toolbtn { display:inline-flex; align-items:center; gap:5px; border:none; border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:bold; font-family:inherit; }',
         '.tl-guide { max-width:960px; margin:0 auto 14px; padding:0 4px; font-size:10.5pt; color:#475569; line-height:1.5; }',
         '.tl-guide b { color:#1e293b; }',
-        '.tl-addform { max-width:960px; margin:0 auto 18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px 18px; display:none; }',
+        '.tl-addform { max-width:960px; margin:0 auto 18px; background:#f8fafc; border:1px solid var(--mm-bordo, #cbd5e1); border-radius:12px; padding:16px 18px; display:none; }',
         '.tl-addform input, .tl-addform select, .tl-addform textarea { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:9px 11px; font-family:inherit; font-size:11pt; background:#fff; }',
         '.tl-form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }',
         '.tl-field-label { display:block; font-size:9pt; font-weight:700; color:#64748b; margin-bottom:4px; }',
@@ -1060,7 +1060,7 @@ window._renderTimeline = function (uniqueEvents, mapName, opts) {
 
     // Barra fissa (solo azioni) + riga-guida + form + banner esercizio (in flusso,
     // sotto lo spacer \u2192 non coprono pi\u00F9 il titolo della timeline).
-    var printBar = '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:white;border-bottom:1px solid #e2e8f0;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:monospace;font-size:12px;gap:12px;flex-wrap:wrap;">' +
+    var printBar = '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:white;border-bottom:1px solid var(--mm-bordo, #cbd5e1);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:monospace;font-size:12px;gap:12px;flex-wrap:wrap;">' +
         '<span style="font-weight:bold;color:#4f46e5;">MappAI \u00b7 Timeline</span>' +
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
             '<button onclick="TL_toggleForm()" class="tl-toolbtn" style="background:#ede9fe;color:#4f46e5;">+ Aggiungi data</button>' +

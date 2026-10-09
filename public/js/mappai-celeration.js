@@ -66,7 +66,7 @@
     let grid = '';
     [0, 0.5, 1].forEach(v => {
       const y = accY(v);
-      grid += `<line x1="${PADL}" y1="${y}" x2="${W - PADR}" y2="${y}" stroke="#e2e8f0"/>`;
+      grid += `<line x1="${PADL}" y1="${y}" x2="${W - PADR}" y2="${y}" stroke="#cbd5e1"/>`;
       grid += `<text x="${PADL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#16a34a">${Math.round(v * 100)}%</text>`;
     });
     grid += `<text x="${W - PADR + 6}" y="${PADT + 6}" font-size="10" fill="#2563eb">${maxRate.toFixed(0)}/min</text>`;

@@ -351,7 +351,7 @@ const it_translations = {
     sp_save_failed: "Il percorso non è stato salvato.",
     sp_archive_failed: "File salvato nella cartella; archivio documenti non aggiornato.",
     sp_print: "Stampa",
-    sp_large: "Testo grande",
+    sp_large: "Grandezza del testo",
     sp_download: "Scarica le risposte",
     sp_answer: "La tua risposta",
     sp_choice: "Scegli una risposta",

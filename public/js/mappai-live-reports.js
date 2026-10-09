@@ -31,18 +31,18 @@
     ".lr-sub{font-size:11px;color:#64748b;margin-top:6px;line-height:1.6}",
     ".lr-chips{margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}",
     ".lr-chip{display:inline-block;background:#eef2ff;color:#4f46e5;border-radius:999px;padding:2px 12px;font-size:10px;font-weight:bold}",
-    ".lr-q{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid}",
+    ".lr-q{background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:12px;padding:14px 16px;margin-bottom:12px;page-break-inside:avoid}",
     ".lr-q-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}",
     ".lr-q-n{flex-shrink:0;width:26px;height:26px;border-radius:8px;background:#4f46e5;color:#fff;font-weight:bold;display:flex;align-items:center;justify-content:center;font-size:12px}",
     ".lr-q-text{font-weight:700;color:#1e293b;line-height:1.4}",
     ".lr-q-meta{font-size:10px;color:#94a3b8;margin-top:2px}",
     ".lr-tag{display:inline-block;background:#f1f5f9;color:#475569;border-radius:6px;padding:1px 7px;font-size:9px;font-weight:bold;margin-left:4px}",
-    ".lr-bar{display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid #e2e8f0;margin-top:6px}",
+    ".lr-bar{display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--mm-bordo, #cbd5e1);margin-top:6px}",
     ".lr-seg{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#fff;min-width:0}",
     ".lr-seg-r{background:#16a34a}.lr-seg-w{background:#dc2626}.lr-seg-b{background:#94a3b8}.lr-seg-m{background:#7c3aed}",
     ".lr-legend{display:flex;gap:14px;font-size:10px;color:#64748b;margin-top:8px;flex-wrap:wrap}",
     ".lr-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}",
-    ".lr-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid}",
+    ".lr-card{background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:14px;padding:16px 18px;margin-bottom:14px;page-break-inside:avoid}",
     ".lr-card-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:10px}",
     ".lr-avatar{font-size:34px;line-height:1}",
     ".lr-who{font-size:16px;font-weight:900;color:#0f172a}",
@@ -77,13 +77,13 @@
     ".cred-emoji{font-size:40px;line-height:1;font-family:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif}",
     ".cred-num{font-size:24px;font-weight:900;color:#4f46e5;margin-top:2px}",
     ".cred-class{font-size:11px;color:#64748b;margin-top:6px}",
-    ".cred-name{font-size:10px;color:#94a3b8;margin-top:8px;border-top:1px solid #e2e8f0;padding-top:6px;min-height:16px}",
+    ".cred-name{font-size:10px;color:#94a3b8;margin-top:8px;border-top:1px solid var(--mm-bordo, #cbd5e1);padding-top:6px;min-height:16px}",
     ".no-print{display:block}",
     "@media print{.no-print{display:none !important}body{background:#fff;padding:8px}.cred-grid{grid-template-columns:repeat(3,1fr)}}"
   ].join('');
 
   function printBar(label) {
-    return '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:monospace;font-size:12px">' +
+    return '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--mm-bordo, #cbd5e1);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:monospace;font-size:12px">' +
       '<span style="font-weight:bold;color:#4f46e5">MappAI Live · ' + esc(label) + '</span>' +
       '<div style="display:flex;gap:8px">' +
       '<button onclick="window.print()" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:11px;font-weight:bold">Stampa / PDF</button>' +

@@ -148,7 +148,7 @@
            disabilitato non emette eventi mouse, quindi il fumetto non uscirebbe. */
         const extraCard = (x, num) => {
             const dis = x.ok ? '' : (x.mancaMotivo || _t('as_extra_missing', 'Funzione non disponibile.'));
-            const activeBorder = x.on ? '#4f46e5' : '#e2e8f0';
+            const activeBorder = x.on ? '#4f46e5' : 'var(--mm-bordo, #cbd5e1)';
             const label = num ? `${num}. ${x.title}` : x.title;
             return `<button type="button" class="as-extra-card" data-extra="${x.key}" ${dis ? 'disabled' : ''} data-tip="${_escAttr(x.hint)}" style="display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:${x.on ? '#eef2ff' : '#fff'};border:1px solid ${activeBorder};border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:${dis ? 'default' : 'pointer'};transition:border-color .15s;${dis ? 'opacity:.5' : ''}">
                 <i data-lucide="${x.icon}" style="width:22px;height:22px;color:#4f46e5;flex:0 0 auto"></i>

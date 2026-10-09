@@ -125,14 +125,14 @@ body.sd-odys { background:#f6efdd; }
 body.sd-odys .sd-body { background:#fffdf6; max-width:none; }
 body.sd-odys .sd-body p, body.sd-odys .sd-item { font-family:'OpenDyslexic',Verdana,'Trebuchet MS',sans-serif; font-size:15px; line-height:2.05; color:#33312e; }
 body.sd-odys .sd-sec-h { font-family:'OpenDyslexic',Verdana,sans-serif; }
-.sd-topbar { position:fixed; top:0; left:0; right:0; background:#fff; border-bottom:1px solid #e2e8f0; padding:10px 24px; display:flex; align-items:center; justify-content:space-between; z-index:100; font-size:12px; }
+.sd-topbar { position:fixed; top:0; left:0; right:0; background:#fff; border-bottom:1px solid var(--mm-bordo, #cbd5e1); padding:10px 24px; display:flex; align-items:center; justify-content:space-between; z-index:100; font-size:12px; }
 .sd-brand { font-weight:bold; color:${accent}; white-space:nowrap; }
 .sd-btn { border:none; border-radius:8px; padding:6px 14px; cursor:pointer; font:bold 11px var(--doc-font, 'Space Mono', monospace); }
 .sd-btn-primary { background:${accent}; color:#fff; }
-.sd-btn-ghost { background:#fff; color:${accent}; border:1px solid #e2e8f0; }
+.sd-btn-ghost { background:#fff; color:${accent}; border:1px solid var(--mm-bordo, #cbd5e1); }
 .sd-btn-ghost.on { background:#eef2ff; }
 .sd-btn-close { background:#f1f5f9; color:#475569; }
-.sd-read-panel { position:fixed; top:54px; right:14px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:12px 16px; z-index:101; box-shadow:0 12px 34px rgba(15,23,42,.14); min-width:236px; }
+.sd-read-panel { position:fixed; top:54px; right:14px; background:#fff; border:1px solid var(--mm-bordo, #cbd5e1); border-radius:14px; padding:12px 16px; z-index:101; box-shadow:0 12px 34px rgba(15,23,42,.14); min-width:236px; }
 /* Nascosto di default: .sd-read-panel.no-print (2 classi) batte .no-print{display:block};
    .sd-read-panel.open, più sotto, riapre. */
 .sd-read-panel.no-print { display:none; }

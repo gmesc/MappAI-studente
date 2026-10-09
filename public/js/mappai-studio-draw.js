@@ -172,7 +172,7 @@
         const cell = opts.cell || 26, n = res.order.length;
         const fs = Math.max(8, Math.min(13, opts.fsNode || 11));
         const side = n * cell;
-        const gridC = '#e2e8f0';
+        const gridC = '#cbd5e1';
 
         for (let i = 0; i <= n; i++) {
             const prevG = i > 0 ? (byId.get(res.order[i - 1]) || {}).group : null;
