@@ -46,7 +46,7 @@ html {
     padding: 12px;
     border-radius: 9999px;
     background: white;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--mm-bordo);
     color: #6366f1;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     transition: all 0.2s;
@@ -995,7 +995,7 @@ html[data-font="space-mono"] #ai-modal-body {
 
 .glass-card {
     background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid var(--mm-bordo) !important;
     border-radius: 1.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
 }
@@ -1979,7 +1979,7 @@ body.a11y-zoomed-modals .fixed.inset-0>div:not(#sidebar):not(#insegnai-drawer)>*
 #landing-view .glass-card .mode-btn,
 #landing-view .glass-card .source-type-btn {
     background: #ffffff !important;
-    border-color: #e2e8f0 !important;
+    border-color: var(--mm-bordo) !important;
     color: #475569 !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01) !important;
 }
@@ -2019,7 +2019,7 @@ body.a11y-zoomed-modals .fixed.inset-0>div:not(#sidebar):not(#insegnai-drawer)>*
     width: 96px !important;
     height: 80px !important;
     background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid var(--mm-bordo) !important;
     color: #475569 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
     display: flex !important;

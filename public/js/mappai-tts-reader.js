@@ -693,7 +693,7 @@
             var b = document.createElement('button');
             b.type = 'button'; b.className = 'mai-fila-bt';
             b.title = etichetta; b.setAttribute('aria-label', etichetta);
-            b.innerHTML = '<i data-lucide="' + icona + '"></i>';
+            if (icona) b.innerHTML = '<i data-lucide="' + icona + '"></i>';
             b.addEventListener('click', azione);
             row.appendChild(b);
             return b;
@@ -705,8 +705,14 @@
             b.appendChild(document.createElement('span'));
             disegna(b);
         }
-        if (opts.aa) conStato(_t('tts_scale', 'Grandezza del testo'), 'a-large-small', opts.aa, function (b) {
-            b.querySelector('span').textContent = opts.aa.leggi();
+        /* IL COMANDO «Aa» (09/10, packet 0087 lotto 6): a schermo solo «Aa», niente
+           icona né fattore; il fattore lo dicono aria-label e suggerimento, scritti da
+           `MappAIAa` (mappai-a11y.js). `leggi()` dà il NUMERO del fattore. */
+        if (opts.aa) conStato(_t('tts_scale', 'Grandezza del testo'), null, opts.aa, function (b) {
+            var AA = window.MappAIAa, f = opts.aa.leggi(), nome = _t('tts_scale', 'Grandezza del testo');
+            var a = AA ? AA.aria(nome, f) : nome + ': ×' + f;
+            b.querySelector('span').textContent = AA ? AA.etichetta : 'Aa';
+            b.title = a; b.setAttribute('aria-label', a);
         });
         if (opts.riga) conStato(_t('tts_riga', 'Riga di lettura'), 'align-justify', opts.riga, function (b) {
             var st = opts.riga.leggi() || {};
@@ -813,7 +819,7 @@
             aa: {
                 leggi: function () {
                     var i = 0; try { i = parseInt(localStorage.getItem('mappai-a11y-zoom') || '0', 10) || 0; } catch (e) {}
-                    return '×' + ([1, 1.5, 2][i] || 1);
+                    return [1, 1.5, 2][i] || 1;
                 },
                 premi: function () { if (window.cycleTextZoom) window.cycleTextZoom(); }
             },
@@ -904,7 +910,7 @@
         document.body.appendChild(f);
         var wrap = fila(ctrl, {
             corpo: function () { return bodyEl; },
-            aa: { leggi: function () { return '×' + _scale(); }, premi: function () { _cycleScale(f); } },
+            aa: { leggi: function () { return _scale(); }, premi: function () { _cycleScale(f); } },
             veloce: function () {
                 if (window.MappAILetturaVeloce) window.MappAILetturaVeloce.apri({ titolo: opts.title || '', testo: opts.text || '' });
             }
@@ -932,7 +938,7 @@
         var css =
             '.mai-tts-slot{display:inline-flex;align-items:center;flex:1 1 auto;min-width:0;vertical-align:middle}' +
             '.mai-tts-wrap{display:inline-flex;align-items:center;gap:10px;max-width:100%;flex:1 1 auto;min-width:0;vertical-align:middle;font-family:"Space Mono",monospace}' +
-            '.mai-tts-chip{display:inline-flex;align-items:stretch;height:40px;border-radius:9999px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 4px 6px -1px rgba(15,23,42,.12);overflow:hidden;flex:0 0 auto}' +
+            '.mai-tts-chip{display:inline-flex;align-items:stretch;height:40px;border-radius:9999px;background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);box-shadow:0 4px 6px -1px rgba(15,23,42,.12);overflow:hidden;flex:0 0 auto}' +
             '.mai-tts-seg{display:inline-flex;align-items:center;justify-content:center;gap:2px;min-width:46px;padding:0 12px;border:0;background:transparent;color:#4f46e5;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;transition:background .15s,color .15s;border-left:1px solid #eef2ff}' +
             '.mai-tts-seg:first-child{border-left:0}.mai-tts-seg:hover{background:#eef2ff}.mai-tts-seg:active{background:#e0e7ff}' +
             '.mai-tts-seg i{width:16px;height:16px}.mai-tts-seg span{font-size:10px;line-height:1;font-weight:700}' +
@@ -947,7 +953,7 @@
             '.mai-tts-sec.on{display:inline-flex}.mai-tts-sec:hover{background:#e0e7ff}.mai-tts-sec i{width:13px;height:13px}' +
             '.mai-tts-block{background:rgba(253,230,138,.30);border-radius:5px;box-shadow:0 0 0 3px rgba(253,230,138,.30)}' +
             '::highlight(mai-tts-read){background-color:#fde68a;color:#0f172a}' +
-            '.mai-tts-float{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:4000;width:min(560px,92vw);background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 18px 44px rgba(15,23,42,.30);padding:16px 18px 14px;font-family:"Space Mono",monospace}' +
+            '.mai-tts-float{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:4000;width:min(560px,92vw);background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:16px;box-shadow:0 18px 44px rgba(15,23,42,.30);padding:16px 18px 14px;font-family:"Space Mono",monospace}' +
             '.mai-tts-float-close{position:absolute;top:9px;right:12px;border:0;background:transparent;color:#94a3b8;cursor:pointer;font-size:15px;line-height:1;width:22px;height:22px;border-radius:9999px}' +
             '.mai-tts-float-close:hover{background:#f1f5f9;color:#475569}' +
             '.mai-tts-float-body{max-height:32vh;overflow:auto;margin:0 0 12px;padding-right:6px}' +
@@ -975,7 +981,7 @@
             // il chip non si schiaccia sotto la sua misura: la fila va a capo
             '.mai-fila .mai-tts-wrap{flex:1 1 420px;min-width:min(100%,420px)}' +
             '.mai-fila .mai-tts-progress{min-width:80px}' +
-            '.mai-fila-bt{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;height:40px;padding:0 11px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;color:#4338ca;cursor:pointer;white-space:nowrap;font:700 12px "Space Mono",monospace}' +
+            '.mai-fila-bt{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;height:40px;padding:0 11px;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:10px;background:#fff;color:#4338ca;cursor:pointer;white-space:nowrap;font:700 12px "Space Mono",monospace}' +
             '.mai-fila-bt svg,.mai-fila-bt i{width:18px;height:18px;flex:0 0 auto}' +
             '.mai-fila-bt span:empty{display:none}' +
             '.mai-fila-bt[aria-pressed="true"]{background:#eef2ff;border-color:#c7d2fe}' +
@@ -989,7 +995,7 @@
             '.mai-maniglia::before{content:"⠿";margin-right:8px;color:#94a3b8;font-weight:400}' +
             '.mai-fila-grip{min-width:30px;padding:0 3px;border-color:transparent;background:transparent;color:#94a3b8;cursor:grab;touch-action:none}' +
             '.mai-fila-rimetti{display:none}' +
-            '.mai-fila--libera{position:fixed;z-index:4100;width:max-content;max-width:calc(100vw - 24px);padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.28)}' +
+            '.mai-fila--libera{position:fixed;z-index:4100;width:max-content;max-width:calc(100vw - 24px);padding:8px 10px;background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.28)}' +
             '.mai-fila--libera .mai-fila-rimetti{display:inline-flex}' +
             '.mai-fila--libera .mai-fila-grip{cursor:grabbing}' +
             '.mai-tts-float--x15{width:min(880px,96vw)}' +

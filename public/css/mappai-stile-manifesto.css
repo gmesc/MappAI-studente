@@ -574,14 +574,22 @@ html.manifesto #mn-genere-dx span {
    (decisione del 31/7 — a distinguerlo è il riempimento, non una riga che su
    fondo chiaro fa 1,23:1) */
 html.manifesto #mn-genere-dx input[type="text"] {
-    background: rgba(64, 64, 64, .07) !important;
-    border: 1px solid transparent !important;
+    /* 09/10 (packet 0087 lotto 4): bianco, perché il box è grigio chiaro («in un
+       riquadro grigio chiaro i campi sono bianchi e senza bordo», Giacomo 08/10),
+       alto come i controlli gemelli; il bordo senza `!important`, così il
+       passaggio del mouse lo può colorare (regola sotto) */
+    background: var(--mm-fondo) !important;
+    border: var(--mm-bordo-spessore) solid transparent;
     border-radius: 12px !important;
-    padding: 10px 14px !important;
+    height: var(--mm-ctl-h);
+    padding: 0 14px !important;
     font-size: var(--bn-fs-voce) !important;
     font-weight: var(--bn-fw-voce) !important;
     color: var(--man-su-verde) !important;
     box-shadow: none !important;
+}
+html.manifesto #mn-genere-dx input[type="text"]:hover:not(:focus) {
+    border-color: var(--mm-bordo);
 }
 html.manifesto #mn-genere-dx input[type="text"]:focus-visible {
     outline: 2px solid var(--man-verde);
@@ -1217,8 +1225,8 @@ html.manifesto #mn-bento .mn-card:not(.mn-card--nuda) .mn-str > .mn-spostato {
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 8px !important;
-    min-height: 30px !important;
-    height: auto !important;
+    min-height: var(--mn-sp-min-h, 30px) !important;
+    height: var(--mn-sp-h, auto) !important;
     padding: 4px 8px !important;
     border-radius: 9px !important;
     background: color-mix(in srgb, currentColor 14%, transparent) !important;
@@ -1384,8 +1392,8 @@ html.manifesto #mn-bento .mn-str--et.mn-str--pieno > input.mn-spostato,
 html.manifesto #mn-bento .mn-str--et.mn-str--pieno > select.mn-spostato {
     flex: 1 1 auto !important;
     max-width: 60% !important;
-    min-height: 30px;
-    height: 32px !important;      /* una riga: qui si scrive una frase, non un testo */
+    min-height: var(--mn-sp-min-h, 30px);
+    height: var(--mn-sp-h, 32px) !important;      /* una riga: qui si scrive una frase, non un testo */
     resize: none !important;
 }
 /* ⚠️ Le righe NON si allungano con lo spazio che avanza. Senza, alzare l'altezza
@@ -1986,8 +1994,8 @@ html.manifesto #mn-bento .mn-card--extra.mn-card--str :is(button, select, textar
     border: none !important;
     box-shadow: none !important;
     padding: 4px 10px !important;
-    min-height: 26px;
-    height: auto !important;          /* `.btn_mode_selector_sm` porta h-12: qui è una pillola come le altre */
+    min-height: var(--mn-sp-min-h, 26px);
+    height: var(--mn-sp-h, auto) !important;          /* `.btn_mode_selector_sm` porta h-12: qui è una pillola come le altre */
     line-height: 1.3 !important;
 }
 html.manifesto #mn-bento .mn-card--extra.mn-card--str .mn-spostato button,
@@ -2345,3 +2353,44 @@ html.manifesto .mn-briciole__sep {
 /* col percorso a vista il titolo del motore sparisce: sarebbe lo stesso nome,
    scritto due volte sulla stessa riga */
 html.manifesto .mm-head__testi.ha-briciole .mm-title { display: none !important; }
+
+/* ── CONTROLLI GEMELLI nel bento di CREA (09/10, packet 0087 lotto 4) ─────────
+   Tendine, numeri e bottoni alti come i controlli del motore (`--mm-ctl-h`, 40) e
+   scritti a `--mm-ctl-fs` (12), scelte di Giacomo sul banco del bento:
+   - il riempimento resta quello che si ADATTA al box (giallo, scuro): col mouse
+     si fa un gradino più forte, dallo stesso `currentColor`;
+   - bianco solo nel box grigio chiaro (il campo del TEMA: «in un riquadro grigio
+     chiaro i campi sono bianchi e senza bordo», 08/10), col mouse il bordo;
+   - pillole e lenti restano compatte (26): sono interruttori, non azioni;
+   - il passaggio del mouse dei bottoni resta VERDE (decisione del 5/8).
+   Solo nell'app del docente, tranne il campo del TEMA: quello è corretto dentro la
+   sua regola (`#mn-genere-dx input[type="text"]`), e il reader non monta il bento
+   di CREA. */
+html[data-app="docente"] #mn-bento :is(.mn-sel, .mn-num) {
+    height: var(--mm-ctl-h);
+    padding-top: 0;
+    padding-bottom: 0;
+}
+html[data-app="docente"] #mn-bento :where(.mn-sel, .mn-num):hover:not(:focus):not([disabled]) {
+    background: color-mix(in srgb, currentColor 26%, transparent);
+    border-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+html[data-app="docente"] #mn-bento .mn-btn {
+    min-height: var(--mm-ctl-h);
+}
+/* «Livello» e FOCUS: le regole del bento che li governano (riga montata,
+   pillole, riga di una frase) leggono `--mn-sp-*` col ripiego di oggi; qui le
+   si dichiarano solo su questi due, così le pillole non si muovono e nessuno
+   scavalca nessuno. Il corpo del FOCUS è l'unica eccezione: lo fissa lo zoom
+   della landing in style.css (`#landing-view .glass-card .text-sm`, con
+   `!important`), e la regola del bento che porta i campi a 12 è anche quella
+   che li mette in grassetto. */
+html[data-app="docente"] #mn-bento #gen-depth-select {
+    --mn-sp-h: var(--mm-ctl-h);
+    --mn-sp-min-h: var(--mm-ctl-h);
+    font-size: var(--mm-ctl-fs);
+}
+html[data-app="docente"] #mn-bento #focus-input {
+    --mn-sp-min-h: var(--mm-ctl-h);
+    font-size: var(--mm-ctl-fs) !important;
+}

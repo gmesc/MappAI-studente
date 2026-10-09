@@ -120,13 +120,13 @@
             const arr = x.type === 'contrast' ? '↔' : '→';
             const a = x.type === 'contrast' ? x.a : x.cause;
             const b = x.type === 'contrast' ? x.b : x.effect;
-            return '<div style="display:flex;align-items:baseline;gap:7px;padding:5px 0;border-bottom:1px dashed #e2e8f0;flex-wrap:wrap">' +
+            return '<div style="display:flex;align-items:baseline;gap:7px;padding:5px 0;border-bottom:1px dashed var(--mm-bordo, #cbd5e1);flex-wrap:wrap">' +
                 '<span style="font-size:10.5px;color:#334155">' + _esc(a) + '</span>' +
                 '<span style="font-size:10px;font-weight:700;color:' + fm.color + ';white-space:nowrap">' + arr + ' ' + _esc(x.type === 'contrast' ? x.conn : (x.connShow || x.conn)) + ' ' + arr + '</span>' +
                 '<span style="font-size:10.5px;color:#334155">' + _esc(b) + '</span>' +
                 '</div>';
         }).join('');
-        return '<div style="margin:18px 0 6px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #4f46e5;border-radius:10px;page-break-inside:avoid">' +
+        return '<div style="margin:18px 0 6px;padding:14px 16px;background:#f8fafc;border:1px solid var(--mm-bordo, #cbd5e1);border-left:4px solid #4f46e5;border-radius:10px;page-break-inside:avoid">' +
             '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#4f46e5;margin-bottom:8px">' +
             _esc(t('cc_box_title', 'La catena dei perché')) + '</div>' + rows + '</div>';
     }
@@ -197,7 +197,7 @@
             '.cc-sec{background:#fff;border-radius:14px;padding:16px 20px;margin-bottom:16px;page-break-inside:avoid}' +
             '.cc-sec-cross{border:2px dashed #a5b4fc}' +
             '.cc-sec-title{font-size:14px;font-weight:900;color:#4f46e5;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid #eef2ff}' +
-            '.cc-row{padding:7px 0;border-bottom:1px dashed #e2e8f0}.cc-row:last-child{border-bottom:0}' +
+            '.cc-row{padding:7px 0;border-bottom:1px dashed var(--mm-bordo, #cbd5e1)}.cc-row:last-child{border-bottom:0}' +
             '.cc-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;line-height:1.7}' +
             '.cc-side{color:#334155}' +
             '.cc-conn{display:inline-flex;align-items:baseline;gap:5px;border:1.5px solid;border-radius:9999px;padding:1px 9px;font-size:11px;font-weight:700;white-space:nowrap}' +
@@ -209,9 +209,9 @@
             'body.cc-ex .cc-badge{visibility:hidden}' +
             '.no-print{display:block}@media print{.no-print{display:none!important}body{background:#fff;padding:10px}}' +
             '</style></head><body>' +
-            '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:\'Space Mono\',monospace;font-size:12px">' +
+            '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--mm-bordo, #cbd5e1);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:\'Space Mono\',monospace;font-size:12px">' +
             '<b>' + _esc(t('cc_doc_title', 'Catena dei perché')) + '</b>' +
-            '<span><button onclick="document.body.classList.toggle(\'cc-ex\')" style="font-family:inherit;margin-right:8px;padding:6px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer">' + _esc(t('cc_exercise', 'Modalità esercizio')) + '</button>' +
+            '<span><button onclick="document.body.classList.toggle(\'cc-ex\')" style="font-family:inherit;margin-right:8px;padding:6px 14px;border:1px solid var(--mm-bordo, #cbd5e1);background:#fff;border-radius:8px;cursor:pointer">' + _esc(t('cc_exercise', 'Modalità esercizio')) + '</button>' +
             '<button onclick="window.print()" style="font-family:inherit;padding:6px 14px;border:0;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-weight:700">' + _esc(t('cc_print', 'Stampa')) + '</button></span></div>' +
             '<div style="height:44px" class="no-print"></div>' +
             _ccTestata(mapName, now) +
