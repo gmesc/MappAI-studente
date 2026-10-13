@@ -4,7 +4,7 @@
  * Chi apre MappAI studente senza aver ricevuto niente dal docente (il revisore
  * dell'App Store, un ragazzo curioso) vedrebbe una pagina vuota. Al PRIMO avvio,
  * se in Documenti non c'è nessuna mappa, l'app scrive lì «La carta» (2A ·
- * Storia): un vault vero, generato da MappAI re, impacchettato in
+ * Storia) e «Sistema Albero» (1A · Scienze): vault veri, generati da MappAI re, impacchettati in
  * `demo/vault.json` da `npm run demo` (solo i file che `relVaultStudente`
  * ammette). Una volta sola: `mappai_studente_demo='1'`; chi lo cancella da File
  * non lo rivede. Kill-switch `mappai_studente_demo='0'` prima del primo avvio.
@@ -24,7 +24,7 @@
                     if (!lista || !lista.length) return false;
                     return window.MappAIStudenteFS.importa(lista).then(function () {
                         try { localStorage.setItem(K, '1'); } catch (e) { }
-                        if (window.showToast) window.showToast('C\'è una mappa di prova: «La carta». Le tue arriveranno dal docente.', 'info');
+                        if (window.showToast) window.showToast('Ci sono due mappe di prova: «La carta» e «Sistema Albero». Le tue arriveranno dal docente.', 'info');
                         return true;
                     });
                 });
