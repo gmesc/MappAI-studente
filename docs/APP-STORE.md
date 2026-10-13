@@ -52,7 +52,7 @@ Non c'è nessuna registrazione. Le mappe e le tue risposte restano nella cartell
 
 PER CHI È
 
-Per gli allievi della scuola media e superiore le cui insegnanti e i cui insegnanti usano MappAI, l'app gratuita per Mac e Windows che genera mappe mentali e materiali di studio da un testo. L'app contiene una mappa di prova, «La carta», per provare tutto subito.
+Per gli allievi della scuola media e superiore le cui insegnanti e i cui insegnanti usano MappAI, l'app gratuita per Mac e Windows che genera mappe mentali e materiali di studio da un testo. L'app contiene due mappe di prova, «La carta» (storia) e «Sistema Albero» (scienze), per provare tutto subito.
 
 Un carattere ad alta leggibilità (TM Sans, Atkinson Hyperlegible) si sceglie dalla Cabina. La guida, scritta per ragazze e ragazzi di 11-12 anni, è dentro l'app.
 
@@ -64,7 +64,7 @@ mappe mentali,studio,scuola,flashcard,quiz,ripasso,docente,mappa,memoria,DSA,leg
 
 ## Novità in questa versione (prima pubblicazione)
 
-Prima versione: mappa, materiali, flashcard, prove a scelta multipla e a domande aperte, mappa della padronanza, scambio con il docente via QR sulla rete locale, mappa di prova inclusa.
+Prima versione: mappa, materiali, flashcard, prove a scelta multipla e a domande aperte, mappa della padronanza, scambio con il docente via QR sulla rete locale, due mappe di prova incluse.
 
 ## Privacy (le domande di App Store Connect)
 
@@ -80,36 +80,40 @@ Testo per la pagina privacy sul sito (breve):
 
 ## Note per il revisore (App Review)
 
-> L'app è pensata per allievi che ricevono le mappe dal docente tramite MappAI (app desktop). Per la revisione non serve nessun account né alcun dispositivo esterno: al primo avvio l'app installa una mappa di prova, «La carta», visibile nella colonna di sinistra sotto «Storia». Da lì si possono provare Mappa, Flashcard, Prova (quiz a scelta multipla e domande aperte) e Materiali. Le funzioni «Docente › Ricevi» e «Consegna» richiedono il computer di un docente con MappAI sulla stessa rete Wi-Fi e non sono verificabili in revisione; senza, mostrano un messaggio chiaro e non bloccano nulla.
+> L'app è pensata per allievi che ricevono le mappe dal docente tramite MappAI (app desktop). Per la revisione non serve nessun account né alcun dispositivo esterno: al primo avvio l'app installa due mappe di prova, «La carta» e «Sistema Albero», visibili nella colonna di sinistra sotto «Storia» e «Scienze». Da lì si possono provare Mappa, Flashcard, Prova (quiz a scelta multipla e domande aperte) e Materiali. Le funzioni «Docente › Ricevi» e «Consegna» richiedono il computer di un docente con MappAI sulla stessa rete Wi-Fi e non sono verificabili in revisione; senza, mostrano un messaggio chiaro e non bloccano nulla.
 
-## Screenshot (rifatti il 21/9/26 — iPad 13", orizzontale e verticale)
+## Screenshot (rifatti il 13/10/26 — iPad 13", orizzontale e verticale)
 
 In `resources/app-store/orizzontale/` (2752×2064) e `resources/app-store/verticale/` (2064×2752),
 le due misure che App Store Connect accetta per l'iPad 13" (valgono anche per gli iPad più piccoli).
 Sono DIECI per orientamento, il massimo che App Store Connect accetta.
-Screenshot puri, senza didascalie; le foto non stanno in git. Nell'ordine:
+Screenshot puri, senza didascalie; le foto non stanno in git (quelle del 21/9 sono in
+`resources/app-store/precedenti-2026-09-21/`). Due mappe: «Svizzera e 2a GM» (la versione rigenerata il
+10/10, 39 nodi) per la mappa e la scheda del nodo; «Sistema Albero» per la console e i materiali
+(Giacomo, 13/10: «un buon progetto in cui si vedono tutti i materiali di studio»). Nell'ordine:
 
 1. `00-landing` — la casa appena aperta: il cerchio «Ricevi dal docente» al centro e la nota che dice dove finiscono i progetti ricevuti.
-2. `01-console` — la console STUDIA con «La carta» scelta, «Svizzera e 2a GM» nella colonna.
-3. `02-mappa` — «Svizzera e 2a GM» in vista Fasci: 48 nodi, i rami colorati.
-4. `03-menu-nodo` — il menu del nodo (tocco lungo): Descrizione, Leggi ad alta voce, Lettura veloce, Focus…
+2. `01-console` — la console STUDIA con «Sistema Albero» scelto, «La carta» e «Svizzera e 2a GM» nella colonna.
+3. `02-mappa` — «Svizzera e 2a GM» in vista Fasci: 39 nodi, i rami colorati.
+4. `03-menu-nodo` — il menu del nodo «Diplomazia della Neutralità» (tocco lungo): Descrizione, Leggi ad alta voce, Lettura veloce, Focus…
 5. `04-scheda-voce` — la scheda del nodo mentre la voce legge: frase evidenziata, parola sottolineata.
 6. `05-lettura-veloce` — la lettura veloce al posto del testo: una parola, la lettera di fuoco in rosso.
-7. `06-sintesi` — «La carta»: la sintesi accanto alla mappa, con la fila di lettura.
+7. `06-sintesi` — «Sistema Albero»: la sintesi accanto alla mappa, con la fila di lettura.
 8. `07-flashcard` — una carta girata.
-9. `08-prova` — le domande aperte su misura con i tre colori del «Perché».
-10. `09-split` — la risposta scritta con la mappa accanto.
+9. `08-prova` — le domande aperte su misura di «Sistema Albero» con i tre colori del «Perché».
+10. `09-split` — la risposta scritta (la chioma) con la mappa di «Sistema Albero» accanto.
 
 **Come si rifanno** (l'app web del bundle, in Chrome headless, pilotata via CDP — la stessa strada
 della guida; il simulatore restava inaccessibile agli strumenti di questo Mac):
 
 ```bash
-# il pacchetto con le due mappe: la demo + «Svizzera e 2a GM» nella copia per l'allievo
-node tools/vault-json.js "<cartella della copia per l'allievo>/Svizzera e 2a GM" "4R/Storia" /tmp/sv.json
-node -e "const f=require('fs');f.mkdirSync('public/dev',{recursive:true});f.writeFileSync('public/dev/vault.json',JSON.stringify(JSON.parse(f.readFileSync('public/demo/vault.json')).concat(JSON.parse(f.readFileSync('/tmp/sv.json')))))"
+# il pacchetto: la demo («La carta» + «Sistema Albero») + «Svizzera e 2a GM» filtrata come per l'allievo
+# (un dest sotto …/public/demo/ applica relVaultStudente)
+node tools/vault-json.js "$HOME/Documents/MappAI - file/Mappe/4R/Storia/Svizzera e 2a GM" "4R/Storia" /tmp/x/public/demo/sv.json
+node -e "const f=require('fs');f.mkdirSync('public/dev',{recursive:true});f.writeFileSync('public/dev/vault.json',JSON.stringify(JSON.parse(f.readFileSync('public/demo/vault.json')).concat(JSON.parse(f.readFileSync('/tmp/x/public/demo/sv.json')))))"
 python3 -m http.server 8766 -d public
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --remote-debugging-port=9377 --user-data-dir=/tmp/chrome-as --hide-scrollbars about:blank
-node tools/appstore/campagna.js orizzontale      # poi: verticale
+node tools/appstore/campagna.js orizzontale      # poi: verticale (PORTA=8767 se il server è su un'altra porta)
 ```
 
 Differenze dal dispositivo vero: niente barra di stato iOS e i cursori con la veste di Chrome.
@@ -121,7 +125,7 @@ Servono anche l'**icona 1024×1024** (c'è: `resources/icona-1024.png`) e, facol
 ## Prima di inviare (checklist tecnica)
 
 - [x] `NSAllowsArbitraryLoads` tolto dal plist (resta `NSAllowsLocalNetworking`): Apple chiede una giustificazione per l'HTTP in chiaro. Tolto a mano il 17/9; dal 5/10 anche da `tools/plist-ipad.py`, che lo rimetteva a ogni giro.
-- [ ] Versione e build in Xcode (1.0 / 1).
-- [ ] `npm run demo` rifatto dopo l'ultima generazione della mappa di prova; `public/demo/vault.json` nel repo.
+- [x] Versione e build in Xcode (1.0 / 1): `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION = 1`, controllato il 13/10.
+- [x] `npm run demo` rifatto il 13/10: il pacchetto porta «La carta» (2A · Storia, dall'Archivio: identica byte per byte alla versione del 16/9) e «Sistema Albero» (1A · Scienze, da `Mappe/`), 85 file, 4,7 MB. Di «Sistema Albero» l'allievo non riceve il PDF della fonte: sta in `Fonti/`, che `relVaultStudente` non ammette.
 - [ ] Archivio con il team di firma; TestFlight con le classi prima della pubblicazione.
-- [ ] Pagina privacy pubblicata su insegnai.ch.
+- [ ] Pagina privacy pubblicata su insegnai.ch (13/10: Giacomo la sta preparando e caricando).

@@ -7,9 +7,10 @@
    (verticale), le due misure che App Store Connect accetta per l'iPad 13".
    Screenshot PURI: niente numeri, cornici o didascalie.
 
-   Due mappe (Giacomo, 17/9/26): «Svizzera e 2a GM» per la mappa e la scheda
-   del nodo (48 nodi, si vede una mappa vera); «La carta» per sintesi,
-   flashcard e prove (è l'unica che le porta).
+   Due mappe: «Svizzera e 2a GM» per la mappa e la scheda del nodo (Giacomo,
+   17/9/26: si vede una mappa vera; dal 13/10 la versione rigenerata il 10/10,
+   39 nodi); «Sistema Albero» per la console, la sintesi, le flashcard e le prove
+   (Giacomo, 13/10/26: «un buon progetto in cui si vedono tutti i materiali di studio»).
 
    Prerequisiti (solo sviluppo, Node >= 22):
      il pacchetto con le due mappe in public/dev/vault.json (demo + Svizzera,
@@ -17,6 +18,7 @@
      python3 -m http.server 8766 -d public
      Chrome headless --remote-debugging-port=9377 --hide-scrollbars
      node tools/appstore/campagna.js [orizzontale|verticale] [dal-passo]
+     (PORTA=8767 se il server di public/ ascolta su un'altra porta)
    Le foto vanno in resources/app-store/<orientamento>/ (fuori da git). */
 'use strict';
 const path = require('path');
@@ -30,7 +32,7 @@ process.env.IMG_DIR = DIR;
 const L = require('../guida/lab.js');
 
 const W = ORIENT === 'verticale' ? 1032 : 1376, H = ORIENT === 'verticale' ? 1376 : 1032;
-const URL0 = 'http://localhost:8766/';
+const URL0 = 'http://localhost:' + (process.env.PORTA || 8766) + '/';
 
 let attivo = !DA;
 async function passo(nome, fn) {
@@ -89,7 +91,7 @@ async function nodo(etichetta) {
 /* Prova › Domande aperte su misura, tutti gli angoli; con o senza la mappa accanto */
 async function domandeSuMisura(split) {
   await daCapo();
-  await toccaTesto('La carta2A', { sel: 'button' });
+  await toccaTesto('Sistema Albero1A', { sel: 'button' });
   await L.pausa(1000);
   await toccaTesto('Prova', { sel: 'button' });
   await aspettaTesto('Scegli un\'attività nella colonna a sinistra.', 12000);
@@ -143,7 +145,7 @@ async function daCapo() {
   });
 
   await passo('01-console', async () => {
-    await toccaTesto('La carta2A', { sel: 'button' });
+    await toccaTesto('Sistema Albero1A', { sel: 'button' });
     await aspettaTesto('Le tue prove');
     await L.pausa(1500);
     await foto('01-console');
@@ -155,7 +157,7 @@ async function daCapo() {
     await toccaTesto('Svizzera e 2a GM4R', { sel: 'button' });
     await L.pausa(1200);
     await toccaTesto('Mappa', { sel: 'button' });
-    await L.finoA(`window.appState && appState.db && appState.db.nodes && appState.db.nodes.length > 40`, 15000);
+    await L.finoA(`window.appState && appState.db && appState.db.nodes && appState.db.nodes.length > 30`, 15000);
     await L.pausa(2500); await senzaToast();
     await vista('fasci');
     await L.pausa(1200);
@@ -169,7 +171,7 @@ async function daCapo() {
   });
 
   await passo('03-menu-nodo', async () => {
-    await tocca(await nodo('Neutralità Elvetica'), 800);
+    await tocca(await nodo('Diplomazia della Neutralità'), 800);
     await L.pausa(700);
     await foto('03-menu-nodo');
   });
@@ -198,16 +200,16 @@ async function daCapo() {
     await L.pausa(600);
   });
 
-  /* ── «La carta»: sintesi, flashcard, prove ─────────────────────────── */
+  /* ── «Sistema Albero»: sintesi, flashcard, prove ───────────────────── */
   await passo('06-sintesi', async () => {
     await daCapo();
-    await toccaTesto('La carta2A', { sel: 'button' });
+    await toccaTesto('Sistema Albero1A', { sel: 'button' });
     await L.pausa(1000);
     await toccaTesto('Mappa', { sel: 'button' });
-    await L.finoA(`window.appState && appState.db && appState.db.nodes && appState.db.nodes.length > 0 && appState.rootNodeLabel === 'La carta'`, 15000);
+    await L.finoA(`window.appState && appState.db && appState.db.nodes && appState.db.nodes.length > 0 && appState.rootNodeLabel === 'Sistema Albero'`, 15000);
     await L.pausa(2500); await senzaToast();
     await vista('td');
-    await L.val(`MappAIStudenteDocumenti.apriFile(appState.activeVaultPath, 'Materiale Studio/Sintesi-La carta - TM Sans.html', 'Sintesi-La carta - TM Sans.html'); 1`);
+    await L.val(`MappAIStudenteDocumenti.apriFile(appState.activeVaultPath, 'Materiale Studio/Sintesi-Sistema Albero - TM Sans.html', 'Sintesi-Sistema Albero - TM Sans.html'); 1`);
     await L.finoA(`!!document.querySelector('#studente-dock .mai-fila')`, 12000);
     await L.pausa(2000);
     await foto('06-sintesi');
@@ -215,7 +217,7 @@ async function daCapo() {
 
   await passo('07-flashcard', async () => {
     await daCapo();
-    await toccaTesto('La carta2A', { sel: 'button' });
+    await toccaTesto('Sistema Albero1A', { sel: 'button' });
     await L.pausa(1000);
     await toccaTesto('Flashcard', { sel: 'button' });
     await aspettaTesto('Sessione di Studio', 12000);
@@ -247,7 +249,7 @@ async function daCapo() {
     await toccaTesto('Comincia a rispondere', { sel: 'button' });
     await L.pausa(1200);
     await L.val(`(()=>{const t=document.querySelector('.sc-ta'); if(!t) return 0; t.focus(); return 1;})()`);
-    await L.scrivi('La pergamena era fatta con la pelle degli animali, pulita, tesa e seccata. Era più resistente del papiro.');
+    await L.scrivi('La chioma è la parte alta dell\'albero, fatta di rami e foglie. Serve a catturare la luce del sole per la fotosintesi.');
     await L.val(`(()=>{const t=document.querySelector('.sc-ta'); if(t) t.blur(); return 1;})()`);
     await L.pausa(800);
     await foto('09-split');

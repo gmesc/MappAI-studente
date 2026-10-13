@@ -8,6 +8,20 @@
 
 ## 0. Dove si riprende
 
+**⟵ 13/10 notte, DUE MAPPE DI PROVA** (ramo `lavoro/demo-albero`). Giacomo: «parti dalla mappa di prova e inserisci il
+progetto Sistema albero quello che abbiamo mantenuto». `public/demo/vault.json` porta ora «La carta» (2A · Storia) e
+«Sistema Albero» (1A · Scienze): 85 file, 4,7 MB. «La carta» si prende dall'Archivio (`Mappe/` è stata archiviata il 28/9) ed
+è identica byte per byte a quella di prima. `npm run demo` le impacchetta tutte e due (`tools/vault-json.js` ha `--aggiungi`:
+accoda al `dest` già scritto); il toast di `studente/demo.js` nomina le due mappe (`?v=demo-albero`); `docs/APP-STORE.md`
+(descrizione, novità, note per il revisore, checklist) aggiornato. Provato nel browser su un'origine vuota (porta 8767):
+console con Scienze › Sistema Albero e Storia › La carta; mappa, flashcard (1 / 30) e Studio attivo (3 quiz, 3 fogli)
+di «Sistema Albero»; nessun errore. Test 45/45.
+Poi gli **screenshot per l'App Store rifatti** (Giacomo: «metti Sistema Albero negli screenshot che possono essere migliorati
+con un buon progetto in cui si vedono tutti i materiali di studio»): console, sintesi, flashcard, prova e schermo diviso su
+«Sistema Albero»; mappa e scheda del nodo su «Svizzera e 2a GM» rigenerata il 10/10 (39 nodi: il nodo «Neutralità Elvetica»
+non c'è più, la campagna tocca «Diplomazia della Neutralità»). `tools/appstore/campagna.js` legge `PORTA`. Venti foto in
+`resources/app-store/` del checkout principale, quelle del 21/9 in `precedenti-2026-09-21/` (fuori da git).
+
 **⟵ 13/10 sera, sincronizzate 8 copie da MappAI re `7c777c11`** (dall'ultima, `9a5de519`: 0087 lotto 11, 0093 beta.7,
 0094 il nome del progetto è il nome della cartella, 0095 importare un vault), `?v=sync-20261013b`. **Nel reader non cambia
 niente**: la modifica di `branch-synthesis` sta nella generazione dell'introduzione (non in `buildHtml`, che la scheda del

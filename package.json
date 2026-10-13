@@ -12,7 +12,7 @@
     "sincronizza": "node tools/sincronizza.js",
     "verifica": "node tools/sincronizza.js --verifica",
     "vault-json": "node tools/vault-json.js",
-    "demo": "node tools/vault-json.js \"$HOME/Documents/MappAI - file/Mappe/2A/Storia/La carta\" 2A/Storia public/demo/vault.json",
+    "demo": "node tools/vault-json.js \"$HOME/Documents/MappAI - file/Archivio/Mappe fino al 28-09-2026/2A/Storia/La carta\" 2A/Storia public/demo/vault.json && node tools/vault-json.js \"$HOME/Documents/MappAI - file/Mappe/1A/Scienze/Sistema Albero\" 1A/Scienze public/demo/vault.json --aggiungi",
     "serve": "python3 -m http.server 8766 -d public",
     "ios": "npx cap add ios; python3 tools/plist-ipad.py && npx cap sync ios && npx cap open ios"
   },
