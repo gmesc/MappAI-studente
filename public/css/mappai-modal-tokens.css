@@ -45,6 +45,12 @@
     --mm-bordo: #cbd5e1;
     /* lo spessore di ogni bordo e filetto del motore (09/10, lotto 2) */
     --mm-bordo-spessore: 1px;
+    /* 11/10/26 (packet 0087 lotto 10b) — L'ANELLO DI FUOCO, uno per tutta l'app del docente (Giacomo: «arancio per
+       avere un buon contrasto»). Misurato: 3,56:1 sul bianco, 3,23 sul neutro, 3,40 sul fondo di sezione, 3,18
+       sull'accento tenue (soglia 3:1 di un contorno; #f97316 faceva 2,80). Nel budget prende il posto di
+       --man-grigio (#989898, zero lettori). Prima c'erano tre anelli: #a5b4fc qui, emerald-500 di Tailwind,
+       #6366f1 in style.css. */
+    --mm-focus: #ea580c;
     --mm-fondo: #ffffff;
     --mm-fondo-sez: #f8fafc;
     /* DECISIONE G (13/9/26) — UN SOLO NEUTRO a riposo. Ne convivevano due a due passi:
@@ -93,6 +99,32 @@
        consigliati per il tocco su iPad. La leva per tornare indietro è UNA:
        questi due valori. */
     --mm-btn-fs: 12px;
+    /* ── LA FAMIGLIA DEI CORPI (0087, lotto 10c, 12/10/2026; Giacomo: «per i banchi C2 e C va bene famiglia») ──
+       Cinque ruoli al posto di dodici letterali: titolo 15 · testo 13 · etichetta 11 · aiuto 11 (alias) ·
+       sezione 10. I mezzi punti muoiono (11,5 → etichetta, 12,5 e 13,5 → testo, 10,5 e 9,5 → sezione) solo
+       sotto html[data-app="docente"]: il reader iPad, che copia questo foglio, non cambia. I controlli restano a
+       --mm-ctl-fs (12). Decisione di Giacomo sul banco 10c: «per i banchi C2 e C va bene famiglia». */
+    --mm-fs-titolo: 15px;
+    --mm-fs-testo: 13px;
+    --mm-fs-label: 11px;
+    --mm-fs-aiuto: var(--mm-fs-label);
+    --mm-fs-sez: 10px;
+    /* il corpo di LETTURA di base (Giacomo, 12/10, dal banco 2: «Un corpo di lettura di base come token = 14px»):
+       il testo che il docente legge con attenzione — schede del Banco, item dell'editor, scheda-fonte — a gradino 1
+       e zoom 1; cresce col gradino per larghezza del contenitore e con i − / + dell'editor (logica unica, in corso) */
+    --mm-fs-lettura: 14px;
+    /* ── I COLORI DI GENERE DEI MATERIALI (0087 lotto 10d, 12-13/10/2026). Giacomo, ad ADMIN: «ho sbagliato,
+       mantieni i colori differenziati per tipi di materiali»; poi in chat: «falli diventare token». Quiz, aperte,
+       sintesi e catena stanno sull'accento; le flashcard sul verde (lo stesso valore del «giusto», --mm-ok); il
+       foglio dei nodi sull'arancio (colore, testo scuro per il contrasto, tenue); le aree sul teal. I valori sono
+       quelli che l'editor (mappai-doc-editor.js) scriveva a mano: cinque colori nuovi nel budget (41 → 46). */
+    --mm-genere-quiz: var(--mm-accent);
+    --mm-genere-flash: var(--mm-ok);
+    --mm-genere-flash-soft: #dcfce7;
+    --mm-genere-foglio: #f97316;
+    --mm-genere-foglio-testo: #c2410c;
+    --mm-genere-foglio-soft: #fff7ed;
+    --mm-genere-aree: #0f766e;
     --mm-btn-pad-y: 9px;
 
     /* DECISA (31/7, verdetti): 20 nei bottoni e nel corpo, 24 in testata.
@@ -204,7 +236,7 @@
 }
 
 .mm-title {
-    font-size: 15px;
+    font-size: var(--mm-fs-titolo);
     font-weight: 800;
     color: var(--mm-testo);
     line-height: 1.35;
@@ -294,7 +326,7 @@
 
 .mm-sez__t {
     display: block;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
@@ -356,7 +388,7 @@
 
 .mm-campo:focus {
     outline: none;
-    box-shadow: 0 0 0 2px #a5b4fc;
+    box-shadow: 0 0 0 2px var(--mm-focus);
 }
 
 /* CONTROLLI GEMELLI (09/10, packet 0087 lotto 2) — nell'app del docente il
@@ -391,7 +423,7 @@ html[data-app="docente"] textarea.mm-campo:not(.mm-campo--cresce) {
    a capire cosa contiene, questa riga sopra il campo è la scappatoia prevista. */
 .mm-hint {
     display: block;
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     color: var(--mm-testo-3);
     margin-bottom: 4px;
 }
@@ -465,6 +497,88 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
    bianco faceva 1,05:1 e non si vedeva */
 .mm-btn--secondario:hover {
     background: var(--mm-neutro);
+}
+
+/* 11/10 (packet 0087 lotto 10a, banco 10a): LO STANDARD DEI CONTROLLI dell'app del docente — il
+   secondario a riposo ha il fondo di sezione col bordo, al passaggio l'accento tenue col testo
+   d'accento. Supera, per il BOTTONE, l'H4 del 09/10 (per il campo l'H4 resta). Sotto data-app
+   perché il reader iPad copia questo foglio e avrà uno standard suo. */
+html[data-app="docente"] .mm-btn--secondario {
+    background: var(--mm-fondo-sez);
+    color: var(--mm-testo-2);
+}
+html[data-app="docente"] .mm-btn--secondario:hover {
+    background: var(--mm-accent-soft);
+    color: var(--mm-accent);
+}
+
+/* 11/10 (packet 0087 lotto 10b): I CAMPI FUORI DAL MOTORE leggono il campo del motore (lotti 2 e 5) con
+   una regola nel foglio, senza toccare i loro file — i modali vecchi di index.html, la sidebar, la scheda
+   del nodo, «Genera materiali» (0070). Neutro senza bordo, 40/12, raggio del campo, al mouse bianco col
+   bordo, dentro un riquadro grigio bianco senza bordo, a fuoco l'anello --mm-focus. Solo app del docente. */
+html[data-app="docente"] :is(.form_input, #prompt-input, #link-family-input, #edit-node-modal :is(textarea, input[type="text"], input[type="url"]),
+    #study-quiz-textarea, #validate-rel-input, #super-finder-input, #ai-sidebar-input, #node-tutor-input,
+    #print-mm-node-select, #print-kg-node-select,
+    #mp-modal :is(select, input[type="text"], input[type="number"])) {
+    background-color: var(--mm-neutro);
+    border: var(--mm-bordo-spessore) solid transparent;
+    border-radius: var(--mm-r-campo);
+    color: var(--mm-testo);
+    font-size: var(--mm-ctl-fs);
+    font-weight: 400;
+    box-shadow: none;
+}
+html[data-app="docente"] :is(.form_input, #link-family-input, #edit-node-modal :is(input[type="text"], input[type="url"]),
+    #validate-rel-input, #super-finder-input, #ai-sidebar-input, #node-tutor-input,
+    #print-mm-node-select, #print-kg-node-select,
+    #mp-modal :is(select, input[type="text"], input[type="number"])):not(textarea) {
+    height: var(--mm-ctl-h);
+    padding-top: 0;
+    padding-bottom: 0;
+}
+html[data-app="docente"] :is(#prompt-input, #edit-node-modal textarea, #study-quiz-textarea) {
+    min-height: var(--mm-ctl-h);
+}
+html[data-app="docente"] :is(.form_input, #prompt-input, #link-family-input, #edit-node-modal :is(textarea, input[type="text"], input[type="url"]),
+    #study-quiz-textarea, #validate-rel-input, #super-finder-input, #ai-sidebar-input, #node-tutor-input,
+    #print-mm-node-select, #print-kg-node-select,
+    #mp-modal :is(select, input[type="text"], input[type="number"])):hover:not(:focus):not([disabled]) {
+    background-color: var(--mm-fondo);
+    border-color: var(--mm-bordo);
+}
+/* a fuoco: l'anello --mm-focus (qui con la stessa lista, perché sopra il box-shadow è azzerato con più peso) */
+html[data-app="docente"] :is(.form_input, #prompt-input, #link-family-input, #edit-node-modal :is(textarea, input[type="text"], input[type="url"]),
+    #study-quiz-textarea, #validate-rel-input, #super-finder-input, #ai-sidebar-input, #node-tutor-input,
+    #print-mm-node-select, #print-kg-node-select,
+    #mp-modal :is(select, input[type="text"], input[type="number"])):focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--mm-focus);
+}
+/* le tendine di «Chiedi e Rispondi» (.tq-in) e della Lavagna (.cl-in): le finestre di INSEGNA nascono da
+   stringhe, un <style> dentro sarebbe un elemento nato dai dati (vietato dai test); la veste sta qui */
+html[data-app="docente"] :is(.tq-in, .cl-in) {
+    height: var(--mm-ctl-h);
+    padding: 0 12px;
+    border: var(--mm-bordo-spessore) solid transparent;
+    border-radius: var(--mm-r-campo);
+    font: inherit;
+    font-size: var(--mm-ctl-fs);
+    color: var(--mm-testo);
+    background-color: var(--mm-neutro);
+}
+html[data-app="docente"] :is(.tq-in, .cl-in):hover:not(:focus) { background-color: var(--mm-fondo); border-color: var(--mm-bordo); }
+html[data-app="docente"] :is(.tq-in, .cl-in):focus { outline: none; box-shadow: 0 0 0 2px var(--mm-focus); }
+/* nel riquadro grigio il campo è bianco (punto 4 di Giacomo, 08/10) e il bordo compare solo col mouse */
+html[data-app="docente"] :is(#edit-node-modal .bg-slate-100, #mp-modal .bg-slate-50) :is(input, select, textarea) {
+    background-color: var(--mm-fondo);
+}
+/* L'ANELLO DI FUOCO È UNO (10b, Giacomo: «arancio per avere un buon contrasto»): --mm-focus, anche per
+   l'anello di Tailwind che index.html mette su tutti gli input (ring-emerald-500 → --tw-ring-color). */
+html[data-app="docente"] :is(input, textarea, select):focus {
+    box-shadow: 0 0 0 2px var(--mm-focus);
+}
+html[data-app="docente"] :is(input, textarea, select):focus-visible {
+    outline-color: var(--mm-focus);
 }
 
 .mm-btn--distruttivo {
@@ -549,7 +663,7 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
 
 .mm-testo {
     margin: 0 0 10px;
-    font-size: 13px;
+    font-size: var(--mm-fs-testo);
     color: var(--mm-testo-2);
     line-height: 1.65;
 }
@@ -656,7 +770,7 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
 .mm-label,
 .mm-campi:has(> .mm-campo-riga > .mm-label) > .mm-campo-riga:not(:has(> .mm-label))::before {
     display: block;
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     font-weight: 700;
     color: var(--mm-testo-2);
     margin-bottom: 4px;
@@ -711,7 +825,7 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
     border: 0;
     background: none;
     color: inherit;
-    font-size: 15px;
+    font-size: var(--mm-fs-titolo);
     line-height: 1;
     /* la × sta DENTRO la voce: 32 è il più grande che ci entri lasciando
        respiro al nome, ed è sopra i 24 minimi di WCAG 2.2 */
@@ -771,7 +885,7 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
 
 .mm-voci__g {
     display: block;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
@@ -838,7 +952,7 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
 
 .mm-voce__s {
     display: block;
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     color: var(--mm-testo-3);
     margin-top: 1px;
     overflow: hidden;
@@ -930,7 +1044,7 @@ html[data-app="docente"] .mm-btn:not(.mm-cella-az .mm-btn) {
 
 .mm-opz__d {
     display: block;
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     color: var(--mm-testo-3);
     line-height: 1.5;
 }
@@ -1079,7 +1193,7 @@ button.mm-ctx__p:hover {
 }
 
 button.mm-ctx__p:focus-visible {
-    outline: 2px solid var(--mm-accent);
+    outline: 2px solid var(--mm-focus);
     outline-offset: -2px;
 }
 
@@ -1277,7 +1391,7 @@ html[data-app="docente"] .mm-tela--colonna :is(input.form_input, select):hover:n
     background: none;
     cursor: pointer;
     font: inherit;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
@@ -1323,7 +1437,7 @@ html[data-app="docente"] .mm-tela--colonna :is(input.form_input, select):hover:n
     background: none;
     cursor: pointer;
     font: inherit;
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .07em;
@@ -1360,7 +1474,7 @@ html[data-app="docente"] .mm-tela--colonna :is(input.form_input, select):hover:n
 }
 
 .mm-tab__riga:focus-visible {
-    outline: 2px solid var(--mm-accent);
+    outline: 2px solid var(--mm-focus);
     outline-offset: -2px;
 }
 
@@ -1399,7 +1513,7 @@ html[data-app="docente"] .mm-tela--colonna :is(input.form_input, select):hover:n
 /* stati: oggi non esistono quasi mai, ed è metà del disordine */
 .mm-btn:focus-visible,
 .mm-campo:focus-visible {
-    outline: 2px solid var(--mm-accent);
+    outline: 2px solid var(--mm-focus);
     outline-offset: 2px;
 }
 
@@ -1425,7 +1539,7 @@ html[data-app="docente"] .mm-tela--colonna :is(input.form_input, select):hover:n
 
 .mm-errore {
     display: block;
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     font-weight: 700;
     color: var(--mm-danger);
     margin-top: 4px;
@@ -1725,7 +1839,7 @@ html .border-slate-200\/60 {
 }
 
 .mm-nav__s {
-    font-size: 11px;
+    font-size: var(--mm-fs-label);
     font-weight: 600;
     opacity: .7;
     overflow: hidden;
@@ -1758,7 +1872,7 @@ html .border-slate-200\/60 {
     background: #fffbeb;
     box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
     color: #92400e;
-    font-size: 15px;
+    font-size: var(--mm-fs-titolo);
 }
 
 .mm-nav__v--segnala:hover,
@@ -1787,7 +1901,7 @@ html .border-slate-200\/60 {
 }
 
 .mm-nav__v--segnala .mm-nav__s {
-    font-size: 13px;
+    font-size: var(--mm-fs-testo);
     font-weight: 700;
     line-height: 20px;
     opacity: .7;
@@ -1837,7 +1951,7 @@ html .border-slate-200\/60 {
    essere navigazione e diventa un muro. Non è cliccabile: è un'etichetta. */
 .mm-nav__g {
     display: block;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
@@ -1864,7 +1978,7 @@ html .border-slate-200\/60 {
     cursor: pointer;
     text-align: left;
     font: inherit;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
@@ -1881,7 +1995,7 @@ html .border-slate-200\/60 {
     border-radius: 999px;
     background: var(--mm-fondo-2, #f1f5f9);
     color: var(--mm-testo-3);
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     letter-spacing: 0;
     text-align: center;
@@ -2136,7 +2250,7 @@ html .border-slate-200\/60 {
     z-index: 1;
     background: var(--mm-fondo-sez);
     text-align: left;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .06em;
@@ -2171,7 +2285,7 @@ html .border-slate-200\/60 {
 }
 
 .mm-tab__ord:focus-visible {
-    outline: 2px solid var(--mm-accent);
+    outline: 2px solid var(--mm-focus);
     outline-offset: 2px;
 }
 
@@ -2268,7 +2382,7 @@ th[aria-sort="descending"] {
     border-radius: var(--mm-r-pill);
     padding: 2px 8px;
     font: inherit;
-    font-size: 10px;
+    font-size: var(--mm-fs-sez);
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
@@ -2279,7 +2393,7 @@ th[aria-sort="descending"] {
 }
 
 .mm-scelta:focus-visible {
-    outline: 2px solid var(--mm-accent);
+    outline: 2px solid var(--mm-focus);
     outline-offset: 1px;
 }
 
@@ -2621,3 +2735,271 @@ th[aria-sort="descending"] {
     top: 0;
     border-radius: 0;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════
+   11/10/26 (packet 0087 lotto 10b, Giacomo: «tutti i modali vanno allineati») — I MODALI VECCHI
+   di index.html (Tailwind a mano) e «Genera materiali» (0070) leggono i token del motore con
+   regole nel foglio, senza toccare il loro markup né i loro file. Velo e cornice, titolo,
+   titolo di sezione, bottoni (primario · secondario · distruttivo), riquadri grigi, spunte.
+   Solo app del docente. La migrazione a MappAIModal resta un packet a parte.
+   ══════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* velo unico e cornice della finestra */
+html[data-app="docente"] :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal,
+    #ai-modal, #config-ai-modal, #validate-link-modal, #mp-modal) {
+    background-color: var(--mm-velo);
+}
+html[data-app="docente"] :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal,
+    #ai-modal, #config-ai-modal, #validate-link-modal, #mp-modal)
+    > div:is(.rounded-xl, .rounded-2xl, .rounded-lg) {
+    border-radius: var(--mm-r-box);
+    box-shadow: var(--mm-ombra);
+}
+html[data-app="docente"] :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #study-player-modal, #config-ai-modal, #validate-link-modal, #mp-modal) > div:is(.p-6, .p-8, .p-7) {
+    padding: var(--mm-pad);
+}
+
+/* il titolo della finestra: 15/800 nello scuro dei token (il titolo colorato della scheda del nodo resta suo) */
+html[data-app="docente"] :is(.modal_title, .pm-title,
+    :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal, #ai-modal,
+        #config-ai-modal, #validate-link-modal)
+        :is(h2, h3):is(.text-lg, .text-xl, .text-2xl, .modal_title, .text-\[1\.15em\])) {
+    font-size: var(--mm-fs-titolo);
+    font-weight: 800;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--mm-testo);
+}
+html[data-app="docente"] #edit-node-modal h3.text-lg { color: inherit; } /* sta sulla testata colorata del nodo */
+html[data-app="docente"] :is(.pm-subtitle, .pm-body-text, .pm-option-desc) { color: var(--mm-testo-3); }
+
+/* il titolo di sezione: 10/700 maiuscoletto .08em nel grigio dei token (= .mm-sez__t) */
+html[data-app="docente"] :is(.modal_field_title, .pm-section-title, .input_label_xxs,
+    :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal, #config-ai-modal, #validate-link-modal)
+        :is(label, span, p, h4).uppercase,
+    #mp-modal .uppercase) {
+    font-size: var(--mm-fs-sez);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--mm-testo-3);
+}
+/* etichetta di campo senza maiuscole e titolo di riquadro di «Genera materiali» */
+/* 10c (12/10): il corpo di base della finestra era il 16 del Tailwind, le etichette delle opzioni 12,5 — vanno al testo della famiglia */
+html[data-app="docente"] #mp-modal > div { font-size: var(--mm-fs-testo); }
+html[data-app="docente"] #mp-modal .text-\[12\.5px\] { font-size: var(--mm-fs-testo); }
+html[data-app="docente"] #mp-modal span.text-\[13\.5px\] { font-size: 14px; font-weight: 700; color: var(--mm-testo); }
+html[data-app="docente"] #mp-modal :is(.text-sm, summary) { font-size: var(--mm-fs-testo); color: var(--mm-testo-2); }
+html[data-app="docente"] #mp-modal :is(.text-\[12\.5px\], .text-\[11px\]) { color: var(--mm-testo-2); }
+
+/* i bottoni: primario, secondario, distruttivo — gli stessi token di .mm-btn */
+html[data-app="docente"] :is(.btn_salva_action, .btn_annulla_action, .btn_confirm_action,
+    :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal, #config-ai-modal, #validate-link-modal)
+        button:is(.bg-indigo-600, .bg-indigo-500, .bg-slate-100, .bg-red-600, .bg-emerald-500, .bg-emerald-600,
+                  .bg-white, .bg-gradient-to-r):not(.rounded-full):not(.pm-btn-cancel):not(.pm-btn-primary)) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--mm-btn-gap);
+    min-height: var(--mm-ctl-h);
+    height: var(--mm-ctl-h); /* a una riga: la riga h-11/h-12 che li ospita non li allunga */
+    padding: 0 14px;
+    border-radius: var(--mm-r-btn);
+    font-size: var(--mm-ctl-fs);
+    font-weight: 700;
+    letter-spacing: normal;
+    text-transform: none;
+    box-shadow: none;
+    background-image: none;
+}
+/* primario */
+html[data-app="docente"] :is(.btn_salva_action,
+    :is(#alert-modal, #study-player-modal, #validate-link-modal,
+        #config-ai-modal)
+        button:is(.bg-indigo-600, .bg-indigo-500, .bg-emerald-500, .bg-emerald-600, .bg-gradient-to-r):not(.rounded-full)) {
+    background-color: var(--mm-accent);
+    color: #fff;
+    border: var(--mm-bordo-spessore) solid transparent;
+}
+html[data-app="docente"] :is(.btn_salva_action,
+    :is(#alert-modal, #study-player-modal, #validate-link-modal,
+        #config-ai-modal)
+        button:is(.bg-indigo-600, .bg-indigo-500, .bg-emerald-500, .bg-emerald-600, .bg-gradient-to-r):not(.rounded-full)):hover {
+    background-color: var(--mm-accent-hover);
+    color: #fff;
+}
+/* secondario (anche le azioni interne «Aggiungi» del nodo) */
+html[data-app="docente"] :is(.btn_annulla_action, .btn_confirm_action,
+    :is(#confirm-modal, #study-player-modal, #validate-link-modal)
+        button.bg-slate-100:not(.rounded-full)) {
+    background-color: var(--mm-fondo-sez);
+    color: var(--mm-testo-2);
+    border: var(--mm-bordo-spessore) solid var(--mm-bordo);
+}
+html[data-app="docente"] :is(.btn_annulla_action, .btn_confirm_action,
+    :is(#confirm-modal, #study-player-modal, #validate-link-modal)
+        button.bg-slate-100:not(.rounded-full)):hover {
+    background-color: var(--mm-accent-soft);
+    color: var(--mm-accent);
+}
+/* distruttivo: bianco col rosso, come .mm-btn--distruttivo */
+html[data-app="docente"] :is(#confirm-modal button.bg-red-600) {
+    background-color: var(--mm-fondo);
+    color: var(--mm-danger);
+    border: var(--mm-bordo-spessore) solid var(--mm-danger-soft);
+}
+html[data-app="docente"] :is(#confirm-modal button.bg-red-600):hover {
+    background-color: var(--mm-danger-soft);
+    color: var(--mm-danger);
+}
+
+/* i riquadri grigi dentro le finestre: il riquadro del motore (.mm-sez) */
+html[data-app="docente"] :is(.pm-section,
+    :is(#edit-node-modal, #study-player-modal, #config-ai-modal, #link-family-modal,
+        #dossier-print-modal, #mp-modal) div:is(.bg-slate-100, .bg-slate-50)) {
+    background-color: var(--mm-fondo-sez);
+    border: var(--mm-bordo-spessore) solid var(--mm-bordo);
+    border-radius: calc(var(--mm-r-box) - 4px);
+}
+
+/* le spunte e i pallini leggono l'accento */
+html[data-app="docente"] input:is([type="checkbox"], [type="radio"]) { accent-color: var(--mm-accent); }
+/* «Aggiungi» del nodo: il markup è minuscolo e la classe lo faceva MAIUSCOLO; nello standard la parola ha
+   l'iniziale. La sua riga è alta 44 (h-11): il bottone resta 40 e si centra. */
+html[data-app="docente"] .btn_confirm_action { height: var(--mm-ctl-h); text-transform: capitalize; align-self: center; }
+/* l'avviso (showAlert): titolo e testo come gli altri; Salva/Annulla dei modali vecchi sono a una riga: 40 fissi */
+html[data-app="docente"] .error_title { font-size: var(--mm-fs-titolo); font-weight: 800; color: var(--mm-testo); }
+html[data-app="docente"] .error_body_text { font-size: var(--mm-fs-testo); color: var(--mm-testo-2); }
+
+/* ═══ Le taglie dei modali vecchi (0087, lotto 10-larghezze, 12/10/2026) ═══════════
+   Quattro taglie, le stesse del motore (--mm-s 440 · --mm-m 600 · --mm-l 820 · --mm-xl
+   1160), al posto di undici larghezze. Giacomo (12/10): «Scheda a L, domande di studio a L
+   e poi per tutto scelgo l'opzione C» (taglia + disposizione, banco 2). Per id sulla
+   cornice: vince sui `max-w-*` di Tailwind senza toccare il markup; le finestre di 0070
+   (#mp-*) e la lingua (#lang-onboarding-modal) si prendono per id, i loro file restano
+   fermi. Solo app del docente. */
+html[data-app="docente"] :is(#alert-box, #confirm-box, #validate-link-modal > div, #lang-onboarding-modal > div, #mp-resume > div) {
+    width: min(var(--mm-s), calc(100vw - 2 * var(--mm-pad)));
+    max-width: var(--mm-s);
+}
+html[data-app="docente"] :is(#prompt-box, #mp-modal > div, #mp-summary > div) {
+    width: min(var(--mm-m), calc(100vw - 2 * var(--mm-pad)));
+    max-width: var(--mm-m);
+}
+html[data-app="docente"] :is(#link-family-box, #edit-node-box, #source-modal-content-box, #study-player-modal > div,
+    #ai-modal-content-box, #app-guide-modal > div) {
+    width: min(var(--mm-l), calc(100vw - 2 * var(--mm-pad)));
+    max-width: var(--mm-l);
+}
+
+/* le disposizioni C (banco 2, 12/10): lo spazio della taglia si riempie, non si allunga */
+/* «Collega nodi»: le otto famiglie in due colonne (da 825 a 552 px, sta nello schermo) */
+html[data-app="docente"] #link-family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+/* «Modifica nodo»: Collegamenti e Immagini affiancati (due «aggiungi una risorsa»), il nome a una riga,
+   «Aggiungi immagine» a destra e non a tutta riga; da 1089 (scorreva) a 976 */
+html[data-app="docente"] #edit-media-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+html[data-app="docente"] #edit-media-section > div { margin: 0; }
+html[data-app="docente"] #edit-media-section .btn_confirm_action.w-48 { width: auto; padding: 0 14px; }
+html[data-app="docente"] #edit-media-section .bg-slate-100 > .btn_confirm_action {
+    display: flex;
+    width: max-content;
+    margin-left: auto;
+}
+html[data-app="docente"] :is(#edit-n-label, #prompt-input) {
+    height: var(--mm-ctl-h);
+    min-height: var(--mm-ctl-h);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    line-height: 22px;
+    resize: none;
+}
+/* «Rinomina» e gli altri prompt: la testata del motore (icona 40 nel riquadro tenue + titolo 15/800 accanto),
+   non più l'icona da 64 sola e il titolo come etichetta del campo; da 292 a 243 px */
+html[data-app="docente"] #prompt-box .modal_title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+}
+html[data-app="docente"] #prompt-box .modal_title > svg {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    box-sizing: border-box;
+    border-radius: 14px;
+    background: var(--mm-accent-soft);
+    color: var(--mm-accent);
+    flex: 0 0 auto;
+}
+html[data-app="docente"] #prompt-box #prompt-title {
+    font-size: var(--mm-fs-titolo);
+    font-weight: 800;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--mm-testo);
+    margin: 0;
+}
+html[data-app="docente"] #prompt-box > .space-y-6 { padding-left: 0; padding-right: 0; }
+html[data-app="docente"] #prompt-box .mt-8 { margin-top: 20px; }
+
+/* ── I MEZZI PUNTI MUOIONO, MA SOLO NELL'APP DEL DOCENTE (0087, lotto 10c, 12/10/2026) ─────────────────
+   Le regole base qui sopra tengono i loro 11,5 · 12,5 · 13,5 · 10,5 · 9,5: questo foglio lo copia il reader iPad,
+   che ha uno standard suo. Sotto html[data-app="docente"] vanno al token della famiglia (etichetta 11, testo 13,
+   sezione 10). Le sostituzioni a valore uguale (15 → titolo, 13 → testo, 11 → etichetta, 10 → sezione) stanno
+   nelle regole base: non cambiano nulla da nessuna parte. */
+html[data-app="docente"] :is(.mm-subtitle, .mm-piede-nota, .mm-sez__esito, .mm-tip) { font-size: var(--mm-fs-label); }
+html[data-app="docente"] :is(.mm-elenco__v, .mm-elenco__piu, .mm-opz__t, .mm-nota, .mm-ctx__p, .mm-voce__n) { font-size: var(--mm-fs-testo); }
+html[data-app="docente"] :is(.mm-voce__b, .mm-tabg__n, .mm-nav__n, .mm-nav__b) { font-size: var(--mm-fs-sez); }
+
+/* ── I RIQUADRI SENZA BORDO COLORATO (0087, lotto 10c, Giacomo 12/10: «tutte le sezioni possono mantenere
+   il BG grigio ma devono essere con bordo colour less. Anche nella sidebar di cabina e nelle console di
+   cabina tutte le sezioni che hanno un box devono mantenere il colore del loro BG ma essere con bordi
+   colour less») ─────────────────────────────────────────────────────────────────────────────────────
+   Il bordo resta (stesso spessore, niente salti di layout) ma perde il colore. La Cabina non ha una
+   classe sua: la si riconosce dalla voce «Segnalazione» della sua sidebar (.mm-nav__v--segnala), che
+   esiste solo lì. Restano col bordo i CONTROLLI (bottoni secondari, le card-opzione .mm-voce, il
+   bottone tondo «+») e i riquadri che hanno SOLO il bordo (.mm-tab-wrap, #modelli-setup): senza, il
+   riquadro sparirebbe — da decidere a parte. */
+html[data-app="docente"] #mp-modal .bg-slate-50.border { border-color: transparent; }
+.mm-nav__v--segnala { border-color: transparent; }
+.mm-box--console:has(.mm-nav__v--segnala) .mm-sez { border-color: transparent; }
+.mm-box--console:has(.mm-nav__v--segnala) :is(.bg-indigo-50.border, .bg-slate-50.border, #pricing-legend) { border-color: transparent; }
+/* la tela legacy di Impostazioni AI dà a ogni figlio bianco + filetto (`.mm-tela--colonna > :not(:has(#provider-google))`,
+   qui sopra): nella Cabina il filetto perde il colore, il bianco resta */
+.mm-box--console:has(.mm-nav__v--segnala) .mm-tela--colonna > :not(:has(#provider-google)) { border-color: transparent; }
+
+/* ── LE DECISIONI DEL BANCO 3 (Giacomo, 12/10 notte) ──────────────────────────────────────────────────
+   «Aspetto = come oggi ma i riquadri per la selezione degli stili con bordo colour less» · «Profilo insegnante =
+   fondo-sez» · «Consumi AI = neutro» · «Tendine di Genera materiali = come oggi» · «Impostazioni AI = nel banco non
+   vedo differenze» (resta com'è). Le viste della Cabina non hanno una classe: si riconoscono da un pezzo che esiste
+   solo lì (il campo del nome del profilo #mmf-nome, la tendina dei consumi #mmf-ud-vista, le card-opzione .mm-voce).
+   Solo nell'app del docente. */
+html[data-app="docente"] .mm-box--console:has(.mm-nav__v--segnala) .mm-voce { border-color: transparent; }
+html[data-app="docente"] .mm-box--console:has(.mm-nav__v--segnala) .mm-console__area:has(#mmf-nome) :is(.mm-btn--secondario, .mm-elenco__piu) {
+    border-color: transparent;
+    background: var(--mm-fondo-sez);
+}
+html[data-app="docente"] .mm-box--console:has(.mm-nav__v--segnala) .mm-console__area:has(#mmf-ud-vista) :is(.mm-btn--secondario, .mm-tab-wrap) {
+    border-color: transparent;
+    background: var(--mm-neutro);
+}
+
+/* ── LO SCURO VECCHIO E IL GRIGIO SOTTO SOGLIA COME TESTO (0087, lotto 10e, 13/10/2026) ───────────────────────
+   Le classi Tailwind di testo che l'app usa ancora — text-slate-900/800/700 (#0f172a #1e293b #334155, lo scuro
+   di prima del 5/8) e text-slate-400 (#94a3b8: 2,6:1 su bianco, sotto la soglia del testo) — vanno ai token:
+   lo scuro dell'app (--mm-testo) e il grigio terzo (--mm-testo-3, 4,8:1). Una regola, come il lotto 9 per
+   border-slate-200: copre anche i file vietati senza toccarli. Solo nell'app del docente (l'iPad avrà il suo
+   standard). Decisioni di Giacomo del 13/10: «PDF a #404040, pagine allievi col ripiego, iPad avrà il suo
+   standard». Le dichiarazioni `color:#…` scritte a mano nei file liberi sono passate ai token col ripiego
+   (giro a secco rivisto riga per riga, come il lotto 9). */
+html[data-app="docente"] :is(.text-slate-900, .text-slate-800, .text-slate-700) { color: var(--mm-testo); }
+html[data-app="docente"] .text-slate-400 { color: var(--mm-testo-3); }

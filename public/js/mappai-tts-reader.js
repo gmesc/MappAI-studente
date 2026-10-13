@@ -952,20 +952,20 @@
             '.mai-tts-sec{display:none;align-items:center;justify-content:center;width:22px;height:22px;margin-right:8px;padding:0;border:0;border-radius:9999px;background:#eef2ff;color:#4f46e5;cursor:pointer;vertical-align:middle}' +
             '.mai-tts-sec.on{display:inline-flex}.mai-tts-sec:hover{background:#e0e7ff}.mai-tts-sec i{width:13px;height:13px}' +
             '.mai-tts-block{background:rgba(253,230,138,.30);border-radius:5px;box-shadow:0 0 0 3px rgba(253,230,138,.30)}' +
-            '::highlight(mai-tts-read){background-color:#fde68a;color:#0f172a}' +
+            '::highlight(mai-tts-read){background-color:#fde68a;color:var(--mm-testo, #404040)}' +
             '.mai-tts-float{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:4000;width:min(560px,92vw);background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:16px;box-shadow:0 18px 44px rgba(15,23,42,.30);padding:16px 18px 14px;font-family:"Space Mono",monospace}' +
-            '.mai-tts-float-close{position:absolute;top:9px;right:12px;border:0;background:transparent;color:#94a3b8;cursor:pointer;font-size:15px;line-height:1;width:22px;height:22px;border-radius:9999px}' +
+            '.mai-tts-float-close{position:absolute;top:9px;right:12px;border:0;background:transparent;color:var(--mm-testo-3, #64748b);cursor:pointer;font-size:15px;line-height:1;width:22px;height:22px;border-radius:9999px}' +
             '.mai-tts-float-close:hover{background:#f1f5f9;color:#475569}' +
             '.mai-tts-float-body{max-height:32vh;overflow:auto;margin:0 0 12px;padding-right:6px}' +
             '.mai-tts-float-body h4{font-size:14px;font-weight:800;color:#4338ca;margin:0 0 6px}' +
-            '.mai-tts-float-body p{font-size:13px;line-height:1.75;color:#334155;margin:0}' +
+            '.mai-tts-float-body p{font-size:13px;line-height:1.75;color:var(--mm-testo, #404040);margin:0}' +
             '.mai-tts-float-ctrl{display:flex}' +
             // effetti parola per parola
             '::highlight(mai-tts-word-u){text-decoration:underline;text-decoration-color:#4f46e5;text-decoration-thickness:3px;text-underline-offset:5px;background-color:rgba(199,210,254,.55)}' +
             '.mai-tts-fx-parola,.mai-tts-fx-parola *{color:rgba(100,116,139,.35) !important}' +
-            '::highlight(mai-tts-word-lit){color:#0f172a;background-color:rgba(253,230,138,.6)}' +
+            '::highlight(mai-tts-word-lit){color:var(--mm-testo, #404040);background-color:rgba(253,230,138,.6)}' +
             // una parola alla volta: la lettera di fuoco ferma al centro, fra due tacche
-            '.mai-rsvp{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 auto;min-height:1.9em;padding:.35em 0;margin:0 0 10px;border-radius:12px;background:#f8fafc;color:#0f172a;font-size:34px;font-weight:700;line-height:1.1;font-family:var(--app-font,"Space Mono",monospace);overflow:hidden}' +
+            '.mai-rsvp{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 auto;min-height:1.9em;padding:.35em 0;margin:0 0 10px;border-radius:12px;background:#f8fafc;color:var(--mm-testo, #404040);font-size:34px;font-weight:700;line-height:1.1;font-family:var(--app-font,"Space Mono",monospace);overflow:hidden}' +
             '.mai-rsvp::before,.mai-rsvp::after{content:"";position:absolute;left:50%;width:2px;height:.3em;background:#ef4444;transform:translateX(-50%)}' +
             '.mai-rsvp::before{top:4px}.mai-rsvp::after{bottom:4px}' +
             '.mai-rsvp__w{display:grid;grid-template-columns:1fr auto 1fr;width:100%;white-space:pre}' +
@@ -992,8 +992,8 @@
             // la testata è anche la maniglia: alta 44, tutta da afferrare
             '.mai-tts-float-t{position:absolute;top:0;left:0;right:44px;height:44px;line-height:44px;margin:0;padding-left:18px;font-size:13px;font-weight:800;color:#4338ca;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
             '.mai-maniglia{cursor:move;touch-action:none;user-select:none;-webkit-user-select:none}' +
-            '.mai-maniglia::before{content:"⠿";margin-right:8px;color:#94a3b8;font-weight:400}' +
-            '.mai-fila-grip{min-width:30px;padding:0 3px;border-color:transparent;background:transparent;color:#94a3b8;cursor:grab;touch-action:none}' +
+            '.mai-maniglia::before{content:"⠿";margin-right:8px;color:var(--mm-testo-3, #64748b);font-weight:400}' +
+            '.mai-fila-grip{min-width:30px;padding:0 3px;border-color:transparent;background:transparent;color:var(--mm-testo-3, #64748b);cursor:grab;touch-action:none}' +
             '.mai-fila-rimetti{display:none}' +
             '.mai-fila--libera{position:fixed;z-index:4100;width:max-content;max-width:calc(100vw - 24px);padding:8px 10px;background:#fff;border:1px solid var(--mm-bordo, #cbd5e1);border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.28)}' +
             '.mai-fila--libera .mai-fila-rimetti{display:inline-flex}' +

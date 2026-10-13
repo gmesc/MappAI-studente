@@ -270,6 +270,52 @@ window.saveMapVault = async function () {
 // stessa classe → suffisso « · 0N » (stesso schema della pipeline 011).
 // Kill-switch: localStorage 'mappai_autovault' === '0'. Ritorna
 // { created, folderPath, classDir } oppure null (skip/errore, mai bloccante).
+/* 0070: crea soltanto la cartella del percorso. L'adozione della sessione
+   avviene nel controller DOPO fonte e riferimento nel manifest salvati: un
+   errore di I/O non deve cambiare identità o cartella del progetto aperto. */
+window.createReadingVault = async function (opts) {
+    const o = opts || {};
+    const FC = window.MappAIFilesCore;
+    const api = window.electronAPI;
+    const fail = function (code) { const e = new Error(code); e.code = code; throw e; };
+    if (!FC || !FC.idProgettoValido || !FC.idProgettoValido(o.projectId) ||
+        typeof o.title !== 'string' || !o.title.trim() || typeof o.language !== 'string' || !o.language.trim() ||
+        typeof o.assertCurrent !== 'function') fail('reading_vault_invalid');
+    if (!api || !api.filesRootGet || !api.getAllVaults || !api.readVaultFile || !api.saveVault) fail('reading_vault_unavailable');
+    const assertCurrent = o.assertCurrent;
+    const check = function () { if (assertCurrent() === false) fail('reading_vault_stale'); };
+    check();
+    const projectId = o.projectId, title = o.title.trim();
+    const ctx = _contestoDellaMappa();
+    if (o.context) { ctx.classe = o.context.className || ''; ctx.materia = o.context.discipline || ''; }
+    const cls = window.MappAIClasses && window.MappAIClasses.getActive ? window.MappAIClasses.getActive() : null;
+    const allievo = window.MappAIClasses && window.MappAIClasses.activeStudentName ? window.MappAIClasses.activeStudentName() : '';
+    const classDir = cls && cls.name ? FC.mapClassFolder(cls.sede, cls.name) : null;
+    const discDir = classDir ? FC.disciplineFolder(o.context ? ctx.materia : appState.generationDiscipline || '') : '';
+    const name = 'Lettura-' + projectId;
+    const info = await api.filesRootGet();
+    check();
+    if (!info || !info.mapsBaseDir) fail('reading_vault_unavailable');
+    const root = FC.mapVaultRoot({ maps: info.mapsBaseDir, students: info.studentsBaseDir }, allievo);
+    const folderPath = [root].concat(FC.mapVaultParentsFor(allievo, classDir, discDir), [name]).join('/');
+    const vaults = await api.getAllVaults();
+    check();
+    if (!Array.isArray(vaults)) fail('reading_vault_unavailable');
+    if (vaults.some(v => v && (String(v.folderName || '').toLowerCase() === name.toLowerCase() || v.projectId === projectId))) fail('reading_vault_exists');
+    /* Anche una cartella senza index.yaml può contenere lavoro: si crea solo
+       quando il canale dichiara assente il VAULT, non il solo file. */
+    const existing = await api.readVaultFile({ vaultPath: folderPath, relPath: 'index.yaml' });
+    check();
+    if (!existing || existing.ok !== false || existing.error !== 'vault inesistente') fail('reading_vault_exists');
+    const saved = await api.saveVault({ folderPath, mapData: {
+        projectId, extractionMode: 'lettura', rootNodeLabel: title,
+        classe: ctx.classe, materia: ctx.materia, nodes: [], links: [], studySets: [], sourcesDict: {}, customColors: {}
+    } });
+    check();
+    if (!saved || !saved.success) fail((saved && saved.error) || 'reading_vault_write_failed');
+    return { folderPath, classDir: allievo ? null : classDir, discDir: allievo ? null : (discDir || null) };
+};
+
 window.ensureProjectVault = async function (opts) {
     opts = opts || {};
     try {
@@ -427,7 +473,6 @@ window.ensureProjectVault = async function (opts) {
 
 window.loadDemoGraph = async function (url) {
     try {
-        window.closeVaultManager();
         window.showLoadingOverlay(true, "Caricamento Demo...");
         const res = await fetch(url);
         if (!res.ok) throw new Error("File demo non trovato.");
@@ -503,10 +548,6 @@ window.loadMapVault = async function () {
     // Vista studio (1/8): smonta l'overlay e riporta il ciclo al default —
     // senza, cambiando mappa o tornando alla home l'overlay resterebbe orfano
     // sopra il canvas nuovo e layoutMode 'studio' verrebbe persistito.
-    if (window.MappAIStudioView && appState.layoutMode === 'studio') {
-        window.MappAIStudioView.exit();
-        appState.layoutMode = 'default';
-    }
     try {
         const result = await window.electronAPI.pickFolder({ importOnly: true });
         if (result.canceled) return;
@@ -517,6 +558,15 @@ window.loadMapVault = async function () {
 
         window.showLoadingOverlay(false);
         if (loadRes.success) {
+            if (loadRes.data && loadRes.data.extractionMode === 'lettura') {
+                const reading = window.MappAIPercorsoLettura;
+                if (!reading || typeof reading.openVault !== 'function') throw new Error(window.t('pl_runtime_missing', 'Il percorso di lettura non è disponibile in questa versione.'));
+                return await reading.openVault({ folderPath: result.folderPath, data: loadRes.data });
+            }
+            if (window.MappAIStudioView && appState.layoutMode === 'studio') {
+                window.MappAIStudioView.exit();
+                appState.layoutMode = 'default';
+            }
             appState._reviewRestoring = true;
             delete appState._reviewRestoreError;
             delete appState._reviewCommit;
@@ -749,10 +799,6 @@ window.handleIPadVaultFileSelected = async function (event) {
             window.showLoadingOverlay(false);
             if (saveRes && saveRes.success) {
                 window.showToast(window.t('tst_vault_imported', "Vault importato con successo!"), "success");
-                // Ricarica la lista dei vault nel modale
-                if (typeof window.loadVaultList === 'function') {
-                    await window.loadVaultList();
-                }
             } else {
                 window.showAlert("Errore", "Impossibile salvare il Vault nel dispositivo.");
             }

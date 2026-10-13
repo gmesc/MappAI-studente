@@ -5,82 +5,9 @@
 // NB: directLoadVault riassegna `tutorState` (let top-level in app.js) e chiama
 // initD3Visualization() come bare identifier — entrambi risolti a runtime tramite
 // lo scope lessicale globale condiviso (modulo caricato dopo app.js).
-window.showVaultManager = async function () {
-    const modal = document.getElementById('vault-manager-modal');
-    const box = document.getElementById('vault-manager-box');
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        box.classList.remove('scale-95');
-    }, 10);
-    window.safeCreateIcons();
-
-    await window.loadVaultList();
-};
-
-window.closeVaultManager = function () {
-    const modal = document.getElementById('vault-manager-modal');
-    const box = document.getElementById('vault-manager-box');
-    modal.classList.add('opacity-0');
-    box.classList.add('scale-95');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 200);
-};
-
-window.loadVaultList = async function () {
-    const container = document.getElementById('vault-list-container');
-    container.innerHTML = '<div class="flex items-center justify-center p-20 text-slate-300"><i data-lucide="loader-2" class="w-8 h-8 animate-spin"></i></div>';
-    window.safeCreateIcons();
-
-    try {
-        const vaults = await window.electronAPI.getAllVaults();
-        container.innerHTML = "";
-
-        if (!vaults || vaults.length === 0) {
-            container.innerHTML = `<div class="text-center p-10 text-slate-400 font-bold uppercase tracking-widest text-xs">${window.getTranslation('empty_projects_msg')}</div>`;
-            return;
-        }
-
-        vaults.forEach(v => {
-            const card = document.createElement('div');
-            card.className = "bg-white border border-slate-100 p-4 rounded-2xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all cursor-pointer group shadow-sm flex justify-between items-center";
-
-            let userBadge = "";
-            if (v.nickname) {
-                userBadge = `<span class="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">${v.nickname} (${v.age || '?'})</span>`;
-            }
-
-            card.innerHTML = `
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-all">
-                        <i data-lucide="folder" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="font-black text-slate-800 text-sm leading-none">${v.rootNodeLabel || v.folderName}</span>
-                            ${userBadge}
-                        </div>
-                        <span class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">${v.folderName} • ${new Date(v.lastUpdated).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-all"></i>
-            `;
-
-            card.onclick = () => {
-                window.closeVaultManager();
-                window.directLoadVault(v.fullPath);
-            };
-            container.appendChild(card);
-        });
-        window.safeCreateIcons();
-    } catch (err) {
-        container.innerHTML = `<div class="text-red-500 p-4 text-center text-xs">Errore nel caricamento: ${err.message}</div>`;
-    }
-};
+// 12/10/2026 (0087, lotto 10-modali): il modale «Esplora vault» (#vault-manager-modal,
+// showVaultManager/loadVaultList) è USCITO — nessuno lo apriva dal 3/8 (ELABORA «Progetti
+// esistenti» e INSEGNA leggono il disco). Restano directLoadVault e resetVaultState.
 
 window.directLoadVault = async function (folderPath) {
     /* ⚠️ Non si cambia mappa mentre la pipeline lavora (13/8): i suoi passi
@@ -96,15 +23,20 @@ window.directLoadVault = async function (folderPath) {
     // Vista studio (1/8): smonta l'overlay e riporta il ciclo al default —
     // senza, cambiando mappa o tornando alla home l'overlay resterebbe orfano
     // sopra il canvas nuovo e layoutMode 'studio' verrebbe persistito.
-    if (window.MappAIStudioView && appState.layoutMode === 'studio') {
-        window.MappAIStudioView.exit();
-        appState.layoutMode = 'default';
-    }
     window.showLoadingOverlay(true, "Caricamento Vault...");
     try {
         const loadRes = await window.electronAPI.loadVault(folderPath);
         window.showLoadingOverlay(false);
         if (loadRes.success) {
+            if (loadRes.data && loadRes.data.extractionMode === 'lettura') {
+                const reading = window.MappAIPercorsoLettura;
+                if (!reading || typeof reading.openVault !== 'function') throw new Error(window.t('pl_runtime_missing', 'Il percorso di lettura non è disponibile in questa versione.'));
+                return await reading.openVault({ folderPath: folderPath, data: loadRes.data });
+            }
+            if (window.MappAIStudioView && appState.layoutMode === 'studio') {
+                window.MappAIStudioView.exit();
+                appState.layoutMode = 'default';
+            }
             appState._reviewRestoring = true;
             delete appState._reviewRestoreError;
             delete appState._reviewCommit;

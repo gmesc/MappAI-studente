@@ -138,7 +138,7 @@ MappAITimeline._hl = function (context, dateRaw) {
     var escd = String(dateRaw || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (!escd) return context;
     return context.replace(new RegExp(escd, 'gi'),
-        '<strong style="color:#1e293b;background:#fef9c3;padding:1px 2px;border-radius:2px;font-style:normal;">$&</strong>');
+        '<strong style="color:var(--mm-testo, #404040);background:#fef9c3;padding:1px 2px;border-radius:2px;font-style:normal;">$&</strong>');
 };
 MappAITimeline._color = function (macroArea) {
     var core = _TLC();
@@ -874,7 +874,7 @@ window.openTimelineView = function (aiTimelineData, mapNameOverride, opts) {
         var escaped = dateRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         return context.replace(
             new RegExp(escaped, 'gi'),
-            '<strong style="color:#1e293b;background:#fef9c3;padding:1px 2px;border-radius:2px;font-style:normal;">$&</strong>'
+            '<strong style="color:var(--mm-testo, #404040);background:#fef9c3;padding:1px 2px;border-radius:2px;font-style:normal;">$&</strong>'
         );
     }
 
@@ -1041,12 +1041,12 @@ window._renderTimeline = function (uniqueEvents, mapName, opts) {
         '.tl-gap { border: 2px dashed #cbd5e1 !important; }',
         '.tl-toolbtn { display:inline-flex; align-items:center; gap:5px; border:none; border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12px; font-weight:bold; font-family:inherit; }',
         '.tl-guide { max-width:960px; margin:0 auto 14px; padding:0 4px; font-size:10.5pt; color:#475569; line-height:1.5; }',
-        '.tl-guide b { color:#1e293b; }',
+        '.tl-guide b { color:var(--mm-testo, #404040); }',
         '.tl-addform { max-width:960px; margin:0 auto 18px; background:#f8fafc; border:1px solid var(--mm-bordo, #cbd5e1); border-radius:12px; padding:16px 18px; display:none; }',
         '.tl-addform input, .tl-addform select, .tl-addform textarea { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:9px 11px; font-family:inherit; font-size:11pt; background:#fff; }',
         '.tl-form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }',
         '.tl-field-label { display:block; font-size:9pt; font-weight:700; color:#64748b; margin-bottom:4px; }',
-        '.tl-req { color:#dc2626; } .tl-opt { color:#94a3b8; font-weight:400; }',
+        '.tl-req { color:#dc2626; } .tl-opt { color:var(--mm-testo-3, #64748b); font-weight:400; }',
         '.tl-ex-banner { max-width:960px; margin:0 auto 18px; background:#eef2ff; border:1px solid #c7d2fe; border-radius:10px; padding:11px 14px; font-size:10pt; color:#4338ca; line-height:1.5; display:none; }',
         '.tl-ex-banner .dash { border-bottom:2px dashed #6366f1; }',
         '@media print { body { background: white; padding: 10mm; } .tl-container::before { background: #cbd5e1; } .dossier-card { box-shadow: none; } .tl-event { page-break-inside: avoid; } .tl-gap { display: none !important; } .no-print { display: none !important; } }'
@@ -1086,7 +1086,7 @@ window._renderTimeline = function (uniqueEvents, mapName, opts) {
 
         // Form "Nuova data" (in flusso, nascosto di default)
         '<div class="tl-addform" id="tl-addform">' +
-            '<div style="font-weight:bold;color:#1e293b;margin-bottom:12px;font-size:11pt;">Nuova data</div>' +
+            '<div style="font-weight:bold;color:var(--mm-testo, #404040);margin-bottom:12px;font-size:11pt;">Nuova data</div>' +
             '<div class="tl-form-grid">' +
                 '<div><label class="tl-field-label">Anno <span class="tl-req">*</span></label>' +
                     '<input id="tl-f-anno" type="number" placeholder="es. 1945"></div>' +

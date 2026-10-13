@@ -117,7 +117,36 @@ const StorageManager = {
         // (20/8: qui si saltava il salvataggio mentre una modalità di Studio
         // attivo teneva il grafo smontato. Quelle modalità sono in pensione e
         // le attività di oggi non toccano il canvas: si salva sempre.)
-        if (!appState || !appState.db || !appState.db.nodes || appState.db.nodes.length === 0) return;
+        const reading = appState && appState.extractionMode === 'lettura';
+        const readingRef = reading && appState._pipelineManifest && appState._pipelineManifest.reading;
+        if (reading) {
+            // 0070: il testo vive nella cartella. L'autosave può aggiornare solo
+            // l'indice, dopo il readback e l'adozione della stessa identità.
+            const FC = window.MappAIFilesCore, ic = this.idInCartella;
+            const safeId = x => typeof x === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(x);
+            const r = appState._pipelineManifest && appState._pipelineManifest.review;
+            if (!FC || !FC.idProgettoValido(this.currentProjectId) || !appState.activeVaultPath ||
+                !ic || ic.percorso !== appState.activeVaultPath || ic.id != null && ic.id !== this.currentProjectId ||
+                !readingRef || readingRef.kind !== 'percorso-lettura' || readingRef.schemaVersion !== 1 ||
+                readingRef.extractionMode !== 'lettura' || readingRef.projectId !== this.currentProjectId ||
+                !safeId(readingRef.percorsoId) || !safeId(readingRef.sourceId) ||
+                !Number.isSafeInteger(readingRef.sourceRevision) || readingRef.sourceRevision < 1 ||
+                readingRef.sourcePath !== 'Materiale Studio/Sorgenti/Percorso-lettura-' + readingRef.percorsoId + '.json' ||
+                readingRef.originalArchived !== true || !r || r.projectId !== this.currentProjectId || r.vaultPath !== appState.activeVaultPath) {
+                return { ok: false, error: 'reading_identity_invalid' };
+            }
+            try {
+                const listed = JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]');
+                if (!Array.isArray(listed) || listed.some(p => !p || typeof p !== 'object')) return { ok: false, error: 'reading_index_invalid' };
+                const sameId = listed.filter(p => p && p.id === this.currentProjectId);
+                const vaultName = String(appState.activeVaultPath).split(/[\\/]/).filter(Boolean).pop().normalize('NFC');
+                if (sameId.length > 1 || sameId.some(p => p.type !== 'lettura') || listed.some(p => p &&
+                    p.id !== this.currentProjectId && (p.vaultPath === appState.activeVaultPath ||
+                        typeof p.vault === 'string' && p.vault.normalize('NFC') === vaultName))) {
+                    return { ok: false, error: 'reading_identity_collision' };
+                }
+            } catch (error) { return { ok: false, error: 'reading_index_invalid' }; }
+        } else if (!appState || !appState.db || !appState.db.nodes || appState.db.nodes.length === 0) return;
 
         if (!this.currentProjectId) {
             this.currentProjectId = 'proj_' + Date.now();
@@ -189,7 +218,7 @@ const StorageManager = {
             tuned: (typeof appState.generationTuned === 'boolean')
                 ? appState.generationTuned
                 : (existing ? !!existing.tuned : false),
-            nodesCount: appState.db.nodes.length,
+            nodesCount: reading ? 0 : appState.db.nodes.length,
             type: appState.extractionMode || 'mindmap',
             // Nome della cartella vault collegata (null = progetto solo-localStorage):
             // usato da renderRecentProjects per nascondere i progetti il cui vault è stato eliminato
@@ -238,6 +267,12 @@ const StorageManager = {
             else pMeta.cartella = VCs.percorsoRiga(appState.activeVaultPath, null);
         }
 
+        if (reading) {
+            pMeta.vaultPath = appState.activeVaultPath;
+            pMeta.reading = { percorsoId: readingRef.percorsoId, sourceId: readingRef.sourceId,
+                sourceRevision: readingRef.sourceRevision, sourcePath: readingRef.sourcePath };
+        }
+
         if (idx >= 0) projects[idx] = pMeta;
         else projects.push(pMeta);
 
@@ -262,6 +297,10 @@ const StorageManager = {
         let snello = false;
         try { snello = localStorage.getItem('mappai_cassetto_snello') === '1'; } catch (e) { snello = false; }
         const _scrivi = () => {
+            if (reading) {
+                localStorage.setItem('tutor_ai_projects', JSON.stringify(projects));
+                return;
+            }
             /* 0082: il testo della copia si calcola in UN posto (`_testoCopia`), lo
                stesso che `allineaCartella` ricorda nell'impronta (inv. 6). */
             const testo = this._testoCopia();
@@ -298,6 +337,9 @@ const StorageManager = {
             }
         }
         catch (e) {
+            // Una scrittura atomica dell'indice non lascia una mezza copia.
+            // Il chiamante può segnalare Riprendi indisponibile: il testo è salvo.
+            if (reading) return { ok: false, error: 'reading_index_write_failed' };
             let potate = 0;
             try {
                 const TC = window.MappAITeachCore;
@@ -372,6 +414,8 @@ const StorageManager = {
                 return;
             }
         }
+
+        if (reading) return { ok: true, projectId: this.currentProjectId };
 
         // Indice leggero Quiz & flashcard (005): rigenera le voci di QUESTO
         // progetto da appState.db.studySets (in memoria) — mai riparsando snapshot.
@@ -482,6 +526,7 @@ const StorageManager = {
         const api = window.electronAPI;
         const ferma = () => {
             if (typeof appState === 'undefined' || !appState) return true;
+            if (appState.extractionMode === 'lettura') return true;
             if (appState._reviewRestoring || appState._reviewRestoreError) return true;
             try { if (window.MappAIGen && window.MappAIGen.attiva && window.MappAIGen.attiva()) return true; } catch (e) { return true; }
             try { if (window.MappAIPipeline && window.MappAIPipeline.occupata && window.MappAIPipeline.occupata()) return true; } catch (e) { return true; }
@@ -927,6 +972,32 @@ const StorageManager = {
             discDellaRiga = (r0 && r0.disc) || null;
         } catch (e) { clsDellaRiga = null; discDellaRiga = null; }
         try {
+            // 0070: nessuna fotografia locale per lettura, anche a flag spento.
+            // Si controlla l'identità sul disco prima di adottare il progetto;
+            // un'eventuale vecchia copia locale non precede mai la cartella.
+            const indexRows = JSON.parse(localStorage.getItem('tutor_ai_projects') || '[]');
+            const readingRows = Array.isArray(indexRows) ? indexRows.filter(p => p && p.id === id) : [];
+            const readingMeta = readingRows.find(p => p.type === 'lettura');
+            if (readingMeta) {
+                const fail = () => { throw new Error(window.t('pl_read_failed', 'Il testo salvato non è leggibile.')); };
+                if (readingRows.length !== 1 || typeof readingMeta.vaultPath !== 'string' || !readingMeta.vaultPath || !readingMeta.reading) fail();
+                if (!window.electronAPI || !window.electronAPI.loadVault || !window.MappAIPercorsoLettura || !window.MappAIPercorsoLettura.openVault) {
+                    throw new Error(window.t('pl_runtime_missing', 'Il percorso di lettura non è disponibile in questa versione.'));
+                }
+                const previousState = appState, previousDb = appState.db, previousPath = appState.activeVaultPath, previousId = this.currentProjectId;
+                let disk;
+                this._apreDallaCartella = true;
+                try { disk = await window.electronAPI.loadVault(readingMeta.vaultPath); }
+                finally { this._apreDallaCartella = false; }
+                if (appState !== previousState || appState.db !== previousDb || appState.activeVaultPath !== previousPath || this.currentProjectId !== previousId) {
+                    throw new Error(window.t('pl_stale', 'Il progetto è cambiato. Riapri il percorso prima di continuare.'));
+                }
+                const ptr = disk && disk.data && disk.data._pipelineManifest && disk.data._pipelineManifest.reading;
+                if (!disk || !disk.success || disk.data.extractionMode !== 'lettura' || disk.data.projectId !== id || !ptr || ptr.projectId !== id ||
+                    ptr.percorsoId !== readingMeta.reading.percorsoId || ptr.sourceId !== readingMeta.reading.sourceId || ptr.sourcePath !== readingMeta.reading.sourcePath) fail();
+                await window.MappAIPercorsoLettura.openVault({ folderPath: readingMeta.vaultPath, data: disk.data });
+                return true;
+            }
             const data = localStorage.getItem(id);
             /* Senza snapshot ma con un VAULT, la mappa non è persa: si apre
                dalla cartella (15/8). È il ripiego che rende innocua una futura
