@@ -6,6 +6,8 @@ che rende l'app «MappAI Studente» quella che era già stata compilata una volt
   · UIFileSharingEnabled            la cartella Documenti compare nell'app File
   · LSSupportsOpeningDocumentsInPlace  i file si aprono sul posto, senza copie
   · TARGETED_DEVICE_FAMILY = 2      solo iPad — nel PROGETTO, non nel plist (5/10)
+  · ITSAppUsesNonExemptEncryption = NO  niente crittografia propria (13/10): App Store
+                                    Connect non chiede più la conformità all'esportazione
     python3 tools/plist-ipad.py [cartella ios]   (dopo `npx cap add ios`, prima di `cap sync`)
 La cartella è `ios/` accanto al repo se non la si dà: con un argomento lo script
 lavora su un altro checkout, o sul modello di Capacitor estratto per prova.
@@ -57,8 +59,12 @@ d.pop('UIDeviceFamily', None)   # la sovrascrive TARGETED_DEVICE_FAMILY (qui sop
 d['NSCameraUsageDescription'] = 'Per inquadrare il codice QR sullo schermo del docente.'
 d['NSLocalNetworkUsageDescription'] = 'Per scambiare i file con il computer del docente sulla rete della classe.'
 d['NSAppTransportSecurity'] = {'NSAllowsLocalNetworking': True}
+# la conformità all'esportazione (Giacomo, 13/10): l'app usa solo la cifratura di iOS (HTTPS
+# di sistema, nessun algoritmo suo) → NO, e App Store Connect non lo domanda a ogni build.
+d['ITSAppUsesNonExemptEncryption'] = False
 CHIAVI = ('UIFileSharingEnabled', 'LSSupportsOpeningDocumentsInPlace', 'UIDeviceFamily',
-          'NSCameraUsageDescription', 'NSLocalNetworkUsageDescription', 'NSAppTransportSecurity')
+          'NSCameraUsageDescription', 'NSLocalNetworkUsageDescription', 'NSAppTransportSecurity',
+          'ITSAppUsesNonExemptEncryption')
 cambiate = [k for k in CHIAVI if prima.get(k) != d.get(k)]
 if cambiate:
     with open(P, 'wb') as f:
