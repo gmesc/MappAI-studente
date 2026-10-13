@@ -37,7 +37,8 @@ const it_translations = {
     modelli_map: "Mappa",
     modelli_materials: "Materiali",
     modelli_embeddings: "Analisi semantica (embeddings)",
-    modelli_judge: "Giudice, se abilitato",
+    modelli_embeddings_vuoto: "Elenco non ancora caricato: premi «Aggiorna Modelli» qui sopra.",
+    modelli_judge: "Giudice",
     modelli_help: "Le scelte valgono dal prossimo avvio. Un lavoro già avviato mantiene i suoi modelli. Puoi usare lo stesso modello per più fasi.",
     modelli_save: "Salva assegnazioni",
     modelli_saved: "Assegnazioni salvate per il prossimo lavoro.",
@@ -71,6 +72,12 @@ const it_translations = {
     mp_mixed_set_help: "Lotto misto: 2 MC e 2 aperte per ramo. Per quantità e angolazioni personalizzate scegli i formati separati.",
     mp_multi_optional: "Varianti aggiuntive per angolazione",
     mp_batch_empty: "Nessuna domanda utilizzabile per {f}. Il lotto resta da completare.",
+    // ── 0090 · ELABORA: i materiali che aspettano la G2 e la taratura della classe nel modale ─────────
+    ea_chip: "Completa validazione",
+    mp_g2_attesa: "I materiali chiesti l'ultima volta aspettano la tua validazione: completala prima di generarne altri.",
+    mp_adapt_on_cls: "La classe {nome} ha una taratura (note o registro): i materiali la seguono. Spegnila per questo giro, se non serve.",
+    mp_adapt_off_cls: "La classe {nome} non ha una taratura. Accendila per questo giro.",
+    // ── fine 0090 ──
     mp_batch_short: "{f}: {n} domande utilizzabili sulle {t} richieste. Verifica gli obiettivi rimasti scoperti.",
     rv_batch_short_title: "Il lotto contiene meno domande del previsto",
     rv_batch_short_help: "Questi numeri descrivono le domande ottenute alla generazione. Verifica quali obiettivi sono coperti prima di aggiungere altre domande.",
@@ -424,6 +431,13 @@ const it_translations = {
     step_kg_density_title: "Numero di Concetti/Entità",
     step_kg_density_desc: "Scegli quanti nodi generare all'interno del grafo relazionale: 15-25 per grafi ordinati, 30-35 per grafi complessi.",
 
+    // ── 0087, lotto 10 (12/10/2026): l'allineamento delle superfici ai token ──
+    // lotto 10-larghezze: il segnaposto del campo immagine di «Modifica nodo» (data-i18n-placeholder)
+    ph_image_url: "URL dell'immagine",
+    // lotto 10-crea: i due posti d'attesa della modalità iconografica (data-i18n in index.html)
+    crea_attesa_foto: "Anteprima dell'immagine",
+    crea_attesa_titolo: "Titolo",
+
     // ── Chiavi anche italiane, per scelta (25/9/2026) ────────────────────────
     // Di regola una chiave t() vive solo in en_translations.js: il ripiego inline
     // è già l'italiano. Queste no. mappai-learning-path.js prende il ripiego dalla
@@ -626,7 +640,7 @@ const it_translations = {
     src_docs: "Documenti",
     src_text: "Testo",
     prompt_title: "Inserisci valore",
-    prompt_hint: "Premi Invio per salvare.",
+    prompt_hint: "Invio per salvare",
     btn_cancel: "Annulla",
     btn_save: "Salva",
     btn_save_changes: "Salva Modifiche",
@@ -800,7 +814,7 @@ const it_translations = {
     ui_size_small: "Piccolo",
     ui_size_normal: "Normale",
     ui_size_large: "Grande",
-    ui_links_caps: "COLLEGAMENTI (Web o File)",
+    ui_links_caps: "Collegamenti",
     ui_add_lc: "aggiungi",
     ui_images_caps: "IMMAGINI",
     ui_or: "oppure",
@@ -917,6 +931,7 @@ const it_translations = {
     ui_evidence_title: "Evidenze dalla fonte nei quiz",
     ui_evidence_desc: "Le domande nascono dalle frasi vere della fonte, e ognuna porta con sé il riferimento alla pagina da cui viene. Spenta, tutto resta come prima.",
     ui_how_create_it: "Come crearlo?",
+    ui_pid_where: "Dove lo trovo?",
     ph_infomaniak_token: "Inserisci token Infomaniak...",
     ui_merge_map_title: "Unisci Mappa",
     ui_ai_corr_desc: "L'AI cercherà possibili correlazioni tra i nodi delle due mappe e creerà link tratteggiati che potrai validare o rimuovere.",

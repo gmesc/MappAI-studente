@@ -950,7 +950,7 @@
             'font-weight:700;padding:7px 11px 4px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
             esc(label) + '</div>' +
             voci.map((v, i) => '<button type="button" data-i="' + i + '" style="display:block;width:100%;text-align:left;' +
-                'font:inherit;font-size:12.5px;font-weight:700;border:0;background:none;color:#334155;' +
+                'font:inherit;font-size:12.5px;font-weight:700;border:0;background:none;color:var(--mm-testo, #404040);' +
                 'padding:8px 11px;border-radius:8px;cursor:pointer">' + v[0] + '</button>').join('');
         document.body.appendChild(m);
         const r = m.getBoundingClientRect();
@@ -1038,7 +1038,7 @@
             '<span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;' +
             'text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;background:#eef2ff;' +
             'padding:3px 8px;border-radius:999px;flex:0 0 auto">FOCUS</span>' +
-            '<b style="font-size:14px;color:#0f172a;white-space:nowrap;overflow:hidden;' +
+            '<b style="font-size:14px;color:var(--mm-testo, #404040);white-space:nowrap;overflow:hidden;' +
             'text-overflow:ellipsis;flex:0 1 auto">' + esc(centro.label || id) + '</b>' +
             '<span id="sv-focus-sub" style="font-size:11px;color:#64748b;font-weight:700;' +
             'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto"></span>' +
@@ -1153,11 +1153,11 @@
             '<div class="pm-subtitle">' + (n.level != null ? t('sv_lv', 'Livello') + ' ' + esc(n.level) : t('sv_nodo', 'nodo')) + '</div>' +
             '</div>' +
             '<button type="button" id="sv-desc-x" style="font:inherit;border:0;background:none;cursor:pointer;' +
-            'color:#94a3b8;padding:2px"><i data-lucide="x" class="w-5 h-5"></i></button>' +
+            'color:var(--mm-testo-3, #64748b);padding:2px"><i data-lucide="x" class="w-5 h-5"></i></button>' +
             '</div>' +
             '<div style="padding:0 22px 6px;overflow:auto;flex:1">' +
             (desc
-                ? '<div style="font-size:16px;line-height:1.75;color:#334155;white-space:pre-wrap;' +
+                ? '<div style="font-size:16px;line-height:1.75;color:var(--mm-testo, #404040);white-space:pre-wrap;' +
                   'hyphens:auto;-webkit-hyphens:auto">' + esc(desc) + '</div>'
                 : '<div class="pm-body-text">' + t('sv_desc_none', 'Questo nodo non ha ancora una descrizione.') + '</div>') +
             '</div>' +

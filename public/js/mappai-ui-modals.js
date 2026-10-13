@@ -1180,11 +1180,24 @@ window.refreshGeminiModels = async function () {
 
     let productId = null;
     if (isInfomaniak) {
-        productId = document.getElementById('infomaniak-product-id')?.value || appState.infomaniakProductId;
+        /* Il Product ID si ripulisce PRIMA di usarlo (0088, B7): uno spazio incollato in coda a un
+           numero ben scritto dava un errore che il docente non sapeva leggere. Stessa regola di
+           main.js (`/^\d+$/`, rerank-infomaniak). */
+        productId = String(document.getElementById('infomaniak-product-id')?.value || appState.infomaniakProductId || '').trim();
         if (!productId) {
             if (selectEl) selectEl.innerHTML = '<option value="">' + window.t('opt_no_model_pid', 'Nessun modello (manca Product ID)') + '</option>';
             window.showToast(window.t('tst_need_pid', "Inserisci il Product ID per caricare i modelli Infomaniak."), "error");
             if (statusEl) { statusEl.innerText = "Attesa inserimento Product ID..."; statusEl.classList.remove('hidden'); }
+            if (window.updateTokenCostEstimator) window.updateTokenCostEstimator();
+            return;
+        }
+        if (!/^\d+$/.test(productId)) {
+            /* non è un numero: la chiamata non parte, e la tendina e le scelte restano come sono */
+            if (statusEl) {
+                statusEl.innerText = window.t('catalog_err_pid', 'Infomaniak non trova un prodotto AI con questo Product ID: controllalo, sono solo cifre («Dove lo trovo?»).') +
+                    ' ' + window.t('catalog_kept', 'Le ultime scelte sono conservate.');
+                statusEl.classList.remove('hidden');
+            }
             if (window.updateTokenCostEstimator) window.updateTokenCostEstimator();
             return;
         }
@@ -1236,6 +1249,18 @@ window.refreshGeminiModels = async function () {
                 if (kb && kb.deprecated) return false;
                 return true;
             });
+            /* I modelli dei VETTORI vanno in un deposito loro (10/10/26). Dalla tendina
+               principale restano fuori — `excludePatterns` ha già 'embed' — ma servono alla
+               tendina dell'analisi semantica in Cabina. Chiave separata apposta:
+               `gemini_available_models` è dei modelli di chat, e ci pescano dentro sia il
+               selettore sia `matchModelKB`.
+               Si scrive solo se c'è qualcosa: con un `main.js` di prima del 10/10 `servizi`
+               non arriva, e un deposito buono non va cancellato per una risposta muta. */
+            const perVettori = rawModels
+                .filter(m => Array.isArray(m.servizi) && m.servizi.includes('embedContent'))
+                .map(m => ({ id: m.id, displayName: m.displayName || m.id }));
+            if (perVettori.length) localStorage.setItem('gemini_embedding_models', JSON.stringify(perVettori));
+            if (window.MappAIModelliUI) window.MappAIModelliUI.aggiornaCatalogo();
         }
 
         if (filteredModels.length === 0) {
@@ -1286,7 +1311,23 @@ window.refreshGeminiModels = async function () {
             localStorage.setItem('infomaniak_catalogue_state', JSON.stringify({ ...old, stale: true }));
             if (window.MappAIModelliUI) window.MappAIModelliUI.aggiornaCatalogo();
         }
-        if (statusEl) statusEl.innerText = window.t('catalog_refresh_failed', 'Catalogo non aggiornato. Le ultime scelte sono conservate.');
+        if (statusEl) {
+            let msg = window.t('catalog_refresh_failed', 'Catalogo non aggiornato. Le ultime scelte sono conservate.');
+            if (isInfomaniak) {
+                /* Il numero HTTP viaggia nel testo dell'errore («… (HTTP 401).», main.js, list-infomaniak-models):
+                   da lì si capisce che cosa dire al docente. Il testo grezzo dell'errore non si mostra mai
+                   (0088, D6). Senza numero: rete staccata se il sistema lo sa, altrimenti il testo di prima. */
+                const codice = Number((/HTTP (\d{3})/.exec(String((err && err.message) || '')) || [])[1]) || 0;
+                const conservate = ' ' + window.t('catalog_kept', 'Le ultime scelte sono conservate.');
+                if (codice === 401) msg = window.t('catalog_err_401', 'Infomaniak non riconosce il token: copialo di nuovo dal Manager Infomaniak («Come crearlo?»).') + conservate;
+                else if (codice === 403) msg = window.t('catalog_err_403', 'Il token non apre questo Product ID: controlla il Product ID («Dove lo trovo?») e che token e prodotto siano dello stesso account.') + conservate;
+                else if (codice === 400 || codice === 404 || codice === 422) msg = window.t('catalog_err_pid', 'Infomaniak non trova un prodotto AI con questo Product ID: controllalo, sono solo cifre («Dove lo trovo?»).') + conservate;
+                else if (codice === 429) msg = window.t('catalog_err_429', 'Infomaniak chiede di aspettare: riprova fra qualche minuto.') + conservate;
+                else if (codice >= 500) msg = window.t('catalog_err_5xx', 'Infomaniak non risponde in questo momento: riprova più tardi.') + conservate;
+                else if (!codice && typeof navigator !== 'undefined' && navigator && navigator.onLine === false) msg = window.t('catalog_err_offline', 'Il computer non è collegato a Internet.') + conservate;
+            }
+            statusEl.innerText = msg;
+        }
     } finally {
         // la rotellina la ferma solo l'ultima chiamata partita (0064)
         if (refreshIcon && giro === window.refreshGeminiModels._giro) refreshIcon.style.animation = '';

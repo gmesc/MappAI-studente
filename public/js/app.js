@@ -55,7 +55,7 @@ let appState = {
         system: "Ticino"
     },
     allProfiles: [],
-    aiProvider: localStorage.getItem('ai_provider') || 'google',
+    aiProvider: localStorage.getItem('ai_provider') || 'infomaniak',
     infomaniakProductId: localStorage.getItem('infomaniak_product_id') || '',
     studentMode: false,
     infomaniakAllModels: true,
@@ -2442,9 +2442,11 @@ window.applyAppTranslations = null;
         const categoryLabel = (cat && cat.etichetta) || 'Altro';
         const emailSubject = `MappAI Feedback - [${categoryLabel}]`;
 
-        const appVersion = "1.0.0";
         const osInfo = navigator.platform || 'sconosciuto';
         const userAgent = navigator.userAgent;
+        /* La versione vera sta nello user agent di Electron (`MappAI/<versione>`): una cifra scritta
+           qui andava fuori squadra a ogni rilascio (0088, R2). */
+        const appVersion = (/\bmappai\/(\d\S*)/i.exec(userAgent || '') || [])[1] || 'sconosciuta';
         const model = document.getElementById('model-select')?.value || 'Non specificato';
 
         const emailBase = `SEGNALAZIONE UTENTE MAPPAI\n` +

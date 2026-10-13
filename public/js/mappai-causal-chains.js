@@ -121,9 +121,9 @@
             const a = x.type === 'contrast' ? x.a : x.cause;
             const b = x.type === 'contrast' ? x.b : x.effect;
             return '<div style="display:flex;align-items:baseline;gap:7px;padding:5px 0;border-bottom:1px dashed var(--mm-bordo, #cbd5e1);flex-wrap:wrap">' +
-                '<span style="font-size:10.5px;color:#334155">' + _esc(a) + '</span>' +
+                '<span style="font-size:10.5px;color:var(--mm-testo, #404040)">' + _esc(a) + '</span>' +
                 '<span style="font-size:10px;font-weight:700;color:' + fm.color + ';white-space:nowrap">' + arr + ' ' + _esc(x.type === 'contrast' ? x.conn : (x.connShow || x.conn)) + ' ' + arr + '</span>' +
-                '<span style="font-size:10.5px;color:#334155">' + _esc(b) + '</span>' +
+                '<span style="font-size:10.5px;color:var(--mm-testo, #404040)">' + _esc(b) + '</span>' +
                 '</div>';
         }).join('');
         return '<div style="margin:18px 0 6px;padding:14px 16px;background:#f8fafc;border:1px solid var(--mm-bordo, #cbd5e1);border-left:4px solid #4f46e5;border-radius:10px;page-break-inside:avoid">' +
@@ -188,7 +188,7 @@
             '<title>' + _esc(t('cc_doc_title', 'Catena dei perché')) + ' — ' + _esc(mapName) + '</title>' +
             '<style>' + _fontDoc(fontId) +
             '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
-            "body{font-family:var(--doc-font, 'Space Mono', monospace);font-size:12px;color:#1e293b;margin:0 auto;padding:24px 32px 40px;max-width:860px;background:#fafbff;background-image:radial-gradient(#ddd6fe 1px,transparent 1px);background-size:22px 22px}" +
+            "body{font-family:var(--doc-font, 'Space Mono', monospace);font-size:12px;color:var(--mm-testo, #404040);margin:0 auto;padding:24px 32px 40px;max-width:860px;background:#fafbff;background-image:radial-gradient(#ddd6fe 1px,transparent 1px);background-size:22px 22px}" +
             /* Testata e piè: cornice condivisa (mappai-doc-head.js). Erano due
                regole copiate dal foglio quiz, con misure loro. */
             _ccCornice(mapName) +
@@ -199,11 +199,11 @@
             '.cc-sec-title{font-size:14px;font-weight:900;color:#4f46e5;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid #eef2ff}' +
             '.cc-row{padding:7px 0;border-bottom:1px dashed var(--mm-bordo, #cbd5e1)}.cc-row:last-child{border-bottom:0}' +
             '.cc-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;line-height:1.7}' +
-            '.cc-side{color:#334155}' +
+            '.cc-side{color:var(--mm-testo, #404040)}' +
             '.cc-conn{display:inline-flex;align-items:baseline;gap:5px;border:1.5px solid;border-radius:9999px;padding:1px 9px;font-size:11px;font-weight:700;white-space:nowrap}' +
-            '.cc-badge{display:inline-block;margin-top:2px;font-size:8.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}' +
+            '.cc-badge{display:inline-block;margin-top:2px;font-size:8.5px;color:var(--mm-testo-3, #64748b);text-transform:uppercase;letter-spacing:.05em}' +
             '.cc-badge-txt{color:#a8a29e}' +
-            '.cc-trunc{margin-top:6px;font-size:10px;color:#94a3b8;font-style:italic}' +
+            '.cc-trunc{margin-top:6px;font-size:10px;color:var(--mm-testo-3, #64748b);font-style:italic}' +
             /* modalità esercizio: connettivo nascosto → casella da completare */
             'body.cc-ex .cc-conn-txt{color:transparent!important;border-bottom:1.5px dotted #94a3b8;min-width:64px;display:inline-block}' +
             'body.cc-ex .cc-badge{visibility:hidden}' +

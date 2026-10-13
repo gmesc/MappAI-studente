@@ -105,7 +105,11 @@ window.showLoadingOverlay = function (show, text, mode = 'default', nome, onAnnu
 
     if (show) {
         window.currentLoadingMode = mode;
-        el.classList.add('visible');
+        /* 0062: dopo la mappa il giro di CREA lavora sotto gli occhi del docente,
+           senza velo: il testo si aggiorna, il velo resta giù (lo spinner sta
+           nel cerchio di `mappai-lavori.js`) */
+        if (window.MappAIGen && window.MappAIGen.tela && window.MappAIGen.tela()) el.classList.remove('visible');
+        else el.classList.add('visible');
         if (text) desc.textContent = text;
         /* ⚠️ I messaggi che ruotano ogni 4 secondi («Estrazione concetti
            chiave…») servono a far compagnia durante un'attesa MUTA. Quando chi
@@ -130,6 +134,13 @@ window.showLoadingOverlay = function (show, text, mode = 'default', nome, onAnnu
                 title.textContent = `MappAI sta lavorando... (${loadingSeconds}s)`;
             }, 1000);
         }
+    } else if (window.MappAIGen && window.MappAIGen.presa && window.MappAIGen.presa()) {
+        /* 0062: il giro di CREA tiene la presa, e un pezzo del giro (la mappa,
+           a fine generazione) dice «ho finito» — ma il giro no. Il velo resta;
+           il testo torna ai messaggi che ruotano finché il passo dopo non dice
+           il suo. Il velo cade quando il giro lascia la presa. La presa si
+           guarda solo se `MappAIGen` c'è: il reader non lo carica. */
+        window._loadingTestoProprio = false;
     } else {
         el.classList.remove('visible');
         window._loadingTestoProprio = false;   /* il prossimo velo riparte coi messaggi */

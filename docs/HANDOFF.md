@@ -8,6 +8,24 @@
 
 ## 0. Dove si riprende
 
+**⟵ 13/10, sincronizzate 32 copie da MappAI re `9a5de519`** (beta.6; dall'ultima, `4b5c03a8`: 0087 lotti 9b-10e, 0088,
+0090, 0062, 0091, 0070 a interruttore spento), `?v=sync-20261013`. **Nel comportamento del reader non cambia niente;
+nell'aspetto sì, e Giacomo l'ha accettato in MappAI re** («sì, unisci il 10e anche se l'iPad cambia», «sì al merge del 10b»):
+testi scuri a `#404040` e grigio `#94a3b8` → `#64748b` nelle viste copiate (studio attivo, padronanza, palazzo, percorso,
+timeline, lettore), tabelle del motore che riempiono la cornice (`mappai-modal.js`), anello di `#edit-node-modal` e
+`#validate-rel-modal` a `--mm-focus`, voce scelta dell'elenco della console verde piena. Le regole sotto
+`html[data-app="docente"]` (velo di CREA, corpi, Cabina) qui non scattano.
+- **Nomi tolti** dallo 0087 lotto 10 (catena dello spaced repetition di `flashcards-sr`, `showVaultManager`/`loadVaultList`,
+  modale del profilo, `#quiz-modal`): 17 funzioni; nel reader le nominano solo i tre modali morti del suo `index.html`
+  (`#user-profile-modal`, `#vault-manager-modal`, `#quiz-modal`, tutti con la classe `hidden`, che nessuno apre) e le voci
+  di chiusura di `app.js`, che cercano l'elemento visibile prima. Innocui; toglierli è una pulizia del markup (fuori da
+  questa sync). Il player dei set resta (`loadStudySet`, `nextStudyItem`). Nessuna chiave tolta dai dizionari è usata qui.
+- **`app.js`**: fornitore di partenza `infomaniak` (il reader non genera) e versione della segnalazione dallo user agent
+  (`inviaSegnalazione` qui non ha chiamanti; sull'iPad direbbe «sconosciuta»).
+- `--confronta`: `map-view` DIVERSO per costruzione, più i tre id dei modali morti, assenti ora in MappAI re. Test 45/45.
+Provato nel browser: «La carta» (mappa, Vista studio, flashcard 1 / 9 → valutata → 2 / 9), dossier «LA GUERRE… · 05» →
+«Scheda» («Aa» ×1,5 con la classe del documento, Riga «stretta»); nessun errore.
+
 **⟵ 9/10, sincronizzate 26 copie da MappAI re `4b5c03a8`** (dall'ultima, `0a205769`) e ritoccato
 `studente/documenti.js`, `?v=sync-20261009` (copie) e `sync0079` (documenti.js). Le copie vengono dallo **0087**
 (ritocchi grafici, lotti 1-9a: grigi al token `--mm-bordo`, controlli 40/12, «Aa» unico a ciclo con `MappAIAa`, Pomodoro
