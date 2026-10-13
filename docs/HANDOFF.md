@@ -8,6 +8,15 @@
 
 ## 0. Dove si riprende
 
+**⟵ 13/10 sera, sincronizzate 8 copie da MappAI re `7c777c11`** (dall'ultima, `9a5de519`: 0087 lotto 11, 0093 beta.7,
+0094 il nome del progetto è il nome della cartella, 0095 importare un vault), `?v=sync-20261013b`. **Nel reader non cambia
+niente**: la modifica di `branch-synthesis` sta nella generazione dell'introduzione (non in `buildHtml`, che la scheda del
+dossier usa); i core nuovi (`MappAINomeCartellaCore`, `MappAIImportVault`, `MappAIPercorsoLettura`) qui non esistono e ogni
+uso nelle copie è protetto (`NC && NC.acceso(...)`, `window.MappAIImportVault && …`), `loadProject` il reader non lo
+raggiunge; `app.js`, `ui-modals`, `bento-composizione`, `stile-manifesto`: correzioni del docente, sotto `data-app` o fuori
+dalle strade dell'allievo. `--confronta`: `map-view` più i tre modali morti, come prima. Test 45/45. Provato nel browser:
+dossier «LA GUERRE… · 05» → «Scheda» («Aa» ×1,5), nessun errore.
+
 **⟵ 13/10, sincronizzate 32 copie da MappAI re `9a5de519`** (beta.6; dall'ultima, `4b5c03a8`: 0087 lotti 9b-10e, 0088,
 0090, 0062, 0091, 0070 a interruttore spento), `?v=sync-20261013`. **Nel comportamento del reader non cambia niente;
 nell'aspetto sì, e Giacomo l'ha accettato in MappAI re** («sì, unisci il 10e anche se l'iPad cambia», «sì al merge del 10b»):
