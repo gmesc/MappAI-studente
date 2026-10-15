@@ -281,8 +281,13 @@
                 ' data-azione="' + esc(b.id) + '" aria-label="' + esc(b.etichetta) + '"' +
                 ' title="' + esc(b.etichetta) + '">' + icona(b.icona) + '</button>';
         }
+        /* `spento` e `fumetto` (0096) sono facoltativi: un bottone che non li
+           dichiara esce identico a prima, carattere per carattere. Uno spento non
+           è il primario per Invio e per il primo fuoco: non farebbe niente. */
         return '<button type="button" class="mm-btn mm-btn--' + b.ruolo + '" data-azione="' + esc(b.id) + '"' +
-            (b.ruolo === 'primario' ? ' data-primario="1"' : '') + '>' +
+            (b.ruolo === 'primario' && !b.spento ? ' data-primario="1"' : '') +
+            (b.spento ? ' disabled aria-disabled="true"' : '') +
+            (b.fumetto ? ' title="' + esc(b.fumetto) + '"' : '') + '>' +
             icona(b.icona) + '<span>' + esc(b.etichetta) + '</span></button>';
     }
 

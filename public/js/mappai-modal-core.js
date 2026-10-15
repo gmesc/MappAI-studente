@@ -202,7 +202,13 @@
                riga e non deve competere col contenuto (il cestino di un elenco). */
             soloIcona: !!b.soloIcona && !!b.icona,
             valore: b.valore !== undefined ? b.valore : b.id || ruolo,
-            chiude: b.chiude !== false
+            chiude: b.chiude !== false,
+            /* Un comando che c'è ma ora non si può usare, e il FUMETTO che dice
+               perché (0096: «Aggiungi PDF» con il PDF già allegato). Spento senza
+               fumetto lascerebbe il docente a indovinare: il motore li accetta
+               entrambi, e chi spegne scrive anche il perché. */
+            spento: !!b.spento,
+            fumetto: b.fumetto ? String(b.fumetto) : ''
         };
     }
 
