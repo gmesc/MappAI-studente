@@ -4441,8 +4441,8 @@ const en_translations = {
     rv_veste_g1_sospese_senza_riga: "The decisions cannot be applied to the map yet, but no row in the list is the cause: close with {piu_tardi} and reopen the review. The decisions you made stay saved.",
     rv_veste_g1_stantia: "The map or the sources do not match the version of this review: before continuing, reopen the review on the right version of the project.",
     // 0097: an approved G1 whose map changed afterwards — the footer says what to do, and the button does it
-    rv_veste_g1_approvata_cambiata: "The map changed after the approval: to continue, the current map needs a new check. The approved decisions remain saved.",
-    rv_ricontrolla_mappa: "Check the current map again",
+    rv_veste_g1_approvata_cambiata: "The map has changed: to continue, press “Check the map now”. The approved decisions remain saved.",
+    rv_ricontrolla_mappa: "Check the map now",
     rv_veste_g1_conferma_parziale: "I have personally checked the parts the automatic check did not read too, and I approve the contents.",
     // 0075, second round (Q8): the checkbox counts the parts not read by the check as the header does
     rv_veste_g1_conferma_non_lette: "I have personally checked {parti} ({dettaglio}) too, and I approve the contents.",
