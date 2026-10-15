@@ -24,11 +24,21 @@
     function daQr(testo) {
         var t = _s(testo);
         if (!t) return null;
-        var m = /^(https?:\/\/[^\s/?#]+)[^\s?#]*\?(?:[^\s#]*&)?s=([A-Za-z0-9_-]+)/.exec(t);
-        if (m) return { base: m[1], token: m[2] };
+        var m = /^(https?:\/\/[^\s/?#]+)[^\s?#]*\?(?:[^\s#]*&)?s=([A-Za-z0-9_-]+)/i.exec(t);
+        if (m) return { base: m[1].replace(/^https?/i, function (x) { return x.toLowerCase(); }), token: m[2] };
         m = /^(?:https?:\/\/)?([A-Za-z0-9.-]+:[0-9]{2,5})[\s\/]+([A-Za-z0-9_-]{6,})$/.exec(t);
         if (m) return { base: 'http://' + m[1], token: m[2] };
         return null;
+    }
+
+    /* L'esito per chi deve DIRE all'allievo che cosa è andato storto (0098): un
+       indirizzo web senza token è il QR dei Materiali, fatto per i telefoni (il
+       browser segue il redirect); non è un codice rotto, è quello sbagliato.
+       → { ok:true, base, token } | { ok:false, motivo:'telefono'|'no' } */
+    function esitoQr(testo) {
+        var d = daQr(testo);
+        if (d) return { ok: true, base: d.base, token: d.token };
+        return { ok: false, motivo: /^https?:\/\/[^\s]+$/i.test(_s(testo)) ? 'telefono' : 'no' };
     }
 
     /* ── dove finisce il vault sull'iPad ─────────────────────────────────────
@@ -174,6 +184,6 @@
         return (n / 1048576).toFixed(1) + ' MB';
     }
 
-    return { daQr: daQr, cartellaDestinazione: cartellaDestinazione, pianoRicezione: pianoRicezione, fileDaInviare: fileDaInviare,
+    return { daQr: daQr, esitoQr: esitoQr, cartellaDestinazione: cartellaDestinazione, pianoRicezione: pianoRicezione, fileDaInviare: fileDaInviare,
         erroreTesto: erroreTesto, schemaDocente: schemaDocente, schemaIdentita: schemaIdentita, schemaIndirizzo: schemaIndirizzo, schemaInvio: schemaInvio, fmtBytes: fmtBytes };
 }));
