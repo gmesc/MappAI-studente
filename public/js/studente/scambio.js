@@ -93,9 +93,14 @@
         });
     }
     function daTesto(testo) {
-        var d = SC().daQr(testo);
-        if (!d) { if (testo) toast(t('sc_qr_ko', 'Non è un codice di MappAI: serve l\'indirizzo sotto il QR, con «?s=…».'), 'warning'); return null; }
-        return d;
+        var e = SC().esitoQr(testo);
+        if (!e.ok) {
+            if (testo) toast(e.motivo === 'telefono'
+                ? t('sc_qr_telefono', 'Questo QR è per i telefoni. Per l\'app chiedi al docente il QR «Vault su iPad».')
+                : t('sc_qr_ko', 'Non è un codice di MappAI: serve il QR «Vault su iPad» del docente, o il suo indirizzo con il codice.'), 'warning');
+            return null;
+        }
+        return { base: e.base, token: e.token };
     }
     function fetchJson(url, opts) {
         return fetch(url, opts).then(function (r) {

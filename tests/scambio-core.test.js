@@ -19,6 +19,17 @@ test('daQr: il QR di INSEGNA (zip, documento, home) e l\'indirizzo scritto a man
     assert.strictEqual(S.daQr(''), null);
 });
 
+test('esitoQr (0098): il QR dei Materiali è "per i telefoni", il resto "non è MappAI"; schema in maiuscolo', () => {
+    assert.deepStrictEqual(S.esitoQr('http://192.168.1.23:8768/files/x.zip?s=aB3xQ9kLmN'), { ok: true, base: 'http://192.168.1.23:8768', token: 'aB3xQ9kLmN' });
+    assert.deepStrictEqual(S.esitoQr('HTTP://192.168.1.23:8768/?s=aB3xQ9kLmN'), { ok: true, base: 'http://192.168.1.23:8768', token: 'aB3xQ9kLmN' }, 'schema in maiuscolo, base normalizzata');
+    assert.deepStrictEqual(S.esitoQr(' 192.168.1.23:8768 aB3xQ9kLmN '), { ok: true, base: 'http://192.168.1.23:8768', token: 'aB3xQ9kLmN' });
+    assert.deepStrictEqual(S.esitoQr('http://192.168.1.23:8768'), { ok: false, motivo: 'telefono' }, 'il QR del pannello Materiali (LAN)');
+    assert.deepStrictEqual(S.esitoQr('https://relay.example.ch/j/ABC234'), { ok: false, motivo: 'telefono' }, 'il QR del pannello Materiali (Internet)');
+    assert.deepStrictEqual(S.esitoQr('ciao'), { ok: false, motivo: 'no' });
+    assert.deepStrictEqual(S.esitoQr(''), { ok: false, motivo: 'no' });
+    assert.deepStrictEqual(S.esitoQr('http://x.y/ due parole'), { ok: false, motivo: 'no' });
+});
+
 test('cartellaDestinazione: classe/materia/mappa, senza materia, piatto, NFC', () => {
     assert.strictEqual(S.cartellaDestinazione({ nome: 'Elettricità - MM', classe: '4R', materia: 'Scienze' }, 'Documents'), 'Documents/4R/Scienze/Elettricità - MM');
     assert.strictEqual(S.cartellaDestinazione({ nome: 'Clima', classe: '1A', materia: null }, 'Documents'), 'Documents/1A/Clima');
