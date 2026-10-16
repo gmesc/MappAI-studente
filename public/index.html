@@ -12,10 +12,9 @@
          stanno in public/fonts/ e le @font-face le inietta mappai-font.js dal
          catalogo (mappai-font-core.js), insieme a TestMe e Atkinson.
          Le emoji: 'MappAI Emoji' (public/fonts/MappAIEmojiApp.ttf, il sottoinsieme
-         Noto di MappAI re) funziona senza rete; la CDN resta solo come riserva. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+         Noto di MappAI re) funziona senza rete. La riserva da fonts.googleapis.com è
+         stata TOLTA il 16/10/26 (Giacomo, dopo la domanda di App Review sui servizi
+         esterni): l'app non contatta più nessun server fuori dalla rete della classe. -->
     <style>
       @font-face { font-family: 'MappAI Emoji'; font-style: normal; font-weight: 400;
         src: url('fonts/MappAIEmojiApp.ttf') format('truetype'); font-display: swap; }
