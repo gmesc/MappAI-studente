@@ -8,6 +8,14 @@
 
 ## 0. Dove si riprende
 
+**⟵ 16/10, VIA GOOGLE FONTS** (ramo `lavoro/senza-google-fonts`). Giacomo: «sì, togli Google Fonts su un ramo», dopo che
+App Review (Guideline 2.1) ha chiesto l'elenco dei servizi esterni. `public/index.html` caricava da `fonts.googleapis.com` il
+Noto Color Emoji come riserva: tolti i due `preconnect` e il foglio. Le emoji vengono da `MappAI Emoji`
+(`fonts/MappAIEmojiApp.ttf`), primo nello stack di `--emoji-font`. Provato nel browser: nessuna risorsa da google/gstatic,
+`MappAI Emoji` caricato, le emoji delle flashcard in stile Noto. ⚠️ Resta una copia di MappAI re che lo carica ancora:
+`mappai-live-reports.js` (`docShell`, riga 106), usata da `studente/autotest.js` per scrivere `report.html` dopo un autotest.
+Si corregge in MappAI re (packet via ADMIN), poi sync.
+
 **⟵ 13/10 notte, DUE MAPPE DI PROVA** (ramo `lavoro/demo-albero`). Giacomo: «parti dalla mappa di prova e inserisci il
 progetto Sistema albero quello che abbiamo mantenuto». `public/demo/vault.json` porta ora «La carta» (2A · Storia) e
 «Sistema Albero» (1A · Scienze): 85 file, 4,7 MB. «La carta» si prende dall'Archivio (`Mappe/` è stata archiviata il 28/9) ed
