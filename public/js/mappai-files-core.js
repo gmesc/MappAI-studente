@@ -333,6 +333,19 @@
      Fonti/, Consegne/, i dotfile.
      Ritorna il rel normalizzato o null; la usa chi ESPONE (live-server) e chi
      RICEVE (l'adapter dello studente): fiducia zero nel manifest. */
+  /* La chiave della mappa nel QR «Vault su iPad» (0109): `?s=<token>-<chiave>`.
+     Il server dei materiali dà il vault solo al QR che nomina la mappa esposta:
+     un QR di documento (solo il token), il QR di A dopo la condivisione di B o
+     dopo un riavvio non portano più la mappa sbagliata. Non è un segreto (il
+     gate resta il token), è un'etichetta: NFC, FNV-1a a 32 bit, base 36. */
+  function chiaveVault(nome) {
+    var s = String(nome == null ? '' : nome).trim();
+    try { s = s.normalize('NFC'); } catch (e) { }
+    var h = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return h.toString(36);
+  }
+
   function relVaultStudente(relPath) {
     var raw = String(relPath == null ? '' : relPath).replace(/\\/g, '/').trim();
     if (!raw || raw.charAt(0) === '/' || /^[a-zA-Z]:/.test(raw)) return null;
@@ -741,6 +754,7 @@
     senzaCarattere: senzaCarattere,
     variantiDaPotare: variantiDaPotare,
     relVaultStudente: relVaultStudente,
+    chiaveVault: chiaveVault,
     materialeSoloDocente: materialeSoloDocente,
     identitaStudente: identitaStudente,
     VAULT_CONTAINER_EXCLUDE: VAULT_CONTAINER_EXCLUDE,

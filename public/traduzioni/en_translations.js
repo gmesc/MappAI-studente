@@ -2994,6 +2994,7 @@ const en_translations = {
     mp_lbl_c: "Node sheets",
     mp_lbl_d: "Summary",
     mp_resume_prompt: "This vault has an unfinished materials pipeline. Resume it?",
+    mp_resume_g2: "The materials are waiting for your validation. Resume it?",
     /* 0088 B15: conferma prima di tornare a G1 dal riepilogo */
     mps_rivedi_titolo: "Go back to the contents?",
     mps_rivedi_fatto: "The contents review opens. The materials you just completed stay as they are: corrections to the contents apply to the materials you generate next.",
