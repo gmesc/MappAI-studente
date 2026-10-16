@@ -1472,7 +1472,8 @@ window.startGeneration = async function (options) {
     appState.generationDiscipline = '';
     try {
         if (window.MappAIClasses && window.MappAIClasses.ensureGenerationContext) {
-            const genCtx = await window.MappAIClasses.ensureGenerationContext();
+            // 0103: da CREA il contesto è il riquadro giallo, come per la pipeline
+            const genCtx = await window.MappAIClasses.ensureGenerationContext({ contestoDaCrea: !!(options && options.contestoDaCrea) });
             if (!genCtx) return;                       // annullato dal docente
             appState.generationDiscipline = genCtx.discipline || '';
         }
