@@ -23,9 +23,42 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* LE EMOJI DEI REPORT E DELLE TESSERE (packet 0108, 16/10/2026).
+     Fino al 16/10 arrivavano da fonts.googleapis.com: senza rete il PDF delle
+     tessere usciva con le emoji Apple, cioè un'identità diversa da quella che
+     l'allievo vede sul telefono. Ora i byte di 'MappAI Emoji' (le 27
+     dell'identità + ⚠️, 💡 e le altre che questi documenti scrivono) stanno
+     DENTRO il documento: il PDF nasce da un indirizzo `data:`, dove un percorso
+     al font non arriva. Il file è public/js/vendor/mappai-emoji-incorpora.js,
+     generato da tools/font/emoji-sottoinsieme.py. Se non c'è, lo stack ripiega
+     sulle emoji di sistema: nessun guasto nuovo. */
+  var EMOJI_STACK = "'MappAI Emoji','Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji'";
+
+  function emojiIncorporate() {
+    var api = null;
+    if (typeof window !== 'undefined' && window.MappAIInc_emoji) {
+      api = window.MappAIInc_emoji;
+    } else if (typeof module !== 'undefined' && module.exports && typeof require === 'function') {
+      try { api = require('./vendor/mappai-emoji-incorpora.js'); } catch (e) { api = null; }
+    }
+    try { return api ? api.facce('MappAI Emoji') : ''; } catch (e) { return ''; }
+  }
+
+  /* Nel browser (anteprima del docente, PDF delle tessere) il file si carica da
+     solo accanto a questo modulo: index.html non va toccato per un report. */
+  if (typeof window !== 'undefined' && typeof document !== 'undefined' && !window.MappAIInc_emoji) {
+    try {
+      var mio = document.currentScript && document.currentScript.src;
+      var s = document.createElement('script');
+      s.src = (mio ? mio.replace(/[^/]*$/, '') : 'js/') + 'vendor/mappai-emoji-incorpora.js';
+      s.async = true;
+      (document.head || document.documentElement).appendChild(s);
+    } catch (e) { /* le emoji ripiegano su quelle di sistema */ }
+  }
+
   var BASE_STYLES = [
     "*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;box-sizing:border-box}",
-    "body{font-family:'Space Mono',ui-monospace,monospace;font-size:12px;color:var(--mm-testo, #404040);margin:0 auto;padding:24px 28px;max-width:840px;background:#f8fafc}",
+    "body{font-family:'Space Mono'," + EMOJI_STACK + ",ui-monospace,monospace;font-size:12px;color:var(--mm-testo, #404040);margin:0 auto;padding:24px 28px;max-width:840px;background:#f8fafc}",
     ".lr-header{text-align:center;padding:24px 16px 18px;background:#fff;border-radius:16px;margin-bottom:22px;border-bottom:3px solid #4f46e5;page-break-after:avoid}",
     ".lr-title{font-size:20px;font-weight:900;color:var(--mm-testo, #404040)}",
     ".lr-sub{font-size:11px;color:#64748b;margin-top:6px;line-height:1.6}",
@@ -74,7 +107,7 @@
        stack EFFETTIVO dell'elemento — dichiararlo in una variabile non basta:
        il glifo lo prende il primo font dello stack che ce l'ha, e su macOS
        sarebbe Apple Color Emoji (regola globale del progetto). */
-    ".cred-emoji{font-size:40px;line-height:1;font-family:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif}",
+    ".cred-emoji{font-size:40px;line-height:1;font-family:" + EMOJI_STACK + ",sans-serif}",
     ".cred-num{font-size:24px;font-weight:900;color:#4f46e5;margin-top:2px}",
     ".cred-class{font-size:11px;color:#64748b;margin-top:6px}",
     ".cred-name{font-size:10px;color:var(--mm-testo-3, #64748b);margin-top:8px;border-top:1px solid var(--mm-bordo, #cbd5e1);padding-top:6px;min-height:16px}",
@@ -95,16 +128,15 @@
      barra dei comandi — in un PDF non si clicca.
      ⚠️ I FONT restano anche nel PDF: le emoji delle tessere sono l'identità con
      cui l'allievo entra, e devono essere le stesse che vede sul telefono
-     (Noto/Android). Senza il webfont il PDF le stamperebbe in stile Apple.
-     `html-to-pdf` attende `document.fonts.ready` prima di stampare — senza
-     quell'attesa i 150ms fissi non bastavano a scaricarli. */
+     (Noto/Android). Senza il font il PDF le stamperebbe in stile Apple: per
+     questo i byte sono incorporati (EMOJI_STACK, sopra), non chiesti alla rete.
+     `html-to-pdf` attende `document.fonts.ready` prima di stampare. */
   function docShell(title, label, bodyHtml, opts) {
     var perPdf = !!(opts && opts.perPdf);
     return '<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>' + esc(title) + '</title>' +
-      '<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">' +
-      '<style>' + BASE_STYLES + '</style></head><body>' +
+      '<style>' + emojiIncorporate() + BASE_STYLES + '</style></head><body>' +
       (perPdf ? '' : printBar(label)) + bodyHtml +
       '<div class="lr-footer">MappAI Live · generato il ' + esc(nowStr()) + '</div>' +
       '</body></html>';
