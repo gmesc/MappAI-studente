@@ -1739,6 +1739,13 @@ html.manifesto .mm-box--console.mm-box--piena .mm-console__area.mm-console__area
     padding: 0 var(--mm-pad);
 }
 
+/* 0100: la riga dei SOLI comandi (nessuna scheda) sopra la tela — il materiale
+   aperto in INSEGNA — stava a filo della testata (y=65, misurato). Stesso respiro
+   verticale della barra degli editor (.de-bar: 8px sopra e sotto). */
+.mm-box--piena:has(.mm-tela) .mm-console__area>.mm-schede-riga:not(:has(.mm-schede)) {
+    padding: var(--mm-btn-gap, 8px) var(--mm-pad);
+}
+
 .mm-box--piena .mm-tela {
     border-radius: 0;
     border-width: 1px 0 0 0;
