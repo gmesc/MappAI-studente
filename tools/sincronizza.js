@@ -73,11 +73,20 @@ const FILES = [
 const CARTELLE = ['fonts', 'js/vendor/katex-fonts'];
 
 function sha(p) { return crypto.createHash('sha1').update(fs.readFileSync(p)).digest('hex'); }
+/* Le cartelle si percorrono anche nelle SOTTOCARTELLE (16/10, dopo lo 0099: `fonts/emoji/` è la prima
+   sottocartella di `fonts`; prima `copyFileSync` la trattava come un file e si fermava con ENOTSUP).
+   I nomi che cominciano col punto si saltano, a ogni livello. */
+function dentro(rel, out) {
+  const d = path.join(LA, 'public', rel);
+  fs.readdirSync(d, { withFileTypes: true }).forEach(e => {
+    if (e.name.charAt(0) === '.') return;
+    if (e.isDirectory()) dentro(rel + '/' + e.name, out); else out.push(rel + '/' + e.name);
+  });
+}
 function tutti() {
   const out = FILES.slice();
   CARTELLE.forEach(c => {
-    const d = path.join(LA, 'public', c);
-    if (fs.existsSync(d)) fs.readdirSync(d).forEach(f => { if (f.charAt(0) !== '.') out.push(c + '/' + f); });
+    if (fs.existsSync(path.join(LA, 'public', c))) dentro(c, out);
   });
   return out;
 }
