@@ -3098,9 +3098,6 @@ const en_translations = {
     ec_esci: "Exit",
     ec_esci_tip: "Close the document and go back to the tables.",
     ec_modifica_set_tip: "This file was produced by a set you can still edit: open it in the editor.",
-    ec_modifica_tip2: "Open this set in the editor to correct it.",
-    ec_set_via: "This set is no longer in the map.",
-    ec_anteprima_ko: "I cannot build the preview of this set.",
     ec_del_set: "This entry is an editable set: delete it from its editor, not from here.",
     ec_del_ko2: "The delete confirmation is not available here.",
     ec_g_catene: "Chains",
@@ -3959,12 +3956,6 @@ const en_translations = {
     crea_attesa_titolo: "Title",
     // lotto 11 (13/10): il titolo del box unico delle opzioni dei materiali nel bento
     mn_gruppo_materiali: "Materials to generate",
-    // lotto 10-modifica: l'anteprima senza file in ELABORA (la scheda del foglio nodi e il bottone «Modifica»)
-    ec_modifica_tip3: "Open this document in the editor: the PDF is created from there.",
-    ec_ns_scheda_nodi: "Nodes in the map: {n}",
-    ec_ns_scheda_card: "Cards saved in the project: {n} (format {f})",
-    ec_ns_scheda_nuovo: "No sheet saved yet: the editor builds it from the map.",
-    ec_ns_scheda_pdf: "The PDF is created from the editor: press «Edit».",
 
     // ── Veste «manifesto»: il pallino della console porta alla Cabina (4/8) ──
     mn_vai_cabina: "Open the Cockpit",
