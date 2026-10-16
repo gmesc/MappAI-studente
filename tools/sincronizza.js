@@ -57,6 +57,8 @@ const FILES = [
   'js/mappai-mastery.js', 'js/mappai-study-bus.js',
   'js/mappai-active-study-core.js', 'js/mappai-active-study.js',
   'js/mappai-live-core.js', 'js/mappai-live-reports.js',
+  /* le emoji di MappAI incorporate nel report (0108): mappai-live-reports.js lo carica accanto a sé */
+  'js/vendor/mappai-emoji-incorpora.js',
   'js/mappai-console-manifesto.js',
   'js/mappai-scelta-core.js', 'js/mappai-scelta-view.js', 'js/mappai-scelta.js',
   'js/mappai-files-core.js', 'js/mappai-vista-core.js', 'js/mappai-pipeline-core.js',
