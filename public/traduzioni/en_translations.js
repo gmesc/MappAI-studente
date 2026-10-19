@@ -2901,6 +2901,7 @@ const en_translations = {
     // la sola mappa (il modulo blu affiancato non esiste più).
     mn_genera_mappa: "Generate Map",
     mn_solo_mappa_tip: "no material selected: generates the map only",
+    mn_solo_fogli_tip: "only the automatic node sheets: generates the map and the sheets",
     // Step E: «Catena dei perché» come materiale indipendente, con PDF suo
     mp_lbl_e: "Why-chain",
     mp_step_e: "Preparing the why-chain…",
@@ -3877,6 +3878,7 @@ const en_translations = {
     lt_g_quiz_vf: "True / false quizzes",
     lt_g_flash: "Flashcards",
     lt_cons_apri_mappa: "Map",
+    lt_cons_apri_lettura: "Reading",
     lt_cons_finder: "Finder",
     lt_cons_cartella: "Folder",
     /* 0094 (ADR 0021): «Rinomina…» un progetto */
@@ -3895,6 +3897,7 @@ const en_translations = {
     sd_qr_title_vault: "Share vault to iPad",
     lt_cons_tip_allievi: "One click: the QR that sends the map and materials to the MappAI student app.",
     lt_cons_tip_apri: "Opens the mind map view.",
+    lt_cons_tip_apri_lettura: "Opens the reading in ELABORA.",
     lt_cons_tip_elab: "Opens PROCESS on the source and documents of this map.",
     lt_cons_tip_qr: "Sends a file via QR to the students' phones. To send the whole vault to the iPad use «Vault to iPad».",
     lt_cons_qr_aperto: "the open material · for phones",
