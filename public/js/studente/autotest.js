@@ -131,10 +131,11 @@
     function avvia(st, v, fg, sets, poolAp, op) {
         if (st.sel === 'set-mc') {
             var set = sets.filter(function (x) { return x.id === st.set; })[0]; if (!set) return;
-            if (!st.split) { window.loadStudySet(set.id); return; }        /* il player storico di MappAI */
-            /* in split la scelta multipla usa la view «a scelta», col verdetto immediato (bivio 1) */
+            /* la scelta multipla passa SEMPRE dalla view «a scelta», a schermo pieno e diviso: domanda e opzioni grandi,
+               altoparlante, verdetto subito dopo la risposta — la stessa schermata del quiz LIVE via QR (packet 0112).
+               Il player storico di MappAI (`loadStudySet`) qui non si apre più. */
             var poolMC = PC().poolAperte([PC().foglioDaSet(set)]);
-            return prova({ titolo: 'Quiz — ' + (set.title || 'set'), pool: poolMC, dueTempi: false, tipo: 'quiz', mc: true, split: true,
+            return prova({ titolo: 'Quiz — ' + (set.title || 'set'), pool: poolMC, dueTempi: false, tipo: 'quiz', mc: true, split: !!st.split,
                            ambito: '', angoliEt: set.angle ? SV().etAngolo(window.t, set.angle) : '' });
         }
         if (st.sel === 'set-aperte') {

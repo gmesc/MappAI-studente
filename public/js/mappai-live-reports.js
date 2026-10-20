@@ -202,57 +202,97 @@
   }
 
   // ── Report B: schede individuali ────────────────────────────────────────
-  function buildStudentsReportHtml(meta, results) {
-    var r = results || {};
-    var body = headerBlock(meta, 'Schede individuali · ' + (r.joined || 0) + ' allievi');
+  // Le righe di risposta della SCHEDA dell'allievo: la stessa struttura che vede sul telefono, in scala
+  // per la carta (titoletti 14px, testi 18px, spiegazione 14px). Il report del docente non le usa.
+  var STUDENT_SHEET_CSS = [
+    ".lr-sa-q{font-size:18px;font-weight:700;line-height:1.35;color:var(--mm-testo, #404040)}",
+    ".lr-sa-t{text-transform:uppercase;font-weight:700;font-size:14px;line-height:1.3;margin-top:6px;letter-spacing:.03em;color:var(--mm-testo, #404040)}",
+    ".lr-sa-tc{color:#16a34a}",
+    ".lr-sa-a{font-size:18px;font-weight:400;line-height:1.35;margin-top:1px;color:var(--mm-testo, #404040)}",
+    ".lr-sa-vuoto{color:var(--mm-testo-3, #64748b)}",
+    ".lr-sa-c{font-size:18px;font-weight:400;line-height:1.35;margin-top:1px;color:#16a34a}",
+    ".lr-sa-e{font-size:14px;font-style:italic;line-height:1.4;margin-top:10px;color:#475569}"
+  ].join('');
+  // il carattere della pagina (il docente lo sceglie in MappAI; sul telefono arriva come --live-font), Space Mono se non c'è
+  var STUDENT_SHEET_FONT = ".lr-root{font-family:var(--live-font,'Space Mono'),var(--emoji,'MappAI Emoji'),ui-monospace,monospace}";
+  function studentDetailHtml(items, pillMark) {
+    return items.map(function (it, i) {
+      var half = (it.missing && it.missing.length);
+      var badge = half ? '<span style="color:#d97706;font-weight:700">½</span> '
+        : '<span class="lr-di-mark lr-di-' + (it.outcome || 'blank') + '">' + (pillMark[it.outcome] || '·') + '</span> ';
+      var head = it.text ? esc(it.text) : (it.label ? esc(it.label) : '');
+      var showRight = it.outcome !== 'right' && it.correctText;
+      return '<div class="lr-di-row">' + badge + '<div class="lr-di-body">' +
+        '<div class="lr-sa-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
+        '<div class="lr-sa-t">Tua risposta</div>' +
+        (it.yourText ? '<div class="lr-sa-a">' + esc(it.yourText) + '</div>' : '<div class="lr-sa-a lr-sa-vuoto">— vuoto</div>') +
+        (showRight ? '<div class="lr-sa-t lr-sa-tc">Risposta corretta:</div><div class="lr-sa-c">' + esc(it.correctText) + '</div>' : '') +
+        (half ? '<div class="lr-sa-t lr-sa-tc">Manca:</div><div class="lr-sa-c">' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '') +
+        (it.explanation ? '<div class="lr-sa-e">' + esc(it.explanation) + '</div>' : '') +
+        '</div></div>';
+    }).join('');
+  }
 
+  // ── La card di UN allievo (report del docente e scheda dell'allievo) ────
+  // opts.minimal: la scheda che l'allievo salva dal telefono — senza fluenza e
+  // senza punti di forza e deboli, che sono misure per il docente.
+  function studentCardHtml(s, r, opts) {
+    var minimal = !!(opts && opts.minimal);
     var accColor = function (p) { return p >= 80 ? '#16a34a' : p >= 50 ? '#d97706' : '#dc2626'; };
     var pillClass = { right: 'lr-pill-r', wrong: 'lr-pill-w', blank: 'lr-pill-b', manual: 'lr-pill-m' };
     var pillMark = { right: '✓', wrong: '✗', blank: '·', manual: '?' };
 
     var outLabel = { right: 'Corretta', wrong: 'Errata', blank: 'In bianco', manual: 'Da correggere' };
-    (r.perStudent || []).slice().sort(function (a, b) { return b.accuracyPct - a.accuracyPct; }).forEach(function (s) {
-      var strip = (s.items || []).map(function (it, i) {
-        return '<div class="lr-pill ' + (pillClass[it.outcome] || 'lr-pill-b') + '" title="Domanda ' + (i + 1) + '">' +
-          (pillMark[it.outcome] || '·') + '</div>';
-      }).join('');
-      // Dettaglio per-domanda (issue 3): n°, esito, risposta allievo, risposta giusta
-      // se non corretta.
-      var detail = (s.items || []).map(function (it, i) {
-        var half = (it.missing && it.missing.length);
-        var badge = half ? '<span style="color:#d97706;font-weight:700">½</span> '
-          : '<span class="lr-di-mark lr-di-' + (it.outcome || 'blank') + '">' + (pillMark[it.outcome] || '·') + '</span> ';
-        var yours = it.yourText ? esc(it.yourText) : '<span style="color:#cbd5e1">— vuoto</span>';
-        var right = (it.outcome !== 'right' && it.correctText)
-          ? '<div class="lr-di-correct">Corretta: ' + esc(it.correctText) + '</div>' : '';
-        var miss = half ? '<div class="lr-di-correct" style="color:#92400e">manca: ' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '';
-        var head = it.text ? esc(it.text) : (it.label ? esc(it.label) : (outLabel[it.outcome] || ''));
-        return '<div class="lr-di-row">' + badge +
-          '<div class="lr-di-body"><div class="lr-di-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
-          '<div class="lr-di-your">Risposta: ' + yours + '</div>' + right + miss + '</div></div>';
-      }).join('');
-      var rate = s.medianRate != null ? (s.medianRate.toFixed(1) + '/min') : '—';
-      var strengths = (s.strengths || []).length
-        ? s.strengths.map(function (t) { return '<div class="lr-topic-item lr-good">▲ ' + esc(t) + '</div>'; }).join('')
-        : '<div class="lr-topic-item" style="color:#cbd5e1">—</div>';
-      var weaks = (s.weaknesses || []).length
-        ? s.weaknesses.map(function (t) { return '<div class="lr-topic-item lr-bad">▼ ' + esc(t) + '</div>'; }).join('')
-        : '<div class="lr-topic-item" style="color:#cbd5e1">—</div>';
+    var strip = (s.items || []).map(function (it, i) {
+      return '<div class="lr-pill ' + (pillClass[it.outcome] || 'lr-pill-b') + '" title="Domanda ' + (i + 1) + '">' +
+        (pillMark[it.outcome] || '·') + '</div>';
+    }).join('');
+    // Dettaglio per-domanda (issue 3): n°, esito, risposta allievo, risposta giusta
+    // se non corretta.
+    var detail = (s.items || []).map(function (it, i) {
+      var half = (it.missing && it.missing.length);
+      var badge = half ? '<span style="color:#d97706;font-weight:700">½</span> '
+        : '<span class="lr-di-mark lr-di-' + (it.outcome || 'blank') + '">' + (pillMark[it.outcome] || '·') + '</span> ';
+      var yours = it.yourText ? esc(it.yourText) : '<span style="color:#cbd5e1">— vuoto</span>';
+      var right = (it.outcome !== 'right' && it.correctText)
+        ? '<div class="lr-di-correct">Corretta: ' + esc(it.correctText) + '</div>' : '';
+      var miss = half ? '<div class="lr-di-correct" style="color:#92400e">manca: ' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '';
+      var head = it.text ? esc(it.text) : (it.label ? esc(it.label) : (outLabel[it.outcome] || ''));
+      return '<div class="lr-di-row">' + badge +
+        '<div class="lr-di-body"><div class="lr-di-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
+        '<div class="lr-di-your">Risposta: ' + yours + '</div>' + right + miss + '</div></div>';
+    }).join('');
+    if (minimal) detail = studentDetailHtml(s.items || [], pillMark);
+    var rate = s.medianRate != null ? (s.medianRate.toFixed(1) + '/min') : '—';
+    var strengths = (s.strengths || []).length
+      ? s.strengths.map(function (t) { return '<div class="lr-topic-item lr-good">▲ ' + esc(t) + '</div>'; }).join('')
+      : '<div class="lr-topic-item" style="color:#cbd5e1">—</div>';
+    var weaks = (s.weaknesses || []).length
+      ? s.weaknesses.map(function (t) { return '<div class="lr-topic-item lr-bad">▼ ' + esc(t) + '</div>'; }).join('')
+      : '<div class="lr-topic-item" style="color:#cbd5e1">—</div>';
+    return '<div class="lr-card"><div class="lr-card-head">' +
+      '<div class="lr-avatar">' + esc(s.emoji) + '</div>' +
+      '<div><div class="lr-who">' + esc(s.displayName) + '</div>' +
+      '<div class="lr-who-sub">' + esc(s.emoji) + ' ' + esc(s.num) +
+      ' · risposte ' + s.answered + '/' + (r.questionCount || (s.items || []).length) +
+      (s.blankCount ? ' · ' + s.blankCount + ' in bianco' : '') +
+      (s.manualCount ? ' · ' + s.manualCount + ' da correggere' : '') +
+      (s.hintsUsed ? ' · 💡 ' + s.hintsUsed + ' indizi' : '') + '</div></div>' +
+      '<div class="lr-metrics"><div class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</div>' +
+      '<div class="lr-acc-sub">accuratezza' + (minimal ? '' : ' · fluenza ' + rate) + '</div></div></div>' +
+      '<div class="lr-strip">' + strip + '</div>' +
+      '<div class="lr-detail">' + detail + '</div>' +
+      (minimal ? '' : '<div class="lr-topics"><div class="lr-topic-col"><div class="lr-topic-h">Punti di forza</div>' + strengths + '</div>' +
+      '<div class="lr-topic-col"><div class="lr-topic-h">Punti deboli</div>' + weaks + '</div></div>') + '</div>';
+  }
 
-      body += '<div class="lr-card"><div class="lr-card-head">' +
-        '<div class="lr-avatar">' + esc(s.emoji) + '</div>' +
-        '<div><div class="lr-who">' + esc(s.displayName) + '</div>' +
-        '<div class="lr-who-sub">' + esc(s.emoji) + ' ' + esc(s.num) +
-        ' · risposte ' + s.answered + '/' + (r.questionCount || (s.items || []).length) +
-        (s.blankCount ? ' · ' + s.blankCount + ' in bianco' : '') +
-        (s.manualCount ? ' · ' + s.manualCount + ' da correggere' : '') +
-        (s.hintsUsed ? ' · 💡 ' + s.hintsUsed + ' indizi' : '') + '</div></div>' +
-        '<div class="lr-metrics"><div class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</div>' +
-        '<div class="lr-acc-sub">accuratezza · fluenza ' + rate + '</div></div></div>' +
-        '<div class="lr-strip">' + strip + '</div>' +
-        '<div class="lr-detail">' + detail + '</div>' +
-        '<div class="lr-topics"><div class="lr-topic-col"><div class="lr-topic-h">Punti di forza</div>' + strengths + '</div>' +
-        '<div class="lr-topic-col"><div class="lr-topic-h">Punti deboli</div>' + weaks + '</div></div></div>';
+
+  function buildStudentsReportHtml(meta, results) {
+    var r = results || {};
+    var body = headerBlock(meta, 'Schede individuali · ' + (r.joined || 0) + ' allievi');
+
+    (r.perStudent || []).slice().sort(function (a, b) { return b.accuracyPct - a.accuracyPct; }).forEach(function (s) {
+      body += studentCardHtml(s, r);
     });
 
     if (!(r.perStudent || []).length) body += '<div class="lr-q" style="text-align:center;color:var(--mm-testo-3, #64748b)">Nessun allievo ha partecipato.</div>';
@@ -438,13 +478,61 @@
     return docShell((meta && meta.mapTitle || 'Report') + ' — domande a scelta', 'Report domande a scelta', body);
   }
 
+  // ── La scheda che l'ALLIEVO salva dal telefono (packet 0112) ───────────────
+  // Stesso disegno della card del report del docente (intestazione, quadratini,
+  // righe D1…), senza fluenza né punti di forza e deboli. Il nome del file è
+  // «CLASSE APE_10 nome-del-quiz GG-MM-AAAA».
+  // Il nome (Giacomo, 20/10): «[classe] [nome emoji] [numero] [tipo e nome dei quiz]», per esempio
+  // «2A Coccinella 08 Quiz 1a Guerra Mondiale». Senza data né estensione: l'estensione la mette il telefono.
+  function studentSheetName(m) {
+    m = m || {};
+    function pulito(t) { return String(t == null ? '' : t).replace(/[\\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim(); }
+    return [pulito(m.className), pulito(m.emojiLabel), pulito(m.num), pulito(m.activity), pulito(m.title)].filter(Boolean).join(' ');
+  }
+
+  // student = { emoji, num, displayName, accuracyPct, answered, blankCount, manualCount, hintsUsed, items }
+  // opts = { emojiLabel, date }. Restituisce i pezzi: la pagina del telefono li mette in una radice
+  // propria (shadow DOM) e stampa SOLO quella; `css` non ha regole su `body`.
+  function studentSheetParts(meta, student, opts) {
+    opts = opts || {};
+    var m = meta || {};
+    var items = (student && student.items) || [];
+    var title = studentSheetName({ className: m.className, emojiLabel: student && student.emojiLabel, num: student && student.num, activity: m.activity, title: m.mapTitle });
+    var body = headerBlock({ mapTitle: m.mapTitle, activity: m.activity, className: m.className, dateStr: m.dateStr }) +
+      studentCardHtml(student || {}, { questionCount: items.length }, { minimal: true }) +
+      '<div class="lr-footer">MappAI Live · generato il ' + esc(nowStr()) + '</div>';
+    return { title: title, css: BASE_STYLES.replace(/body\{/g, '.lr-root{') + STUDENT_SHEET_CSS + STUDENT_SHEET_FONT, body: body };
+  }
+
+  // La scheda come PAGINA INTERA (la serve il server LAN: /api/my-sheet). Il titolo È il nome del file.
+  // opts: { date, extraCss (le @font-face e le variabili del carattere), autoPrint (apre la stampa da sola) }
+  function buildStudentSheetHtml(meta, student, opts) {
+    opts = opts || {};
+    var p = studentSheetParts(meta, student, opts);
+    var vars = ":root{--emoji:'MappAI Emoji','Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif}";
+    var stampa = opts.autoPrint
+      ? '<script>window.addEventListener("load",function(){var f=(document.fonts&&document.fonts.ready)||Promise.resolve();' +
+        'f.then(function(){setTimeout(function(){window.print()},900)})})</script>'
+      : '';
+    return '<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>' + esc(p.title) + '</title>' +
+      // le emoji di identità sul telefono: immagini, non testo (iOS disegna male il font delle emoji: packet 0099)
+      (opts.emojiProva ? '<script src="/public/js/mappai-emoji-prova.js?v=0108" defer></script>' : '') +
+      '<style>' + emojiIncorporate() + vars + (opts.extraCss || '') + '\n' + p.css + '</style></head><body class="lr-root">' +
+      p.body + stampa + '</body></html>';
+  }
+
   var REPORTS = {
     escapeHtml: esc,
     buildQuestionsReportHtml: buildQuestionsReportHtml,
     buildStudentsReportHtml: buildStudentsReportHtml,
     buildCredentialCardsHtml: buildCredentialCardsHtml,
     buildTimelineWorkshopReportHtml: buildTimelineWorkshopReportHtml,
-    buildSceltaReportHtml: buildSceltaReportHtml
+    buildSceltaReportHtml: buildSceltaReportHtml,
+    studentSheetName: studentSheetName,
+    studentSheetParts: studentSheetParts,
+    buildStudentSheetHtml: buildStudentSheetHtml
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = REPORTS;

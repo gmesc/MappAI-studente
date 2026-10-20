@@ -81,12 +81,8 @@
         '.sc-oss:focus{border-color:#6366f1;outline:none}',
         '.sc-go{width:100%;min-height:52px;border-radius:12px;background:#4f46e5;color:#fff;font-size:17px;font-weight:700}',
         '.sc-go[disabled]{opacity:.55}',
-        /* esito immediato: una riga sotto il campo, mai un modale — qui si
-           risponde una domanda alla volta e il modale coprirebbe la domanda */
-        '.sc-verd{margin-top:14px;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.45}',
-        '.sc-verd--ok{background:#dcfce7;border:2px solid #16a34a;color:#14532d}',
-        '.sc-verd--ko{background:#fee2e2;border:2px solid #dc2626;color:#7f1d1d}',
-        '.sc-verd .sp{display:block;margin-top:6px;font-size:13px;color:var(--mm-testo, #404040)}',
+        /* l'esito immediato (una riga sotto la domanda, mai un modale) lo disegna
+           mappai-quiz-mc-view.js: qui si risponde una domanda alla volta e il modale la coprirebbe */
         '.sc-esito{flex:1;overflow-y:auto;padding:24px max(20px,env(safe-area-inset-left))}',
         '.sc-esito h2{font-size:20px;font-weight:700;margin-bottom:6px}',
         '.sc-esito p{color:#475569;font-size:14px;line-height:1.6;margin-bottom:14px}',
@@ -503,9 +499,17 @@
                 esc(_t(t, 'sc_su', 'di')) + ' ' + mie.length;
             top.appendChild(comando('‹ ' + _t(t, 'sc_torna_scegli', 'Torna alle domande'), function () { vaiA('scegli'); }));
 
-            var q = document.createElement('div'); q.className = 'sc-dom';
-            q.textContent = v.testo;
-            list.appendChild(q);
+            /* la scelta multipla ha la veste del quiz LIVE (domanda col 🔊, opzioni grandi, esito sotto):
+               la disegna mappai-quiz-mc-view.js, la stessa riga di codice che sta dietro il telefono */
+            var QMC = window.MappAIQuizMcView;
+            if (v.tipo === 'mc') {
+                var qh = document.createElement('div'); list.appendChild(qh);
+                QMC.domanda(qh, v.testo);
+            } else {
+                var q = document.createElement('div'); q.className = 'sc-dom';
+                q.textContent = v.testo;
+                list.appendChild(q);
+            }
             var conCriteri = !!(o.criteri && v.tipo !== 'mc' && v.criteri && v.criteri.length);
             if (v.traccia && !conCriteri) {
                 var tr = document.createElement('div'); tr.className = 'sc-lbl';
@@ -515,18 +519,11 @@
             /* IL CAMPO DELLA RISPOSTA è l'unica cosa che cambia fra i due
                generi: una casella dove scrivere, o le opzioni da toccare. */
             if (v.tipo === 'mc') {
-                (v.opzioni || []).forEach(function (testo, oi) {
-                    var b = document.createElement('button');
-                    b.type = 'button'; b.className = 'sc-opt'; b.setAttribute('role', 'radio');
-                    b.setAttribute('aria-checked', String(r.scelta === oi));
-                    b.textContent = testo;
-                    if (verdetti[v.id]) b.disabled = true;   /* già corretta: non si ripensa */
-                    b.onclick = function () {
-                        r.scelta = oi;
-                        list.querySelectorAll('.sc-opt').forEach(function (x, xi) { x.setAttribute('aria-checked', String(xi === oi)); });
-                        salva(v.id, true);
-                    };
-                    list.appendChild(b);
+                var qo = document.createElement('div'); list.appendChild(qo);
+                QMC.opzioni(qo, v.opzioni || [], {
+                    scelta: r.scelta, radio: true,
+                    bloccata: !!verdetti[v.id],            /* già corretta: non si ripensa */
+                    onScegli: function (oi) { r.scelta = oi; QMC.segna(qo, oi); salva(v.id, true); }
                 });
             } else {
                 var ta = document.createElement('textarea');
@@ -568,13 +565,10 @@
             /* l'esito della domanda corrente, se è già stato dato */
             var vd = verdetti[v.id];
             if (vd) {
-                var box2 = document.createElement('div');
-                box2.className = 'sc-verd ' + (vd.esito === 'right' ? 'sc-verd--ok' : 'sc-verd--ko');
-                box2.setAttribute('role', 'status');
-                box2.innerHTML = '<b>' + esc(vd.esito === 'right' ? _t(t, 'sc_giusto', 'Giusto') : _t(t, 'sc_sbagliato', 'Sbagliato')) + '</b>' +
-                    (vd.giusta ? ' — ' + esc(_t(t, 'sc_corretta', 'corretta')) + ': <b>' + esc(vd.giusta) + '</b>' : '') +
-                    (vd.spiegazione ? '<span class="sp">' + esc(vd.spiegazione) + '</span>' : '');
-                list.appendChild(box2);
+                var vh = document.createElement('div'); list.appendChild(vh);
+                QMC.verdetto(vh, vd, {
+                    giusto: _t(t, 'sc_giusto', 'Giusto'), sbagliato: _t(t, 'sc_sbagliato', 'Sbagliato'), corretta: _t(t, 'sc_corretta', 'corretta')
+                });
             }
 
             if (cfg.autovalutazione && !conCriteri) {
