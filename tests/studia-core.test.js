@@ -42,10 +42,10 @@ test('schema: la console STUDIA passa validaSchema, con e senza un vault scelto'
     assert.deepStrictEqual(e1.errori || e1, e1.errori ? [] : e1, 'con selezione: ' + JSON.stringify(e1));
     assert.ok(s1.nav.every(v => v.gruppo || v.chiude === false), 'una voce di nav senza chiude:false chiuderebbe la finestra');
     const sess = s1.tabelle.filter(x => x.id === 'sessioni')[0];
-    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,prova,sintesi,docente', 'i comandi nel riquadro bento, come INSEGNA (+ Sintesi e Docente)');
-    assert.ok(s1.bento[0].voci.slice(0, 4).every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
-    assert.strictEqual(s1.bento[0].voci[4].chiude, false, '«Docente» apre un modale sopra la console: non conclude');
-    assert.strictEqual(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', scambio: false }).bento[0].voci.length, 4, 'kill-switch: via la sola voce Docente');
+    assert.strictEqual(s1.bento[0].voci.map(a => a.id).join(','), 'mappa,flashcard,sintesi,docente', 'i comandi nel riquadro bento, come INSEGNA (+ Sintesi e Docente); «Prova» è uscita col 0117');
+    assert.ok(s1.bento[0].voci.slice(0, 3).every(v => v.forma === 'azione' && v.chiude !== false), 'forma azione, concludono');
+    assert.strictEqual(s1.bento[0].voci[3].chiude, false, '«Docente» apre un modale sopra la console: non conclude');
+    assert.strictEqual(C.schema({ vaults: VAULTS, sel: 'Documents/Clima', scambio: false }).bento[0].voci.length, 3, 'kill-switch: via la sola voce Docente');
     assert.deepStrictEqual(sess.righe[0].celle[3].azioni.map(a => a.id.split(':')[0]), ['invia', 'cartella'], 'la cella Invia prima della cartella');
     assert.deepStrictEqual(s1.bento[0].bottoni, { bg: '#f1f4f8', testo: '#404040', hoverBg: '#41e6aa', hoverTesto: '#0b0b0b' }, 'gli stessi token di _consBentoMappa');
     assert.strictEqual(s1.bento[1].voci[0].forma, 'materiali');
@@ -137,7 +137,7 @@ test("schema: un dossier ha «Scheda» al posto di «Mappa», e l'icona dell'imm
     const dossier = { folderName: 'Foto', fullPath: 'Documents/4R/Storia/Foto', classDir: '4R', discDir: 'Storia', rootNodeLabel: 'Foto', dossier: true };
     const s = C.schema({ vaults: VAULTS.concat([dossier]), sel: dossier.fullPath, materiali: [] });
     assert.deepStrictEqual(Core.validaSchema(s).errori, []);
-    assert.deepStrictEqual(s.bento[0].voci.map(v => v.id), ['scheda', 'flashcard', 'prova', 'sintesi', 'docente']);
+    assert.deepStrictEqual(s.bento[0].voci.map(v => v.id), ['scheda', 'flashcard', 'sintesi', 'docente']);
     assert.strictEqual(s.nav.filter(v => v.id === 'v:' + dossier.fullPath)[0].icona, 'image');
     const m = C.schema({ vaults: VAULTS, sel: VAULTS[0].fullPath, materiali: [] });
     assert.strictEqual(m.bento[0].voci[0].id, 'mappa');
@@ -156,4 +156,47 @@ test('markdownDaScheda: un titolo per blocco pieno, «interpretazione» dove ser
     ].join('\n\n'));
     assert.strictEqual(C.markdownDaScheda(null, VC.BLOCCHI), '');
     assert.strictEqual(C.markdownDaScheda(C.schedaDaNodi(VC.nodiDaScheda(SCHEDA).nodes, VC.BLOCCHI), VC.BLOCCHI).split('\n\n## ').length, 3);
+});
+
+/* Packet 0117: le prove si scelgono nella console del progetto, da tre tabelle
+   (Giacomo, 20/10). Righe che CONCLUDONO, come i materiali: la console si chiude,
+   la mappa si apre e la prova parte accanto. */
+const PROVE = {
+    aperte: [{ i: 0, angolo: 'Causa', titolo: 'Foglio A', n: 8 }, { i: 1, angolo: '', titolo: 'Foglio vecchio', n: 5 },
+             { i: 2, angolo: 'Causa', titolo: 'Foglio B', n: 4 }],
+    mc: [{ id: 's1', angolo: 'Definizione', titolo: 'Quiz 1', n: 10 }],
+    suMisura: { n: 17 }
+};
+
+test('tabelleProve: Domande aperte, Scelta multipla, Domande su misura, in quest\'ordine', () => {
+    const tb = C.tabelleProve(PROVE);
+    assert.deepStrictEqual(tb.map(x => x.titolo), ['Domande aperte', 'Scelta multipla', 'Domande su misura']);
+    assert.deepStrictEqual(tb[0].righe.map(r => r.id), ['aperte:0', 'aperte:1', 'aperte:2']);
+    assert.deepStrictEqual(tb[1].righe.map(r => r.id), ['mc:s1']);
+    assert.deepStrictEqual(tb[2].righe.map(r => r.id), ['su-misura'], 'una riga sola');
+    assert.ok(tb.every(x => x.righe.every(r => r.chiude !== false)), 'le righe concludono, come i materiali');
+    assert.ok(tb.every(x => x.colonne.length === 2 && x.righe.every(r => r.celle.length === 2)), 'colonne e celle allineate (regola 15)');
+    assert.ok(tb.every(x => x.colonne[1].larghezza), 'la colonna dei numeri ha la larghezza fissa');
+});
+
+test('tabelleProve: l\'angolo e il numero; senza angolo il titolo; due righe uguali prendono il titolo', () => {
+    const tb = C.tabelleProve(PROVE);
+    assert.deepStrictEqual(tb[0].righe.map(r => r.celle), [['Causa · Foglio A', '8'], ['Foglio vecchio', '5'], ['Causa · Foglio B', '4']]);
+    assert.deepStrictEqual(tb[1].righe[0].celle, ['Definizione', '10']);
+    assert.deepStrictEqual(tb[2].righe[0].celle, ['Scegli ramo e angolo', '17']);
+});
+
+test('tabelleProve: solo le tabelle con righe; finché non le ha lette, nessuna', () => {
+    assert.deepStrictEqual(C.tabelleProve(null), []);
+    assert.deepStrictEqual(C.tabelleProve({ aperte: [], mc: [], suMisura: null }), []);
+    assert.deepStrictEqual(C.tabelleProve({ aperte: [], mc: PROVE.mc, suMisura: null }).map(x => x.titolo), ['Scelta multipla']);
+});
+
+test('schema: le tabelle delle prove stanno prima dei materiali e di «Le tue prove», e passano validaSchema', () => {
+    const s = C.schema({ vaults: VAULTS, sel: 'Documents/Clima', prove: PROVE, materiali: [{ name: 'Sintesi-voce-Clima.html', relPath: 'Materiale Studio/Sintesi-voce-Clima.html' }], sessioni: [] });
+    assert.deepStrictEqual(Core.validaSchema(s).errori, []);
+    const ids = s.tabelle.map(x => x.id);
+    assert.deepStrictEqual(ids.slice(0, 3), ['prove-aperte', 'prove-mc', 'prove-su-misura']);
+    assert.strictEqual(ids[ids.length - 1], 'sessioni');
+    assert.deepStrictEqual(ids.slice(3), ['mat-sintesi', 'sessioni'], 'i materiali restano, fra le prove e «Le tue prove»');
 });

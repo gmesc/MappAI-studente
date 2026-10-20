@@ -1,19 +1,15 @@
 /*
- * studente/autotest.js — il launcher «Studio attivo» dello studente
+ * studente/autotest.js — le prove dello studente: dalla riga della console alla prova
  * ---------------------------------------------------------------------------
- * `mappai-active-study.js` (copia verbatim) apre un modale suo, costruito a
- * mano: due colonne sbilanciate, il Palazzo della Memoria, le card «a scelta».
- * Qui si SOSTITUISCE `window.ActiveStudy.openLauncher` da fuori con uno schema
- * del motore dei modali — allineato per costruzione — con tre sezioni:
- *   AUTOTEST   un set pronto (scelta multipla · domande aperte) · domande aperte su misura
- *   VISTE      heat map padronanza · mappa lavoro
- *   STRUMENTI  cosa studiare ora · i tuoi progressi nel tempo
- * Le viste e gli strumenti sono quelli di MappAI, chiamati come li chiama il
- * launcher originale. L'autotest passa dal bus (`MappAIStudyBus`), che scrive
- * la padronanza per nodo e la sessione in `Studio Attivo/sessioni.jsonl`: è da
- * lì che heat map, mappa lavoro, «cosa studiare ora» e i progressi leggono.
- *
- * Le voci di un modale CONCLUDONO (inv. 10): la scelta arriva nel `.then()`.
+ * Fino al packet 0117 qui stava il launcher «Studio attivo» (autotest, viste,
+ * strumenti) che sostituiva `window.ActiveStudy.openLauncher`. Dal 0117 (Giacomo,
+ * 20/10) la finestra non c'è più: le prove si scelgono nella console del progetto,
+ * da tre tabelle (studia-core › tabelleProve). Qui: `leggiProve(fullPath)` legge
+ * fogli e set dal disco, senza aprire la mappa, per quelle tabelle; `avviaDa`
+ * parte da una riga, con la mappa già aperta (console.js › apriMappa). La prova
+ * si apre SEMPRE nel pannello accanto alla mappa, mappa aperta: la spunta per
+ * sceglierlo è uscita. L'autotest passa dal bus (`MappAIStudyBus`), che scrive la
+ * padronanza per nodo e la sessione in `Studio Attivo/sessioni.jsonl`.
  */
 (function () {
     'use strict';
@@ -29,10 +25,10 @@
     function SV() { return window.MappAISceltaView; }
 
     /* ── i fogli di domande aperte: dai gemelli `Materiale Studio/Sorgenti/*.html` ── */
-    function leggiFogli() {
-        var s = S(), FS = window.MappAIStudenteFS, QP = window.MappAIQuizPrint;
-        if (!s || !s.activeVaultPath || !FS || !QP || !QP.setFromHtml) return Promise.resolve([]);
-        var dir = s.activeVaultPath + '/Materiale Studio/Sorgenti';
+    function leggiFogli(vp) {
+        var FS = window.MappAIStudenteFS, QP = window.MappAIQuizPrint;
+        if (!vp || !FS || !QP || !QP.setFromHtml) return Promise.resolve([]);
+        var dir = vp + '/Materiale Studio/Sorgenti';
         return FS.lista(dir).then(function (figli) {
             var html = figli.filter(function (f) { return !f.isDir && /\.html?$/i.test(f.name); });
             return Promise.all(html.map(function (f) {
@@ -45,84 +41,63 @@
             return out;
         }).catch(function () { return []; });
     }
+    /* la cache è per cartella: le righe della console (`aperte:<i>`) contano sull'ordine
+       di QUESTO elenco, e la prova che parte dopo l'apertura della mappa lo rilegge da qui */
     var _cache = { vault: '', fogli: null };
-    function fogli() {
-        var vp = (S() || {}).activeVaultPath || '';
+    function fogli(vp) {
+        vp = vp || (S() || {}).activeVaultPath || '';
         if (_cache.vault === vp && _cache.fogli) return Promise.resolve(_cache.fogli);
-        return leggiFogli().then(function (f) { _cache = { vault: vp, fogli: f }; return f; });
+        return leggiFogli(vp).then(function (f) { _cache = { vault: vp, fogli: f }; return f; });
+    }
+    /* i set del vault dal disco (`Materiale Studio/*.json`), filtrati come li filtra
+       `loadVault` dell'adattatore: la console li mostra prima che la mappa si apra */
+    function leggiSet(vp, radice) {
+        var FS = window.MappAIStudenteFS;
+        if (!vp || !FS) return Promise.resolve([]);
+        var dir = vp + '/Materiale Studio';
+        return FS.lista(dir).then(function (figli) {
+            return Promise.all(figli.filter(function (f) { return !f.isDir && /\.json$/i.test(f.name); }).map(function (f) {
+                return FS.leggiTesto(dir + '/' + f.name).then(function (tx) { try { return JSON.parse(tx || 'null'); } catch (e) { return null; } });
+            }));
+        }).then(function (l) {
+            var FC = window.MappAIFilesCore;
+            l = l.filter(Boolean);
+            return (FC && FC.setsDelVault) ? FC.setsDelVault(l, radice || '') : l;
+        }).catch(function () { return []; });
+    }
+    function etAngolo(a) { return (a && a !== 'auto' && SV() && SV().etAngolo) ? SV().etAngolo(window.t, a) : ''; }
+
+    /* ── LE PROVE DEL PROGETTO, per le tabelle della console (0117) ─────────
+       → { aperte:[{i,angolo,titolo,n}], mc:[{id,angolo,titolo,n}], suMisura:{n}|null } */
+    function leggiProve(vp, radice) {
+        /* sempre dal disco (una mappa ricevuta di nuovo porta fogli nuovi), e la cache si rinfresca */
+        var fg = leggiFogli(vp).then(function (f) { _cache = { vault: vp, fogli: f }; return f; });
+        return Promise.all([fg, leggiSet(vp, radice)]).then(function (r) {
+            var fg = r[0], sets = PC().setMC(r[1]), pool = PC().poolAperte(fg);
+            return {
+                aperte: fg.map(function (f, i) { return { i: i, angolo: etAngolo(f.angle), titolo: f.titolo, n: f.items.length }; }),
+                mc: sets.map(function (x) { return { id: x.id, angolo: etAngolo(x.angle), titolo: x.title || 'Quiz', n: x.items.length }; }),
+                suMisura: pool.length ? { n: pool.length } : null
+            };
+        }).catch(function () { return { aperte: [], mc: [], suMisura: null }; });
     }
 
-    /* ── IL LAUNCHER: una CONSOLE a schermo intero ─────────────────────────
-       La forma la decide `MappAIStudenteLauncherCore.schema` (pura, testata con
-       validaSchema). Qui: lo stato della scelta, la lettura dei materiali, le
-       viste che agiscono subito, e «Avvia» che conclude nel `.then()`. */
-    function LC() { return window.MappAIStudenteLauncherCore; }
-    function splitRicordato() { try { return localStorage.getItem('mappai_studente_split') === '1'; } catch (e) { return false; } }
-    function openLauncher(selIniziale) {
+    /* ── DA UNA RIGA DELLA CONSOLE ALLA PROVA (0117) ────────────────────────
+       scelta = { tipo: 'aperte'|'mc'|'su-misura', id }. La mappa è già aperta
+       (console.js › apriMappa): i set si prendono da lì, i fogli dalla cache. */
+    function avviaDa(scelta) {
         var s = S();
-        if (!s || !s.db || !s.db.nodes || !s.db.nodes.length) { toast(t('tst_as_open_map', 'Apri una mappa per usare lo studio attivo'), 'error'); return; }
-        fogli().then(function (fg) {
-            var sets = PC().setMC(s.db.studySets);
-            var poolAp = PC().poolAperte(fg), op = PC().opzioni(poolAp);
-            var st = { sel: String(selIniziale || ''), set: '', foglio: null, split: splitRicordato() };
-            function dati() {
-                return {
-                    sel: st.sel, nMC: sets.length, nAp: fg.length, set: st.set, foglio: st.foglio, split: st.split, t: window.t,
-                    sets: sets.map(function (x) { return { id: x.id, title: x.title || 'Quiz', n: x.items.length }; }),
-                    fogli: fg.map(function (f) { return { titolo: f.titolo, n: f.items.length, angolo: f.angle ? SV().etAngolo(window.t, f.angle) : '' }; }),
-                    opzioni: { rami: op.rami, angoli: op.angoli.map(function (a) { return { k: a, et: SV().etAngolo(window.t, a) }; }) },
-                    mv: !!(window.MappAIMasteryView && window.MappAIMasteryView.active),
-                    ev: !!(window.MappAIEffortView && window.MappAIEffortView.active)
-                };
-            }
-            function briciole() {
-                var CM = window.MappAIConsoleManifesto; if (!CM || !CM.briciole) return;
-                var v = LC().VOCI.filter(function (x) { return x.id === st.sel; })[0];
-                var prog = ((window.MappAIStudente || {}).stato || {}).vaults || [];
-                prog = prog.filter(function (x) { return x.fullPath === s.activeVaultPath; })[0] || {};
-                try {
-                    CM.briciole([{ id: 'studia', et: t('st_titolo', 'Studia') }, { id: 'mappa', et: prog.rootNodeLabel || prog.folderName || t('st_mappa', 'Mappa') },
-                        { id: 'studio', et: t('as_title', 'Studio attivo') }].concat(v ? [{ id: v.id, et: t('st_v_' + v.id, v.et) }] : []));
-                } catch (e) { }
-            }
-            /* le briciole cliccate (`mappai-briciola`, dal manifesto): «Studia» chiude e torna alla
-               console, «mappa» chiude e basta (la mappa è sotto), «Studio attivo» torna alla prima pagina */
-            var box = null, dove = '';
-            function suBriciola(ev) {
-                var id = ev && ev.detail && ev.detail.id;
-                if (id === 'studio') { st.sel = ''; st.set = ''; st.foglio = null; if (box && box.__ridisegna) { box.__ridisegna(LC().schema(dati())); briciole(); } return; }
-                if (id !== 'studia' && id !== 'mappa') return;
-                dove = id;
-                var x = box && box.querySelector('[data-azione="__chiudi"]'); if (x) x.click();
-            }
-            document.addEventListener('mappai-briciola', suBriciola);
-            var schema = LC().schema(dati());
-            schema.suApertura = function (b, ridisegna) { box = b; box.__ridisegna = ridisegna; briciole(); };
-            schema.suAzione = function (ev, box, ridisegna) {
-                var a = String(ev && ev.azione || '');
-                if (ev && ev.valori && typeof ev.valori.split === 'boolean') st.split = ev.valori.split;
-                if (a === '__nav') {
-                    var v = String(ev.voce || '');
-                    if (/^g:/.test(v)) return;
-                    if (v === 'heatmap' && window.MappAIMasteryView) { window.MappAIMasteryView.toggle(); ridisegna(LC().schema(dati())); briciole(); return; }
-                    if (v === 'effort' && window.MappAIEffortView) { window.MappAIEffortView.toggle(); ridisegna(LC().schema(dati())); briciole(); return; }
-                    if (v === 'studypath') { if (window.MappAIStudyPath) window.MappAIStudyPath.open(); return; }
-                    if (v === 'celeration') { if (window.MappAICeleration) window.MappAICeleration.open(); return; }
-                    st.sel = v; st.set = ''; st.foglio = null;
-                    ridisegna(LC().schema(dati())); briciole(); return;
-                }
-                if (/^set:/.test(a)) { st.set = a.slice(4); ridisegna(LC().schema(dati())); return; }
-                if (/^foglio:/.test(a)) { st.foglio = Number(a.slice(7)); ridisegna(LC().schema(dati())); return; }
-                /* `__campo` (la spunta split) è già letto sopra; `__esc` esce: non è la home */
-            };
+        if (!s || !s.db || !s.db.nodes || !s.db.nodes.length) { toast(t('tst_as_open_map', 'Apri una mappa per usare lo studio attivo'), 'error'); return Promise.resolve(); }
+        scelta = scelta || {};
+        return fogli().then(function (fg) {
+            var sets = PC().setMC(s.db.studySets), poolAp = PC().poolAperte(fg), op = PC().opzioni(poolAp);
+            if (scelta.tipo === 'mc') return avvia({ sel: 'set-mc', set: String(scelta.id) }, {}, fg, sets, poolAp, op);
+            if (scelta.tipo === 'aperte') return avvia({ sel: 'set-aperte', foglio: Number(scelta.id) }, {}, fg, sets, poolAp, op);
+            if (scelta.tipo !== 'su-misura' || !poolAp.length) return;
+            var schema = window.MappAIStudenteLauncherCore.schemaSuMisura({ t: window.t,
+                opzioni: { rami: op.rami, angoli: op.angoli.map(function (a) { return { k: a, et: SV().etAngolo(window.t, a) }; }) } });
             return MM().open(schema).then(function (r) {
-                document.removeEventListener('mappai-briciola', suBriciola);
-                if (dove === 'studia' || (r && r.azione === 'torna')) { if (window.MappAIStudente) window.MappAIStudente.torna(); return; }
-                if (!r || r.azione !== 'avvia') return;
-                var v = r.valori || {};
-                st.split = !!v.split;
-                try { localStorage.setItem('mappai_studente_split', st.split ? '1' : '0'); } catch (e) { }
-                return avvia(st, v, fg, sets, poolAp, op);
+                if (r && r.azione === 'avvia') return avvia({ sel: 'su-misura' }, r.valori || {}, fg, sets, poolAp, op);
             });
         });
     }
@@ -135,12 +110,12 @@
                altoparlante, verdetto subito dopo la risposta — la stessa schermata del quiz LIVE via QR (packet 0112).
                Il player storico di MappAI (`loadStudySet`) qui non si apre più. */
             var poolMC = PC().poolAperte([PC().foglioDaSet(set)]);
-            return prova({ titolo: 'Quiz — ' + (set.title || 'set'), pool: poolMC, dueTempi: false, tipo: 'quiz', mc: true, split: !!st.split,
+            return prova({ titolo: 'Quiz — ' + (set.title || 'set'), pool: poolMC, dueTempi: false, tipo: 'quiz', mc: true, split: true,
                            ambito: '', angoliEt: set.angle ? SV().etAngolo(window.t, set.angle) : '' });
         }
         if (st.sel === 'set-aperte') {
             var f = fg[st.foglio]; if (!f) return;
-            return prova({ titolo: f.titolo, pool: PC().poolAperte([f]), dueTempi: false, tipo: 'foglio', split: st.split,
+            return prova({ titolo: f.titolo, pool: PC().poolAperte([f]), dueTempi: false, tipo: 'foglio', split: true,
                            ambito: '', angoliEt: f.angle ? SV().etAngolo(window.t, f.angle) : '' });
         }
         if (st.sel === 'su-misura') {
@@ -151,7 +126,7 @@
             if (!c.pool.length) { toast(t('st_pool_vuoto', 'Con queste scelte non resta nessuna domanda.'), 'warning'); return; }
             var titolo = t('st_su_misura', 'Domande aperte su misura') + ' — ' + (v['amb-ramo'] && op.rami ? v.ramo : t('st_tutta', 'Tutta la mappa')) +
                 ' · ' + (v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli'));
-            return prova({ titolo: titolo, pool: c.pool, dueTempi: c.dueTempi, tipo: 'su-misura', split: st.split,
+            return prova({ titolo: titolo, pool: c.pool, dueTempi: c.dueTempi, tipo: 'su-misura', split: true,
                            ambito: (v['amb-ramo'] && op.rami) ? v.ramo : '', angoliEt: v['ang-uno'] ? SV().etAngolo(window.t, v.angolo) : t('st_tutti_angoli', 'Tutti gli angoli') });
         }
     }
@@ -189,9 +164,9 @@
             };
         }
         var schema = null;
-        /* Il pannello accanto alla mappa serve anche il quiz a scelta multipla a SCHERMO PIENO (Giacomo, gate (b), 20/10:
-           «finestra full screen, mappa di default collassata, la maniglia visibile e attiva»): si apre già con la mappa
-           chiusa e la maniglia verde la riporta. Il modale grande era troppo piccolo. */
+        /* Il pannello accanto alla mappa serve tutte le prove. Dal 0117 (Giacomo, 20/10: «all'avvio dell'esercizio la
+           mappa è sempre aperta di default per tutti») ogni prova arriva con `split: true`, anche la scelta multipla
+           che il gate (b) dello 0112 apriva con la mappa chiusa; la maniglia resta. Il modale qui sotto non si apre più. */
         var inDock = !!o.split || !!o.mc;
         if (inDock) {
             var D = window.MappAIStudenteDocumenti;
@@ -341,14 +316,16 @@
         } catch (e) { console.warn('[autotest] registro', e); }
     }
 
-    /* la sostituzione: dopo che mappai-active-study.js ha definito il suo */
+    /* il launcher di MappAI (mappai-active-study.js, copia) resta definito ma qui non si
+       apre: dal 0117 nessun bottone lo chiama, e se qualcuno lo chiamasse si torna alla
+       console del progetto, dove le prove si scelgono */
     function installa() {
         if (!window.ActiveStudy) window.ActiveStudy = {};
-        window.ActiveStudy.openLauncher = openLauncher;
+        window.ActiveStudy.openLauncher = function () { if (window.MappAIStudente) window.MappAIStudente.torna(); };
         agganciaPlayer();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installa); else installa();
     installa();
 
-    window.MappAIStudenteAutotest = { openLauncher: openLauncher, fogli: fogli, prova: prova, avvia: avvia, scriviReportMC: scriviReportMC };
+    window.MappAIStudenteAutotest = { leggiProve: leggiProve, avviaDa: avviaDa, fogli: fogli, prova: prova, avvia: avvia, scriviReportMC: scriviReportMC };
 }());
