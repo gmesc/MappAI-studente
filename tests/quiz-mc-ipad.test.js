@@ -22,7 +22,7 @@ test('autotest: il quiz a scelta multipla non apre più il player storico, né a
     const ramo = src.slice(src.indexOf("if (st.sel === 'set-mc')"), src.indexOf("if (st.sel === 'set-aperte')"));
     assert.ok(ramo.length > 100, 'ramo set-mc non trovato');
     assert.ok(!/loadStudySet/.test(ramo.replace(/\/\*[\s\S]*?\*\//g, '')), 'il ramo set-mc chiama ancora loadStudySet');
-    assert.ok(/mc: true, split: !!st\.split/.test(ramo), 'la prova MC deve seguire la scelta schermo pieno / diviso');
+    assert.ok(/mc: true, split: true/.test(ramo), 'la prova MC parte con la mappa aperta accanto, come le altre (0117)');
 });
 
 test('index: il modulo della scelta multipla si carica PRIMA della view «a scelta»', () => {

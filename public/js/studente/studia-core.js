@@ -109,6 +109,38 @@
         }).filter(Boolean);
     }
 
+    /* LE PROVE DEL PROGETTO (packet 0117, Giacomo 20/10): tre tabelle nella console,
+       «Domande aperte», «Scelta multipla», «Domande su misura». Una riga per foglio o
+       per set col nome dell'angolo e il numero di domande; senza angolo (fogli e set
+       vecchi) il titolo, e se due righe si chiamerebbero uguali prendono anche il
+       titolo. Su misura è una riga sola: ramo e angolo si scelgono nel modale.
+       Le righe CONCLUDONO, come i materiali: la console si chiude, si apre la mappa
+       e la prova parte accanto. `p` = null finché la console non le ha lette.
+       p = { aperte:[{i,angolo,titolo,n}], mc:[{id,angolo,titolo,n}], suMisura:{n}|null } */
+    function tabelleProve(p, t) {
+        t = t || function (k, f) { return f; };
+        if (!p) return [];
+        var colN = { etichetta: t('st_col_domande', 'Domande'), larghezza: '120px' };
+        function righe(lista, pref, chiave) {
+            var nomi = {};
+            lista.forEach(function (x) { var k = x.angolo || x.titolo; nomi[k] = (nomi[k] || 0) + 1; });
+            return lista.map(function (x) {
+                var et = x.angolo || x.titolo;
+                if (x.angolo && nomi[et] > 1) et += ' · ' + x.titolo;
+                return { id: pref + x[chiave], celle: [et, String(x.n)] };
+            });
+        }
+        var out = [];
+        if (p.aperte && p.aperte.length) out.push({ id: 'prove-aperte', titolo: t('st_g_prove_aperte', 'Domande aperte'), collassabile: true,
+            colonne: [{ etichetta: t('st_col_angolo', 'Angolo') }, colN], righe: righe(p.aperte, 'aperte:', 'i') });
+        if (p.mc && p.mc.length) out.push({ id: 'prove-mc', titolo: t('st_g_prove_mc', 'Scelta multipla'), collassabile: true,
+            colonne: [{ etichetta: t('st_col_angolo', 'Angolo') }, colN], righe: righe(p.mc, 'mc:', 'id') });
+        if (p.suMisura) out.push({ id: 'prove-su-misura', titolo: t('st_g_su_misura', 'Domande su misura'), collassabile: true,
+            colonne: [{ etichetta: t('st_col_ramo_angolo', 'Ramo e angolo') }, colN],
+            righe: [{ id: 'su-misura', celle: [t('st_scegli_ramo_angolo', 'Scegli ramo e angolo'), String(p.suMisura.n)] }] });
+        return out;
+    }
+
     /* LA SCHEDA DI UN DOSSIER, DAI SUOI NODI (4/10) — l'inverso di `nodiDaScheda` di
        mappai-visione-core. Un dossier da foto (0067) È la sua scheda: radice `fonte_0` =
        il titolo, un ramo `fonte_<blocco>` per blocco pieno, e nel ramo una riga
@@ -238,7 +270,6 @@
                     ? { id: 'scheda', et: t('st_scheda', 'Scheda'), forma: 'azione', icona: 'image', aiuto: t('st_tip_scheda', 'La foto e la sua scheda di analisi.') }
                     : { id: 'mappa', et: t('st_mappa', 'Mappa'), forma: 'azione', icona: 'git-merge', aiuto: t('st_tip_mappa', 'Apre la mappa.') },
                 { id: 'flashcard', et: t('st_flashcard', 'Flashcard'), forma: 'azione', icona: 'copy', aiuto: t('st_tip_flashcard', 'Le carte: leggi, pensa, gira.') },
-                { id: 'prova', et: t('st_prova', 'Prova'), forma: 'azione', icona: 'help-circle', aiuto: t('st_tip_prova', 'Un quiz o un foglio di domande aperte.') },
                 /* «Sintesi» (7/9): il documento che si legge per primo aveva una sola
                    strada — l'elenco dei materiali — e lì era una riga fra venti. */
                 { id: 'sintesi', et: t('st_sintesi', 'Sintesi'), forma: 'azione', icona: 'file-text', aiuto: t('st_tip_sintesi', 'Il riassunto della mappa, da leggere o da ascoltare.') }
@@ -262,7 +293,8 @@
                         vuoto: o.materiali === null ? t('st_carico_mat', 'Cerco i materiali di questa mappa…') : t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.') }]
                 }
             ];
-            s.tabelle = tabMat.concat([{
+            /* le prove (0117) prima dei materiali: si scelgono qui, la finestra «Studio attivo» non c'è più */
+            s.tabelle = tabelleProve(o.prove, t).concat(tabMat).concat([{
                 id: 'sessioni', titolo: t('st_sessioni', 'Le tue prove'), collassabile: true,
                 vuota: t('st_sessioni_vuota', 'Nessuna prova ancora: componine una e il documento comparirà qui.'),
                 colonne: [
@@ -307,5 +339,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi, markdownDaScheda: markdownDaScheda };
+    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, tabelleProve: tabelleProve, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi, markdownDaScheda: markdownDaScheda };
 }));
