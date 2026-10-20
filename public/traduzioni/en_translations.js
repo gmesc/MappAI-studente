@@ -1395,7 +1395,7 @@ const en_translations = {
     lv_hub_title: "MappAI Live",
     lv_hub_intro: "Class activities via QR: students join from their phones on the classroom network.",
     lv_card_quiz: "Live active study",
-    lv_card_quiz_d: "True/False, multiple choice or your own questions — with final reports",
+    lv_card_quiz_d: "Multiple-choice quiz — with final reports",
     lv_card_quiz_tip: "Each student answers from their phone; at the end two reports: question heatmap and individual cards.",
     lv_card_board: "LIVE map",
     lv_card_board_d: "Groups propose nodes from their phones, live on the map",
@@ -3425,6 +3425,9 @@ const en_translations = {
     sc_giusto: "Right",
     sc_sbagliato: "Wrong",
     sc_corretta: "correct answer",
+    /* 0112 — l'altoparlante della scelta multipla (mappai-quiz-mc-view.js) */
+    qmc_ascolta: "Listen",
+    qmc_ascolta_domanda: "Listen to the question",
     sc_area_scelta: "topic",
     sc_ko_area1: "You picked a single topic; {m} are suggested.",
     sc_hint_aree: "Pick the topics you feel most confident about: you will only read the questions from those.",

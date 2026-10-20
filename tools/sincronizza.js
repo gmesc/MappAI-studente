@@ -60,7 +60,7 @@ const FILES = [
   /* le emoji di MappAI incorporate nel report (0108): mappai-live-reports.js lo carica accanto a sé */
   'js/vendor/mappai-emoji-incorpora.js',
   'js/mappai-console-manifesto.js',
-  'js/mappai-scelta-core.js', 'js/mappai-scelta-view.js', 'js/mappai-scelta.js',
+  'js/mappai-scelta-core.js', 'js/mappai-quiz-mc-view.js', 'js/mappai-scelta-view.js', 'js/mappai-scelta.js',   /* quiz-mc-view (0112): la scelta multipla identica a quella LIVE; PRIMA di scelta-view */
   'js/mappai-files-core.js', 'js/mappai-vista-core.js', 'js/mappai-pipeline-core.js',
   'js/mappai-visione-core.js',   // 4/10: i quattro blocchi della scheda di un dossier (studente/documenti.js › apriScheda)
   'js/mappai-sidebar-resize.js', 'js/mappai-mastery-view.js', 'js/mappai-effort-view.js',
