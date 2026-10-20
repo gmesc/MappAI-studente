@@ -189,10 +189,15 @@
             };
         }
         var schema = null;
-        if (o.split) {
+        /* Il pannello accanto alla mappa serve anche il quiz a scelta multipla a SCHERMO PIENO (Giacomo, gate (b), 20/10:
+           «finestra full screen, mappa di default collassata, la maniglia visibile e attiva»): si apre già con la mappa
+           chiusa e la maniglia verde la riporta. Il modale grande era troppo piccolo. */
+        var inDock = !!o.split || !!o.mc;
+        if (inDock) {
             var D = window.MappAIStudenteDocumenti;
             host = D.apri({
                 titolo: o.titolo,
+                mappaChiusa: !o.split,
                 monta: function (h) { h.style.padding = '0'; api = SV().monta(h, opzioniView()); },
                 chiediChiusura: function () {
                     if (consegnato) return Promise.resolve(true);
@@ -215,7 +220,7 @@
             MM().open(schema);
         }
         function fine(testo) {
-            if (o.split) {
+            if (inDock) {
                 if (!host) return;
                 host.innerHTML = '<div class="sd-esito"><p>' + esc(testo) + '</p><button type="button" class="sd-esito__b">' + esc(t('mm_chiudi', 'Chiudi')) + '</button></div>';
                 host.querySelector('.sd-esito__b').onclick = function () { window.MappAIStudenteDocumenti.chiudi(); };

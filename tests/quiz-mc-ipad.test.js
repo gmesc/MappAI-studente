@@ -45,3 +45,30 @@ test('il modulo c\'è, ed è quello di MappAI re (la copia non si ritocca di qua
     assert.strictEqual(typeof V.opzioni, 'function');
     assert.match(V.CSS, /\.qmc \.q-testo \{ font-size: 24px/);
 });
+
+/* Gate (b) sull'iPad, 20/10: a schermo pieno il quiz MC stava in un modale piccolo.
+   Giacomo: «con finestra full screen, mappa di default deve apparire collassata e la
+   maniglia può rimanere visibile e attiva». Lo schermo diviso resta com'è. */
+test('quiz MC a schermo pieno: nel pannello affiancato con la mappa chiusa, non in un modale', () => {
+    const a = leggi('public/js/studente/autotest.js');
+    const i = a.indexOf('var schema = null;');
+    assert.ok(i > 0, 'il punto in cui si sceglie dove aprire la prova non c\'è più');
+    const corpo = a.slice(i, a.indexOf('function fine(', i));
+    // il pannello si usa anche per il quiz MC non diviso
+    assert.match(corpo, /var inDock = !!o\.split \|\| !!o\.mc;/);
+    assert.match(corpo, /if \(inDock\)/);
+    // a schermo pieno la mappa nasce chiusa; diviso, no
+    assert.match(corpo, /mappaChiusa: !o\.split/);
+    // la fine della prova scrive dove la prova sta
+    const f = a.slice(a.indexOf('function fine('), a.indexOf('function consegna('));
+    assert.match(f, /if \(inDock\)/);
+});
+
+test('documenti: apri() accetta mappaChiusa e parte con la mappa collassata, la maniglia resta', () => {
+    const d = leggi('public/js/studente/documenti.js');
+    const i = d.indexOf('function apri(o) {');
+    const corpo = d.slice(i, d.indexOf('if (o.iframe)', i));
+    assert.match(corpo, /collasso = o\.mappaChiusa \? 'mappa' : null; misura\(memoria\(\)\);/);
+    // chi non lo chiede resta com'era: mappa aperta, split a metà
+    assert.equal(/collasso = null; misura\(memoria\(\)\);\s*\n\s*if \(o\.iframe\)/.test(d), false);
+});

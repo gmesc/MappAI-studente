@@ -186,7 +186,8 @@
         libera();
         titolo.textContent = o.titolo || '';
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
-        collasso = null; misura(memoria());
+        /* `mappaChiusa`: il documento nasce a tutto schermo, la maniglia verde sul bordo riporta la mappa (quiz MC a schermo pieno) */
+        collasso = o.mappaChiusa ? 'mappa' : null; misura(memoria());
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
             f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); });
