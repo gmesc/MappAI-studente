@@ -36,19 +36,19 @@
     function ricordaDocente(d) { try { localStorage.setItem(K_DOC, JSON.stringify({ base: d.base, token: d.token, ts: Date.now() })); } catch (e) { } }
     function camera() { var p = FS() && FS().plugin && FS().plugin('CapacitorBarcodeScanner'); return !!(p && p.scanBarcode); }
 
-    /* ── Chi sei: numero personale + classe, la classe si scrive MAIUSCOLA mentre si digita ── */
+    /* ── Chi sei: numero di registro, classe a tendina, sezione MAIUSCOLA mentre si digita ── */
     function chiediIdentita() {
         var s = SC().schemaIdentita({ t: window.t, identita: identita() });
         s.suApertura = function (box) {
-            var c = box.querySelector('[data-campo="classe"]'), n = box.querySelector('[data-campo="numero"]');
-            if (c) { c.setAttribute('autocapitalize', 'characters'); c.setAttribute('maxlength', '2'); c.addEventListener('input', function () { var v = c.value.toUpperCase().replace(/[^0-9A-Z]/g, ''); if (v !== c.value) c.value = v; }); }
+            var c = box.querySelector('[data-campo="sezione"]'), n = box.querySelector('[data-campo="numero"]');
+            if (c) { c.setAttribute('autocapitalize', 'characters'); c.setAttribute('maxlength', '1'); c.addEventListener('input', function () { var v = SC().sezionePulita(c.value); if (v !== c.value) c.value = v; }); }
             if (n) { n.setAttribute('inputmode', 'numeric'); n.addEventListener('input', function () { var v = n.value.replace(/[^0-9]/g, ''); if (v !== n.value) n.value = v; }); }
         };
         return MM().open(s).then(function (r) {
             if (!r || r.azione !== 'ok') return identita();
             var v = r.valori || {};
-            var id = FC().identitaStudente(v.numero, v.classe);
-            if (!id) { toast(t('sc_identita_ko', 'Numero solo cifre; classe una cifra da 1 a 4 e una lettera, per esempio 2B.'), 'warning'); return chiediIdentita(); }
+            var id = FC().identitaStudente(v.numero, SC().classeDa(v));
+            if (!id) { toast(t('sc_identita_ko', 'Scrivi il numero di registro solo con cifre, scegli la classe e scrivi la sezione (una lettera).'), 'warning'); return chiediIdentita(); }
             try { localStorage.setItem(K_ID, JSON.stringify({ numero: id.numero, classe: id.classe })); } catch (e) { }
             return id;
         });
@@ -104,8 +104,11 @@
     }
     function fetchJson(url, opts) {
         return fetch(url, opts).then(function (r) {
-            if (!r.ok) { var e = new Error('http ' + r.status); e.status = r.status; throw e; }
-            return r.json();
+            if (r.ok) return r.json();
+            /* il corpo dice PERCHÉ (`{ error: 'troppe-consegne' }`): erroreTesto ne ha bisogno (0119) */
+            return r.json().catch(function () { return null; }).then(function (j) {
+                var e = new Error('http ' + r.status); e.status = r.status; e.codice = j && j.error; throw e;
+            });
         });
     }
     function blobToB64(b) {
@@ -137,7 +140,7 @@
             if (poi) poi(r.piano.dest);
         }).catch(function (e) {
             veloChiudi();
-            toast(e && e.message === 'manifest vuoto' ? t('sc_err_404', 'Il docente non ha questa mappa aperta per lo scambio.') : SC().erroreTesto(window.t, e), 'error');
+            toast(SC().erroreTesto(window.t, e && e.message === 'manifest vuoto' ? { status: 404 } : e), 'error');
         });
     }
 
@@ -150,7 +153,14 @@
         return passo1.then(function (id) {
             if (!id) return null; st.id = id;
             return FS().esiste(vaultPath + '/Studio Attivo/sessioni.jsonl').then(function (jl) {
-                return MM().open(SC().schemaInvio({ t: window.t, prova: prova, jsonl: !!jl, identita: id }));
+                /* «Cambia» accanto a «Chi consegna» (0119): si corregge e si torna qui */
+                function chiedi() {
+                    return MM().open(SC().schemaInvio({ t: window.t, prova: prova, jsonl: !!jl, identita: st.id })).then(function (r) {
+                        if (!r || r.azione !== 'identita') return r;
+                        return chiediIdentita().then(function (nuova) { if (nuova) st.id = nuova; return chiedi(); });
+                    });
+                }
+                return chiedi();
             });
         }).then(function (r) {
             if (!r || r.azione !== 'invia') return null;
@@ -190,15 +200,34 @@
         });
     }
 
+    /* ── la guida a slide (0119) ─────────────────────────────────────────────
+       Una finestra sola: ‹ e › ridisegnano sul posto (`chiude:false`), «Ho capito»
+       o la × la chiudono. */
+    function guida() {
+        var passo = 1;
+        function schema() {
+            var g = SC().schemaGuida({ t: window.t, passo: passo });
+            g.suAzione = function (ev, box, ridisegna) {
+                if (ev.azione === 'avanti') passo++;
+                else if (ev.azione === 'indietro') passo--;
+                else return;
+                ridisegna(schema());
+            };
+            return g;
+        }
+        return MM().open(schema());
+    }
+
     /* ── il modale Docente ─────────────────────────────────────────────────── */
     function apri(vaultPath) {
         var st = (window.MappAIStudente && window.MappAIStudente.stato) || {};
         var v = (st.vaults || []).filter(function (x) { return x.fullPath === vaultPath; })[0] || null;
-        var prove = (st.sessioni || []).map(function (s) { return { id: s.id, nome: s.nome, tipo: s.tipo, pdf: s.pdf, html: s.html, data: s.data ? String(s.data).slice(0, 10) : '' }; });
+        var prove = (st.sessioni || []).map(function (s) { return { id: s.id, nome: s.nome, tipo: s.tipo, mappa: s.mappa, titolo: s.titolo, pdf: s.pdf, html: s.html, data: s.data || '' }; });
         var s = SC().schemaDocente({ t: window.t, identita: identita(), camera: camera(), prove: prove, vault: v ? (v.rootNodeLabel || v.folderName) : '' });
         return MM().open(s).then(function (r) {
             var a = r && r.azione || '';
             if (a === 'identita') return chiediIdentita().then(function () { return apri(vaultPath); });
+            if (a === 'guida') return guida().then(function () { return apri(vaultPath); });
             if (a === 'inquadra' || a === 'scrivi') {
                 var p = a === 'inquadra' ? inquadra().then(function (tx) { return tx ? tx : scrivi(''); }) : scrivi('');
                 return p.then(function (tx) {
@@ -218,8 +247,8 @@
         var v = (st.vaults || []).filter(function (x) { return x.fullPath === vaultPath; })[0] || null;
         var s = (st.sessioni || []).filter(function (x) { return x.id === id; })[0];
         if (!s) return Promise.resolve();
-        return invia(vaultPath, { id: s.id, nome: s.nome, tipo: s.tipo, pdf: s.pdf, html: s.html }, v ? v.folderName : '');
+        return invia(vaultPath, { id: s.id, nome: s.nome, tipo: s.tipo, mappa: s.mappa, titolo: s.titolo, pdf: s.pdf, html: s.html }, v ? v.folderName : '');
     }
 
-    window.MappAIStudenteScambio = { apri: apri, inviaProva: inviaProva, identita: identita, chiediIdentita: chiediIdentita, ricevi: ricevi, camera: camera };
+    window.MappAIStudenteScambio = { apri: apri, guida: guida, inviaProva: inviaProva, identita: identita, chiediIdentita: chiediIdentita, ricevi: ricevi, camera: camera };
 }());
