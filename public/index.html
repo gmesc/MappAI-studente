@@ -654,16 +654,14 @@
             <div class="absolute bottom-8 left-8 z-[40]" id="floating-actions-container">
                 <!-- Popover Menu -->
                 <div id="floating-actions-menu" class="hidden">
-                    <!-- MappAI studente: quattro voci (le altre erano del docente: Live, Garden,
-                         Graph manager, Sincronizza, Revisione, Co-docente, Annulla) -->
+                    <!-- MappAI studente: tre voci (le altre erano del docente: Live, Garden,
+                         Graph manager, Sincronizza, Revisione, Co-docente, Annulla). «Studio attivo»
+                         è uscito col packet 0117: le prove si scelgono nella console del progetto -->
                     <button onclick="window.exportPDFVista && window.exportPDFVista()" title="Salva la vista che guardi in MAPPE PDF, nella cartella della mappa">
                         <i data-lucide="file-down"></i> <span>Salva mappa in PDF</span>
                     </button>
                     <button onclick="window.MappAIStudenteDocumenti && window.MappAIStudenteDocumenti.materiali()" title="Sintesi, PDF e stampe accanto alla mappa">
                         <i data-lucide="book-open"></i> <span>Materiali</span>
-                    </button>
-                    <button onclick="window.ActiveStudy && window.ActiveStudy.openLauncher()" title="Attività di studio, viste e strumenti" data-i18n-title="tt_active_study">
-                        <i data-lucide="puzzle"></i> <span data-i18n="ui_active_study_btn">Studio attivo</span>
                     </button>
                     <div class="h-px bg-slate-100 my-1"></div>
                     <button onclick="window.MappAIStudente && window.MappAIStudente.torna()" title="Torna alla console Studia">
@@ -1554,10 +1552,10 @@
     <script src="js/studente/documenti.js?v=sync0079"></script>
     <script src="js/studente/prova-core.js?v=st36"></script>
     <script src="js/studente/prova-pdf.js?v=st35"></script>
-    <script src="js/studente/launcher-core.js?v=st36"></script>
-    <script src="js/studente/autotest.js?v=st36"></script>
-    <script src="js/studente/studia-core.js?v=scheda3"></script>
-    <script src="js/studente/console.js?v=split2"></script>
+    <script src="js/studente/launcher-core.js?v=p0117"></script>
+    <script src="js/studente/autotest.js?v=p0117"></script>
+    <script src="js/studente/studia-core.js?v=p0117"></script>
+    <script src="js/studente/console.js?v=p0117"></script>
     <script src="js/studente/cabina.js?v=st36"></script>
     <script src="js/studente/scambio-core.js?v=0119-5"></script>
     <script src="js/studente/scambio.js?v=0119-2"></script>

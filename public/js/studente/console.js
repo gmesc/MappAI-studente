@@ -20,7 +20,7 @@
     function S() { try { return (typeof appState !== 'undefined') ? appState : window.appState; } catch (e) { return window.appState; } }
     var C = function () { return window.MappAIStudiaCore; };
 
-    var st = { vaults: [], sel: '', chiusi: {}, sessioni: [], materiali: null, aperta: false };
+    var st = { vaults: [], sel: '', chiusi: {}, sessioni: [], materiali: null, prove: null, aperta: false };
     var rid = null;   /* il `ridisegna` della console aperta (per le briciole e per la ricezione) */
     try { st.sel = localStorage.getItem('mappai_studente_sel') || ''; } catch (e) { }
 
@@ -57,9 +57,16 @@
            senza questa seconda lettura resterebbe sul disco e invisibile nell'app */
         return Promise.all([uno(''), uno('Allegati')]).then(function (r) { return r[0].concat(r[1]); });
     }
+    /* le prove del progetto per le tre tabelle (0117): fogli e set letti dal disco, senza aprire la mappa */
+    function leggiProve(fullPath) {
+        var A = window.MappAIStudenteAutotest;
+        if (!fullPath || !A || !A.leggiProve) return Promise.resolve(null);
+        var v = (st.vaults || []).filter(function (x) { return x.fullPath === fullPath; })[0] || {};
+        return A.leggiProve(fullPath, v.rootNodeLabel || '');
+    }
     function scambioOn() { try { return localStorage.getItem('mappai_studente_scambio') !== '0' && !!window.MappAIStudenteScambio; } catch (e) { return false; } }
     function schema() {
-        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, chiusi: st.chiusi, t: window.t, scambio: scambioOn(),
+        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, prove: st.prove, chiusi: st.chiusi, t: window.t, scambio: scambioOn(),
             ipad: !!(window.MappAIStudenteFS && window.MappAIStudenteFS.provider === 'ipad') });
     }
     function briciole() {
@@ -70,10 +77,10 @@
     function scegli(fullPath, ridisegna) {
         st.sel = fullPath;
         try { localStorage.setItem('mappai_studente_sel', fullPath); } catch (e) { }
-        st.sessioni = []; st.materiali = null;
+        st.sessioni = []; st.materiali = null; st.prove = null;
         ridisegna(schema()); briciole();
-        Promise.all([leggiSessioni(fullPath), leggiMateriali(fullPath)]).then(function (r) {
-            if (st.sel === fullPath) { st.sessioni = r[0]; st.materiali = r[1]; ridisegna(schema()); briciole(); }
+        Promise.all([leggiSessioni(fullPath), leggiMateriali(fullPath), leggiProve(fullPath)]).then(function (r) {
+            if (st.sel === fullPath) { st.sessioni = r[0]; st.materiali = r[1]; st.prove = r[2]; ridisegna(schema()); briciole(); }
         });
     }
 
@@ -151,7 +158,7 @@
             rid = ridisegna;
             leggi().then(function () {
                 ridisegna(schema()); briciole();
-                if (st.sel) Promise.all([leggiSessioni(st.sel), leggiMateriali(st.sel)]).then(function (r) { st.sessioni = r[0]; st.materiali = r[1]; ridisegna(schema()); briciole(); });
+                if (st.sel) Promise.all([leggiSessioni(st.sel), leggiMateriali(st.sel), leggiProve(st.sel)]).then(function (r) { st.sessioni = r[0]; st.materiali = r[1]; st.prove = r[2]; ridisegna(schema()); briciole(); });
             });
         };
         s.suAzione = function (ev, box, ridisegna) {
@@ -180,8 +187,13 @@
             var a = r && r.azione;
             if ((a === 'mappa' || a === 'scheda') && scelto) return apriMappa(scelto);
             if (a === 'flashcard' && scelto) return apriFlashcard(scelto);
-            /* «Prova»: la mappa sotto, poi il launcher dello studente (autotest, viste, strumenti) */
-            if (a === 'prova' && scelto) return apriMappa(scelto).then(function (ok) { if (ok && window.ActiveStudy) window.ActiveStudy.openLauncher(); });
+            /* una riga delle prove (0117): la mappa sotto, senza la scheda di un dossier (la prova
+               sta nel pannello accanto), poi la prova con la mappa aperta. Su misura apre prima
+               il modale di ramo e angolo. Al posto del bottone «Prova» e del launcher. */
+            var pr = /^(aperte|mc):(.*)$/.exec(a || '') || (a === 'su-misura' ? [a, a, ''] : null);
+            if (pr && scelto) return apriMappa(scelto, false).then(function (ok) {
+                if (ok && window.MappAIStudenteAutotest) return window.MappAIStudenteAutotest.avviaDa({ tipo: pr[1], id: pr[2] });
+            });
             /* «Sintesi»: la stessa strada di un materiale, ma il file lo trova il core */
             if (a === 'sintesi' && scelto) {
                 var sin = C().trovaSintesi(st.materiali);
