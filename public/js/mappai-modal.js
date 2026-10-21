@@ -782,6 +782,9 @@
         var s = Core.normalizzaSchema(schema);
         var box = el('div', 'mm-box' + (s.taglia !== 'm' ? ' mm-box--' + s.taglia : '') +
             (s.piena ? ' mm-box--piena' : '') + (s.layout === 'console' ? ' mm-box--console' : '') +
+            /* 0122: il vestito «grande» (famiglia C, icona nuda) è una classe sul box: i
+               token si ridefiniscono lì, in mappai-modal-tokens.css; senza `veste` niente cambia */
+            (s.veste ? ' mm-box--' + s.veste : '') +
             (s.navChiusa ? ' is-nav-chiusa' : ''));
         box.setAttribute('role', 'dialog');
         box.setAttribute('aria-modal', 'true');

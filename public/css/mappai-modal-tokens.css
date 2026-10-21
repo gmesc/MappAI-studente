@@ -165,6 +165,36 @@
     /* alta abbastanza da mostrare ~12 righe */
 }
 
+/* ── Il vestito «grande» (0122, lotto 2) ─────────────────────────────────
+   Giacomo, 21/10, sul banco delle quattro finestre delle Attività live («C»):
+   titolo 20 · testo 16 · etichette 13 · sezioni 12 · controlli e bottoni 14 ·
+   icona di testata 26, NUDA (niente riquadro), al centro del titolo. Lo chiede
+   lo schema con `veste: 'grande'` (o una finestra a mano con la classe sul box).
+   I token si ridefiniscono QUI e si ereditano nel box: nessuna regola di prima
+   cambia, un modale senza il vestito è identico. Quando la famiglia C passerà
+   a tutti i modali (lotto A), questi valori salgono su :root e il blocco muore. */
+.mm-box--grande {
+    --mm-fs-titolo: 20px;
+    --mm-fs-testo: 16px;
+    --mm-fs-label: 13px;
+    --mm-fs-sez: 12px;
+    --mm-btn-fs: 14px;
+    --mm-ctl-fs: 14px;
+    --mm-icona-head: 26px;
+    --mm-fs-lettura: 16px;
+}
+.mm-box--grande .mm-head { align-items: center; gap: 10px; }
+.mm-box--grande .mm-head__ico { width: auto; height: auto; background: none; border-radius: 0; }
+
+/* Il velo per le finestre FUORI dal motore (0122, gate del lotto 2, Giacomo:
+   «tieni il blur + dimmer per tutti i modali di tutta l'app»): lo stesso velo
+   di `.mm-overlay`, scuro e sfumato, come classe da dare a un overlay scritto a
+   mano. `.mm-overlay` resta solo del motore (lo cerca per nome). */
+.mm-velo { background: var(--mm-velo); backdrop-filter: blur(3px); }
+/* Giacomo, 22/10: «Un velo solo» — una finestra a mano aperta sopra un altro velo (la
+   console, un modale) non ne aggiunge uno: lo sfondo resta scuro una volta sola. */
+.mm-velo--sopra { background: transparent; backdrop-filter: none; }
+
 /* ── Involucro ───────────────────────────────────────────────────────── */
 /* z 12000: sopra i modali ancora scritti a mano (account classi e profilo
    insegnante stanno a 9992, altri a 10005) e ben sotto i fumetti, che devono
