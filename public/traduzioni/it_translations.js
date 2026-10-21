@@ -1010,4 +1010,13 @@ const it_translations = {
     // 0114, dal gate 3 (Giacomo, 21/10): la spunta di tutte le righe gialle in un colpo solo
     fig_va_bene_tutte: "Spunta tutte le righe",
     admin_prompt_desc_immagini_formule: "Lettura delle immagini: una regione di formule di una pagina (disequazioni, equazioni, frazioni, intervalli): una formula per riga, col numero dell'esercizio in testa. Le formule lette verdi sostituiscono il testo tipografico rotto.",
+    // 0118 — la maniglia fra fonte e analisi in ELABORA, e il PDF originale a destra nella vista «Figure»
+    el_split_open: "Riapri la fonte: trascina o fai clic",
+    el_split_move: "Sposta il confine fra fonte e analisi; oltre il bordo sinistro la fonte si chiude",
+    el_split_open_fig: "Riapri le figure: trascina o fai clic",
+    el_split_move_fig: "Sposta il confine fra le figure e il PDF; oltre il bordo sinistro le figure si chiudono",
+    fig_pdf_titolo: "PDF originale",
+    fig_pdf_pagina_di: "pagina {n} di {m}",
+    fig_pdf_nessuna: "Nessuna figura in questo PDF.",
+    fig_pdf_manca: "Il PDF originale non è disponibile: le figure restano da controllare a sinistra.",
 };

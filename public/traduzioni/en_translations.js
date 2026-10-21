@@ -3984,6 +3984,14 @@ const en_translations = {
     crea_output_iconografica: "Iconographic analysis",
     crea_output_metacomprensione: "Metacomprehension",
     crea_output_formati: "Formats",
+    // 0120 (21/10): «Metacomprensione» dietro l'interruttore `mappai_output_metacomprensione`, con la finestra «in costruzione»
+    crea_output_metacomprensione_wip: "Metacomprehension (under construction)",
+    crea_output_meta_titolo: "Metacomprehension",
+    crea_output_meta_intento_titolo: "What it wants to be",
+    crea_output_meta_intento: "From a text, MappAI prepares reading comprehension and metacomprehension activities: pupils learn to plan, monitor and evaluate how they read, on a concrete problem of the text (vocabulary, cohesion, explicit information, inferences, sequences and causes). The materials follow the four PIRLS processes and the explicit strategies recommended by the EEF, with proportionate help that the teacher can remove.",
+    crea_output_meta_wip_titolo: "Under construction",
+    crea_output_meta_wip: "Choosing the materials, reviewing and printing this output may still change or not work yet: you can look, but the results are not ready for the classroom.",
+    crea_output_meta_ok: "Got it",
     crea_attesa_foto: "Image preview",
     crea_attesa_titolo: "Title",
     // lotto 11 (13/10): il titolo del box unico delle opzioni dei materiali nel bento
@@ -4679,4 +4687,13 @@ const en_translations = {
     // 0114, dal gate 3 (Giacomo, 21/10): la spunta di tutte le righe gialle in un colpo solo
     fig_va_bene_tutte: "Tick all lines",
     admin_prompt_desc_immagini_formule: "Image reading: a region of formulas on a page (inequalities, equations, fractions, intervals): one formula per line, with the exercise number first. Formulas read green replace the broken typeset text.",
+    // 0118 — la maniglia fra fonte e analisi in ELABORA, e il PDF originale a destra nella vista «Figure»
+    el_split_open: "Reopen the source: drag or click",
+    el_split_move: "Move the border between source and analysis; past the left edge the source closes",
+    el_split_open_fig: "Reopen the figures: drag or click",
+    el_split_move_fig: "Move the border between the figures and the PDF; past the left edge the figures close",
+    fig_pdf_titolo: "Original PDF",
+    fig_pdf_pagina_di: "page {n} of {m}",
+    fig_pdf_nessuna: "No figures in this PDF.",
+    fig_pdf_manca: "The original PDF is not available: the figures are still to be checked on the left.",
 };
