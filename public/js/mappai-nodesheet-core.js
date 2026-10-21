@@ -69,6 +69,12 @@
         '2x1': { cols: 2, rows: 1, titlePt: 32, kwPt: 15, descPt: 13, cardTitlePt: 24 }
     };
     var LINE = { title: 1.3, titleTop: 1.25, kw: 1.55, cardTitle: 1.2, desc: 1.4 };
+    /* Il passo di riga della DESCRIZIONE è fisso, non un multiplo del corpo (0122, lotto 3;
+       Giacomo sul banco del Foglio, 22/10: «prova interlinea 24px» → «Scelgo la E: interlinea
+       24 px fissa, a sinistra»): 24 px a 96 dpi = 18 pt = 6,35 mm, in tutti i formati. Lo leggono
+       la capacità (qui), l'editor (in frazione di card) e il PDF. `LINE.desc` resta per chi lo
+       legge ancora, ma la descrizione non lo usa più. */
+    var DESC_LINE_MM = 6.35;
 
     // Tipi di contenuto della card. `title` = solo il nome del nodo, centrato:
     // è il default, ed è l'unico ammesso dal formato 3×4 (card troppo piccola).
@@ -163,7 +169,7 @@
             var tUsed = Math.min(MAX_TITLE_LINES, Math.max(1, lineCount(titleText, tCpl) || 1));
             var titleH = PAD.cardTop + blockH(tUsed, g.cardTitlePt, LINE.cardTitle) + PAD.descGap;
             var dAvail = g.cardH - titleH - PAD.cardBottom;
-            var dStep = g.descPt * PT2MM * LINE.desc;
+            var dStep = DESC_LINE_MM;   /* passo fisso: 0122, lotto 3 */
             var dLines = Math.max(0, Math.floor(dAvail / dStep));
             var dCpl = charsPerLine(boxW, g.descPt);
             return {
@@ -491,6 +497,7 @@
     return {
         // geometria e soglie
         PT2MM: PT2MM, ADVANCE: ADVANCE_BASE, setFontMetrics: setFontMetrics, fontMetrics: fontMetrics, PAGE: PAGE, PAD: PAD, FMT: FMT, LINE: LINE,
+        DESC_LINE_MM: DESC_LINE_MM,
         LAYOUTS: LAYOUTS, MAX_KEYWORDS: MAX_KEYWORDS, MAX_TITLE_LINES: MAX_TITLE_LINES,
         fmtOf: fmtOf, layoutOf: layoutOf, allowsContent: allowsContent, geom: geom, pages: pages,
         charsPerLine: charsPerLine, lineCount: lineCount, charLimits: charLimits,

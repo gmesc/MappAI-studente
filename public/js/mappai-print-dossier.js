@@ -1254,7 +1254,11 @@ function _drawJustifiedDesc(doc, text, boxX, boxY, boxW, boxH, fontName, sizePt,
     opts = opts || {};
     if (!text || boxH <= 0 || boxW <= 0) return 0;
     var PT2MM = 0.352778;
-    var lineH = sizePt * PT2MM * 1.4;
+    /* 0122, lotto 3 (Giacomo, «E»): il passo di riga è quello FISSO del core del Foglio (6,35 mm =
+       24 px), non un multiplo del corpo — lo stesso che l'editor mostra a schermo; il 6.35 è il
+       ripiego se il core non è caricato. */
+    var NSC = (typeof window !== 'undefined' && window.MappAINodeSheet) || null;
+    var lineH = (NSC && NSC.DESC_LINE_MM) || 6.35;
     var maxLines = Math.max(1, Math.floor(boxH / lineH + 0.001));
     doc.setFontSize(sizePt);
 
@@ -1345,7 +1349,11 @@ function _drawJustifiedDesc(doc, text, boxX, boxY, boxW, boxH, fontName, sizePt,
         if (!parts.length) { yline += lineH; continue; }
         var gaps = parts.length - 1;
         var sum = parts.reduce(function (a, p) { return a + p.width; }, 0);
-        var gap = (!lines[li].natural && gaps > 0) ? (boxW - sum) / gaps : spaceW;
+        /* 0122, lotto 3: a bandiera — lo spazio fra le parole è sempre quello naturale, mai la
+           distribuzione del residuo (su Space Mono faceva i «fiumi»). `natural` resta per chi
+           misura; la sillabazione delle parole che non entrano (tryHyphen) è l'a-capo, non la
+           giustificazione, e resta. */
+        var gap = spaceW;
         if (gap > spaceW * 4) gap = spaceW; // evita "fiumi" su righe con poche parole
         var cx = boxX;
         for (var pi = 0; pi < parts.length; pi++) {
@@ -2093,6 +2101,10 @@ window.generateDossierPDFFromOptions = async function () {
                        file HTML riaperto dove quel blocco non c'è. */
                     --pdf-font-family: var(--doc-font, 'Space Mono', monospace);
                     --pdf-base-font-size: calc(13px * ${fontScale}); /* Dimensione testo normale */
+                    /* 0122, lotto 3: era usata tre volte (body, .dossier-desc, .citation-text) e mai
+                       definita → il dossier cadeva su «normal» (≈1,2). 1,6: fra la Sintesi (1,7) e le
+                       finestre del motore (1,65). */
+                    --pdf-line-height: 1.6;
                     --pdf-title-font-size: calc(17px * ${fontScale}); /* Dimensione titolo principale */
                     --pdf-section-title-size: calc(9.5px * ${fontScale}); /* Dimensione titoli sezioni */
                     --pdf-citation-font-size: calc(11.5px * ${fontScale}); /* Dimensione testo citazioni */
