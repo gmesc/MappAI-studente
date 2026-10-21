@@ -397,6 +397,11 @@
             titolo: String(s.titolo || '').trim(),
             sottotitolo: s.sottotitolo ? String(s.sottotitolo) : '',
             icona: s.icona || 'square',
+            /* SENZA TESTATA (0119, gate sull'iPad): niente titolo, sottotitolo e ×
+               a schermo, per una finestra che si capisce dal suo contenuto e ha già
+               «Chiudi» in fondo. Il titolo resta il NOME della finestra
+               (`aria-label`): chi legge con lo schermo deve sapere dove si trova. */
+            senzaTestata: !!s.senzaTestata,
             taglia: t,
             layout: layoutValido(s.layout, t),
             /* vista piena: la console occupa la finestra invece di essere un
@@ -520,6 +525,8 @@
             return a + s2.voci.filter(function (v) { return v.tipo !== 'gruppo'; }).length;
         }, 0);
         if (!haCorpo) errori.push('modale vuoto: né sezioni né azioni');
+        /* senza la × l'uscita è un bottone del piede: senza nessuno si resta chiusi dentro */
+        if (n.senzaTestata && !n.azioni.length) errori.push('modale senza testata e senza azioni: senza la × non c\'è un bottone per uscire');
 
         var primari = n.azioni.filter(function (b) { return b.ruolo === 'primario'; });
         if (primari.length > 1) errori.push('due azioni primarie: l’occhio non sa dove andare');

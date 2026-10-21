@@ -793,7 +793,7 @@
            landing usa per «classe/allievo · disciplina». */
         var ctx = s.contesto.length ? ctxHtml(s.contesto) : '';
 
-        var testata =
+        var testata = s.senzaTestata ? '' :
             '<div class="mm-head">' +
             (s.icona ? '<div class="mm-head__ico">' + icona(s.icona) + '</div>' : '') +
             '<div class="mm-head__testi"><div class="mm-title">' + esc(s.titolo) + '</div>' +

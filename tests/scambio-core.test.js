@@ -86,7 +86,12 @@ test('schemi: Docente (con e senza camera, con e senza prove), Chi sei, Indirizz
     const id = FC.identitaStudente('7', '2b');
     const d1 = ok(S.schemaDocente({ identita: id, camera: true, prove: [{ id: 'p1', nome: 'Domande · Clima · 00', tipo: 'Scelta multipla', mappa: '1a Guerra Mondiale', pdf: 'risposte.pdf', data: '2026-10-20T08:00:00Z' }], vault: 'Il Clima' }), 'docente');
     assert.deepStrictEqual(d1.sezioni.map(x => x.id), ['sc-ricevi', 'sc-invia'], 'la sezione «Chi sei» non c\'è più');
-    assert.deepStrictEqual(d1.sezioni[0].voci.map(v => v.id), ['inquadra', 'scrivi'], 'ricevere viene per primo');
+    assert.strictEqual(d1.senzaTestata, true, 'niente titolo, sottotitolo né ×: si esce con «Chiudi»');
+    assert.strictEqual(d1.titolo, 'Il tuo docente', 'il titolo resta il nome della finestra');
+    assert.strictEqual(d1.sottotitolo, undefined);
+    assert.strictEqual(d1.sezioni[0].titolo, undefined, 'il riquadro della ricezione senza titoletto');
+    assert.deepStrictEqual(d1.sezioni[0].voci.map(v => [v.id, v.etichetta, v.icona]), [['inquadra', 'Ricevi un vault', 'qr-code']], 'ricevere viene per primo');
+    assert.deepStrictEqual(d1.sezioni[0].azioni.map(a => [a.id, a.etichetta, a.ruolo]), [['scrivi', 'Inserisci link', 'quieto']], '«Inserisci link» sotto il bottone');
     const v = d1.sezioni[1].voci[0];
     assert.strictEqual(v.id, 'invia:p1');
     assert.strictEqual(v.etichetta, '1a Guerra Mondiale', 'l\'argomento sopra: intero, non troncato a metà');
@@ -94,7 +99,9 @@ test('schemi: Docente (con e senza camera, con e senza prove), Chi sei, Indirizz
     assert.strictEqual(S.schemaDocente({ prove: [{ id: 'x', nome: 'cartella vecchia', pdf: 'r.pdf' }] }).sezioni[1].voci[0].etichetta, 'cartella vecchia', 'senza sessione.json resta il nome');
     assert.deepStrictEqual(d1.sezioni[1].rimandi.map(r => [r.id, r.etichetta]), [['guida', 'Istruzioni'], ['identita', '2B · n. 7']]);
     const d2 = ok(S.schemaDocente({ identita: null, camera: false, prove: [] }), 'docente senza');
-    assert.deepStrictEqual(d2.sezioni[0].voci.map(v => v.id), ['scrivi'], 'senza camera resta l\'indirizzo');
+    assert.deepStrictEqual(d2.sezioni[0].voci.map(v => [v.id, v.etichetta]), [['scrivi', 'Ricevi un vault']], 'senza camera il bottone chiede il link');
+    assert.strictEqual(d2.sezioni[0].azioni, undefined, 'e «Inserisci link» non si ripete');
+    assert.strictEqual(S.schemaIndirizzo({}).titolo, 'Inserisci link');
     assert.ok(/console del progetto/.test(d2.sezioni[1].testo), 'senza prove dice dove farne una');
     assert.deepStrictEqual(d2.sezioni[1].rimandi.map(r => r.etichetta), ['Istruzioni', 'Chi sei?'], 'chi sei vuoto: la domanda');
     const ci = ok(S.schemaIdentita({ identita: id }), 'chi sei');

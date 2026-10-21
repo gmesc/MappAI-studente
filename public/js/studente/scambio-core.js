@@ -130,10 +130,15 @@
         o = o || {};
         var t = o.t || function (k, f) { return f; };
         var id = o.identita;
-        var riceve = [];
-        /* i testi per chi ha 11-12 anni (Giacomo, 17/9): che cosa fare, in parole di tutti i giorni */
-        if (o.camera) riceve.push({ id: 'inquadra', etichetta: t('sc_inquadra', 'Inquadra il QR'), sotto: t('sc_inquadra_sotto', 'Punta la fotocamera sul quadratino che il docente ti mostra'), icona: 'camera' });
-        riceve.push({ id: 'scrivi', etichetta: o.camera ? t('sc_scrivi_alt', 'La fotocamera non va? Scrivi il codice') : t('sc_scrivi', 'Scrivi il codice'), sotto: t('sc_scrivi_sotto', 'Copia le lettere scritte sotto il QR'), icona: 'keyboard' });
+        /* i testi per chi ha 11-12 anni (Giacomo, 17/9): che cosa fare, in parole di tutti i giorni.
+           Al gate dello 0119 (21/10): «Ricevi un vault» con l'icona del QR, e sotto il bottone il
+           testo cliccabile «Inserisci link» per chi non riesce a inquadrare. Senza fotocamera il
+           bottone stesso chiede il link. */
+        var riceve = [o.camera
+            ? { id: 'inquadra', etichetta: t('sc_ricevi_vault', 'Ricevi un vault'), sotto: t('sc_inquadra_sotto', 'Punta la fotocamera sul QR che il docente ti mostra'), icona: 'qr-code' }
+            : { id: 'scrivi', etichetta: t('sc_ricevi_vault', 'Ricevi un vault'), sotto: t('sc_scrivi_sotto', 'Scrivi il link che trovi sotto il QR del docente'), icona: 'qr-code' }];
+        var ricevi = { id: 'sc-ricevi', voci: riceve };
+        if (o.camera) ricevi.azioni = [{ id: 'scrivi', etichetta: t('sc_inserisci_link', 'Inserisci link'), ruolo: 'quieto' }];
         var invia = (o.prove || []).filter(function (p) { return p.pdf || p.html; }).map(function (p) {
             /* l'argomento sopra, genere e data sotto: nel reader la voce è in corpo 20 e il
                modale largo 560, e «Quiz a scelta multipla — …» intero non ci sta (21/10) */
@@ -146,11 +151,13 @@
             { id: 'guida', etichetta: t('sc_istruzioni', 'Istruzioni') },
             { id: 'identita', etichetta: id ? chiSeiBreve(id) : t('sc_chi_sei_q', 'Chi sei?') }
         ];
-        var sez = [{ id: 'sc-ricevi', titolo: t('sc_ricevi_t', 'Ricevi una mappa'), voci: riceve }];
+        var sez = [ricevi];
         if (invia.length) sez.push({ id: 'sc-invia', titolo: t('sc_invia_t', 'Consegna una prova'), rimandi: rimandi, voci: invia });
         else sez.push({ id: 'sc-invia', titolo: t('sc_invia_t', 'Consegna una prova'), rimandi: rimandi, testo: t('sc_invia_vuoto', 'Non hai ancora prove da consegnare: fanne una dalla console del progetto e premi «Consegna» alla fine.') });
         return {
-            id: 'scambio', titolo: t('sc_titolo', 'Il tuo docente'), sottotitolo: t('sc_sub', 'Ricevi le mappe e consegna le prove'),
+            /* niente titolo, sottotitolo né × a schermo (gate dello 0119): il titolo resta il
+               nome della finestra per il lettore di schermo, si esce con «Chiudi» */
+            id: 'scambio', titolo: t('sc_titolo', 'Il tuo docente'), senzaTestata: true,
             icona: 'qr-code', taglia: 'm', veloChiude: true,
             sezioni: sez,
             azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'quieto' }]
@@ -193,10 +200,10 @@
         o = o || {};
         var t = o.t || function (k, f) { return f; };
         return {
-            id: 'indirizzo', titolo: t('sc_scrivi', 'Scrivi il codice'), sottotitolo: t('sc_scrivi_sub', 'Lo trovi scritto sotto il QR, sullo schermo del docente'),
+            id: 'indirizzo', titolo: t('sc_inserisci_link', 'Inserisci link'), sottotitolo: t('sc_scrivi_sub', 'Lo trovi scritto sotto il QR, sullo schermo del docente'),
             icona: 'keyboard', taglia: 's', invio: true,
             sezioni: [{ id: 'sc-campi', campi: [
-                { id: 'indirizzo', tipo: 'testo', etichetta: t('sc_indirizzo_et', 'Codice'), segnaposto: 'http://192.168.1.23:8768/…?s=abc123', valore: o.valore || '' }
+                { id: 'indirizzo', tipo: 'testo', etichetta: t('sc_indirizzo_et', 'Link'), segnaposto: 'http://192.168.1.23:8768/…?s=abc123', valore: o.valore || '' }
             ] }],
             azioni: [
                 { id: 'annulla', etichetta: t('mm_annulla', 'Annulla'), ruolo: 'quieto' },
