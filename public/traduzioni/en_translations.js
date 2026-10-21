@@ -2452,7 +2452,7 @@ const en_translations = {
     cls_cred_ko: "Credential sheet not saved: ",
     cls_cred_stud_saved: "Credential card saved in Allievi/",
     // mappai-live-teacher.js
-    sd_qr_studente: "In the MappAI student app: Teacher › Receive — scan the QR or type this address",
+    sd_qr_studente: "In the MappAI student app: Teacher › Receive a vault and scan the QR, or Insert link and type this address",
     // mappai-material-pipeline.js
     mp_cards_over: "{n} cards exceed the character limit: check them in ELABORA → Documents",
     mp_multi_saltati: "{n} variants not generated: the others are ready",
