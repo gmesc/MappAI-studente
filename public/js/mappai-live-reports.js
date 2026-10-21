@@ -241,6 +241,15 @@
     var accColor = function (p) { return p >= 80 ? '#16a34a' : p >= 50 ? '#d97706' : '#dc2626'; };
     var pillClass = { right: 'lr-pill-r', wrong: 'lr-pill-w', blank: 'lr-pill-b', manual: 'lr-pill-m' };
     var pillMark = { right: '✓', wrong: '✗', blank: '·', manual: '?' };
+    /* 0116, gate del 21/10: la scheda delle domande aperte semplici (`soloAperte`)
+       non ha correzione — niente percentuale, niente «da correggere», e una
+       risposta scritta si segna ●, non «?».
+       ⚠️ Non ✎: nessuno dei caratteri dell'app ce l'ha (Space Mono, Atkinson,
+       TestMe), il telefono ripiegava su un font di sistema e l'anteprima di
+       stampa dell'iPhone usciva BIANCA (gate del 21/10). Ogni segno della
+       scheda deve stare nei font. */
+    var aperte = !!s.soloAperte;
+    if (aperte) pillMark = { right: '✓', wrong: '✗', blank: '·', manual: '●' };
 
     var outLabel = { right: 'Corretta', wrong: 'Errata', blank: 'In bianco', manual: 'Da correggere' };
     var strip = (s.items || []).map(function (it, i) {
@@ -276,10 +285,10 @@
       '<div class="lr-who-sub">' + esc(s.emoji) + ' ' + esc(s.num) +
       ' · risposte ' + s.answered + '/' + (r.questionCount || (s.items || []).length) +
       (s.blankCount ? ' · ' + s.blankCount + ' in bianco' : '') +
-      (s.manualCount ? ' · ' + s.manualCount + ' da correggere' : '') +
+      (s.manualCount && !aperte ? ' · ' + s.manualCount + ' da correggere' : '') +
       (s.hintsUsed ? ' · 💡 ' + s.hintsUsed + ' indizi' : '') + '</div></div>' +
-      '<div class="lr-metrics"><div class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</div>' +
-      '<div class="lr-acc-sub">accuratezza' + (minimal ? '' : ' · fluenza ' + rate) + '</div></div></div>' +
+      (aperte ? '' : '<div class="lr-metrics"><div class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</div>' +
+      '<div class="lr-acc-sub">accuratezza' + (minimal ? '' : ' · fluenza ' + rate) + '</div></div>') + '</div>' +
       '<div class="lr-strip">' + strip + '</div>' +
       '<div class="lr-detail">' + detail + '</div>' +
       (minimal ? '' : '<div class="lr-topics"><div class="lr-topic-col"><div class="lr-topic-h">Punti di forza</div>' + strengths + '</div>' +
@@ -388,6 +397,9 @@
     var extra = 'Allievi: <b>' + (r.joined || 0) + '</b> · Consegne <b>' + (r.consegnato || 0) + '</b>';
     var body = headerBlock(meta, extra);
 
+    /* 0116: in modalità semplice l'allievo non sceglie niente — tutte le domande
+       sono sue — quindi tagli evitati e aree scelte sarebbero zeri dappertutto */
+    if (!r.semplice) {
     // ── la classe: i tagli ──
     body += '<div class="lr-q"><div class="lr-q-text" style="margin-bottom:8px">I tagli — chi li ha evitati del tutto</div>';
     var ang = Array.isArray(r.angoli) ? r.angoli : [];
@@ -414,6 +426,7 @@
         '<div style="font-size:11px;color:#475569">scelta da ' + (a.sceltaDa || 0) + '/' + tot + '</div></div>';
     });
     body += '</div>';
+    }
 
     // ── una scheda per allievo ──
     (Array.isArray(r.byStudent) ? r.byStudent : []).forEach(function (a) {
