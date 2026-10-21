@@ -46,6 +46,10 @@
   var USAGE = 'Registro consumi AI';
   var DIAGNOSTICA = 'Diagnostica';
   var ARCHIVIO = 'Archivio';
+  /* Sistema/Figure/<impronta>.figure.json e indice.json (packet 0114, ADR 0024 rev. 1): le letture delle figure di un PDF,
+     per impronta, fuori dai vault. Già dentro Sistema/: la riorganizzazione della beta.8 non la sposta. */
+  var FIGURE = 'Figure';
+  function depositoFigure(nome) { return SUB.system + '/' + FIGURE + (nome ? '/' + nome : ''); }
   var CLASSI_JSON = 'classi.json';
   var REGISTRO_RIORDINO = 'riorganizzazione-beta8.json';   // in Sistema/Diagnostica/
   /* Le cartelle in testa a «MappAI - file» che vanno dentro Sistema/ (bivi 2-4).
@@ -257,6 +261,9 @@
        dello studente e il file, niente di più profondo. `read-vault-file` la
        usa quando INSEGNA apre una consegna nella tela. */
     if (segs.length === 3 && segs[0] === CONSEGNE) return segs.join('/');
+    /* 'Sistema/Figure/<file>.json' (packet 0114; Giacomo, 20/10: «apri il percorso»): il deposito delle letture delle
+       figure, scritto con `vaultPath` = la radice di «MappAI - file». Tre segmenti esatti e solo JSON. */
+    if (segs.length === 3 && segs[0] === SUB.system && segs[1] === FIGURE && /\.json$/i.test(segs[2])) return segs.join('/');
     return null;
   }
 
@@ -738,6 +745,8 @@
     USAGE: USAGE,
     DIAGNOSTICA: DIAGNOSTICA,
     ARCHIVIO: ARCHIVIO,
+    FIGURE: FIGURE,
+    depositoFigure: depositoFigure,
     CLASSI_JSON: CLASSI_JSON,
     REGISTRO_RIORDINO: REGISTRO_RIORDINO,
     SISTEMA_DA_RADICE: SISTEMA_DA_RADICE,
