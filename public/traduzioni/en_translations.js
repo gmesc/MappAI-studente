@@ -4490,6 +4490,8 @@ const en_translations = {
     // 0097: an approved G1 whose map changed afterwards — the footer says what to do, and the button does it
     rv_veste_g1_approvata_cambiata: "The map has changed: to continue, press “Check the map now”. The approved decisions remain saved.",
     rv_ricontrolla_mappa: "Check the map now",
+    // packet 0123, lotto 3 (0056): G1 awaiting review and the map changed on the canvas
+    rv_veste_g1_attesa_cambiata: "The map has changed since the check. To continue, press “Check the map now”: the check starts again on the map as it is now, and the choices made so far remain in the previous review.",
     rv_veste_g1_conferma_parziale: "I have personally checked the parts the automatic check did not read too, and I approve the contents.",
     // 0075, second round (Q8): the checkbox counts the parts not read by the check as the header does
     rv_veste_g1_conferma_non_lette: "I have personally checked {parti} ({dettaglio}) too, and I approve the contents.",
