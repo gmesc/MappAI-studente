@@ -43,6 +43,30 @@
        sopra chiede il prossimo piano: l'ordine è quello di apertura, che è
        l'unico che l'utente riconosce. */
     var Z_TOP = Z_BASE;
+    /* 0122, lotto 4a (Giacomo, 21/10: «quando è aperto un modale lo sfondo è sempre bloccato»): tutto ciò
+       che sta fuori dal velo diventa `inert` (niente fuoco, clic né anello di fuoco) finché la finestra c'è.
+       Un contatore per elemento (data-mm-congela), così due finestre impilate non si sbloccano a vicenda, e
+       un `inert` messo da altri non si tocca. In un DOM senza body.children non fa nulla (i test col DOM finto).
+       Ritorna la funzione che sblocca. */
+    function congela(velo) {
+        if (!document.body || !document.body.children) return null;
+        var presi = [];
+        Array.prototype.forEach.call(document.body.children, function (el) {
+            if (el === velo) return;
+            if (el.hasAttribute && el.hasAttribute('inert') && !(el.dataset && el.dataset.mmCongela)) return;
+            if (!el.setAttribute) return;
+            el.dataset.mmCongela = String((Number(el.dataset.mmCongela) || 0) + 1);
+            el.setAttribute('inert', ''); presi.push(el);
+        });
+        return function () {
+            presi.forEach(function (el) {
+                var n = (Number(el.dataset.mmCongela) || 1) - 1;
+                if (n > 0) { el.dataset.mmCongela = String(n); return; }
+                delete el.dataset.mmCongela; el.removeAttribute('inert');
+            });
+        };
+    }
+
     function prossimoZ() { Z_TOP += 100; return Z_TOP; }
 
     /* «Alza questa finestra sopra la mia pila» (17/8). I modali non ancora
@@ -921,13 +945,19 @@
 
         return new Promise(function (risolvi) {
             var apriva = document.activeElement;
-            var velo = el('div', 'mm-overlay' + (pila.length ? ' mm-overlay--sopra' : ''));
+            /* 0122, lotto 4a: «un velo solo» anche sopra un velo di un'altra famiglia (una finestra a mano
+               con .mm-velo, uno statico di index.html aperto): il secondo velo è trasparente */
+            var altroVelo = !pila.length && document.body && document.body.querySelector &&
+                !!document.body.querySelector(':scope > .mm-velo, :scope > [id$="-modal"].flex, :scope > [id$="-modal"]:not(.hidden)[style*="display: flex"]');
+            var velo = el('div', 'mm-overlay' + ((pila.length || altroVelo) ? ' mm-overlay--sopra' : ''));
             velo.style.zIndex = String(prossimoZ());
             var box = null;
 
             var chiuso = false;
+            var scongela = null;
             function chiudi(risultato) {
                 if (chiuso) return;
+                if (scongela) { try { scongela(); } catch (e) { } scongela = null; }
                 chiuso = true;
                 document.removeEventListener('keydown', tasti, true);
                 tastiera(false);
@@ -1157,6 +1187,7 @@
             monta();
             document.body.appendChild(velo);
             pila.push(velo);
+            scongela = congela(velo);
             tastiera(true);
             adatta();
             disegnaIcone(velo);

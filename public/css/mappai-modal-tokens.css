@@ -98,21 +98,25 @@
        così il bersaglio scende a ~34px, sopra i 24 di WCAG 2.2 ma sotto i 44
        consigliati per il tocco su iPad. La leva per tornare indietro è UNA:
        questi due valori. */
-    --mm-btn-fs: 12px;
+    /* 0122, lotto 4a (Giacomo, 22/10, sul banco di tutti i modali: «Sì, le console seguono la famiglia C»;
+       «anche in questo caso puoi portare su ipad»): la famiglia C è la RADICE, per ogni finestra del motore,
+       le console e gli statici agganciati ai token — bottoni e controlli 14 (era 12) */
+    --mm-btn-fs: 14px;
     /* ── LA FAMIGLIA DEI CORPI (0087, lotto 10c, 12/10/2026; Giacomo: «per i banchi C2 e C va bene famiglia») ──
        Cinque ruoli al posto di dodici letterali: titolo 15 · testo 13 · etichetta 11 · aiuto 11 (alias) ·
        sezione 10. I mezzi punti muoiono (11,5 → etichetta, 12,5 e 13,5 → testo, 10,5 e 9,5 → sezione) solo
        sotto html[data-app="docente"]: il reader iPad, che copia questo foglio, non cambia. I controlli restano a
        --mm-ctl-fs (12). Decisione di Giacomo sul banco 10c: «per i banchi C2 e C va bene famiglia». */
-    --mm-fs-titolo: 15px;
-    --mm-fs-testo: 13px;
-    --mm-fs-label: 11px;
+    /* 0122, lotto 4a: titolo 20 · testo 16 · etichetta 13 · sezione 12 (erano 15 · 13 · 11 · 10) */
+    --mm-fs-titolo: 20px;
+    --mm-fs-testo: 16px;
+    --mm-fs-label: 13px;
     --mm-fs-aiuto: var(--mm-fs-label);
-    --mm-fs-sez: 10px;
+    --mm-fs-sez: 12px;
     /* il corpo di LETTURA di base (Giacomo, 12/10, dal banco 2: «Un corpo di lettura di base come token = 14px»):
        il testo che il docente legge con attenzione — schede del Banco, item dell'editor, scheda-fonte — a gradino 1
        e zoom 1; cresce col gradino per larghezza del contenitore e con i − / + dell'editor (logica unica, in corso) */
-    --mm-fs-lettura: 14px;
+    --mm-fs-lettura: 16px;   /* 0122, lotto 4a: era 14 */
     /* ── I COLORI DI GENERE DEI MATERIALI (0087 lotto 10d, 12-13/10/2026). Giacomo, ad ADMIN: «ho sbagliato,
        mantieni i colori differenziati per tipi di materiali»; poi in chat: «falli diventare token». Quiz, aperte,
        sintesi e catena stanno sull'accento; le flashcard sul verde (lo stesso valore del «giusto», --mm-ok); il
@@ -130,7 +134,7 @@
     /* DECISA (31/7, verdetti): 20 nei bottoni e nel corpo, 24 in testata.
        Chiude la divergenza 20-vs-22 che il codice si portava dietro. */
     --mm-icona: 20px;
-    --mm-icona-head: 24px;
+    --mm-icona-head: 26px;   /* 0122, lotto 4a: era 24; l'icona di testata è nuda (vedi .mm-head__ico) */
 
     /* CONTROLLI GEMELLI (09/10/26, Giacomo, packet 0087 lotto 2): bottone e
        campo hanno la stessa altezza e lo stesso corpo, e si distinguono al
@@ -174,17 +178,9 @@
    cambia, un modale senza il vestito è identico. Quando la famiglia C passerà
    a tutti i modali (lotto A), questi valori salgono su :root e il blocco muore. */
 .mm-box--grande {
-    --mm-fs-titolo: 20px;
-    --mm-fs-testo: 16px;
-    --mm-fs-label: 13px;
-    --mm-fs-sez: 12px;
-    --mm-btn-fs: 14px;
-    --mm-ctl-fs: 14px;
-    --mm-icona-head: 26px;
-    --mm-fs-lettura: 16px;
+    /* 0122, lotto 4a: dal 22/10 questi valori sono la radice (sopra). La classe resta per gli schemi
+       e le finestre a mano che la portano: non cambia più nulla. */
 }
-.mm-box--grande .mm-head { align-items: center; gap: 10px; }
-.mm-box--grande .mm-head__ico { width: auto; height: auto; background: none; border-radius: 0; }
 
 /* Il velo per le finestre FUORI dal motore (0122, gate del lotto 2, Giacomo:
    «tieni il blur + dimmer per tutti i modali di tutta l'app»): lo stesso velo
@@ -216,6 +212,9 @@
 /* modale sopra modale */
 .mm-overlay--sopra {
     z-index: 12100;
+    /* 0122, lotto 4a (Giacomo, 22/10: «Un velo solo»): sopra un velo già aperto il secondo è trasparente */
+    background: transparent;
+    backdrop-filter: none;
 }
 
 /* TASTIERA A SCHERMO (0119): il motore porta il velo sulla parte visibile
@@ -259,11 +258,10 @@
     margin-bottom: 16px;
 }
 
+/* 0122, lotto 4a (Giacomo, 21-22/10, dal banco delle finestre live: «icone senza BG per tutti»): l'icona
+   di testata è NUDA, al centro del titolo — niente riquadro 40×40 su --mm-accent-soft, niente raggio. */
+.mm-head { align-items: center; gap: 10px; }
 .mm-head__ico {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
-    background: var(--mm-accent-soft);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2852,6 +2850,7 @@ th[aria-sort="descending"] {
 html[data-app="docente"] :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal,
     #ai-modal, #config-ai-modal, #validate-link-modal, #mp-modal) {
     background-color: var(--mm-velo);
+    backdrop-filter: blur(3px);   /* 0122, lotto 4a: lo stesso sfumato del motore (i blur-sm/md di Tailwind erano 4 e 12) */
 }
 html[data-app="docente"] :is(#alert-modal, #confirm-modal, #prompt-modal, #link-family-modal, #dossier-print-modal, #edit-node-modal, #study-player-modal,
     #ai-modal, #config-ai-modal, #validate-link-modal, #mp-modal)
