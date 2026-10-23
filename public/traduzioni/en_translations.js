@@ -4150,6 +4150,8 @@ const en_translations = {
     aff_state_teacher_part: "To decide · on its own it removes nothing from the materials: you wrote or touched up the text of the node, but part of it stays out because of another open finding",
     aff_footer: "You do not need to decide everything to create the materials: “Generate materials” uses the decisions already made and leaves out the sentences indicated by open findings, with every sentence of the map that restates them; when a finding does not make it possible to identify the sentence, it leaves out the whole node, but the text you wrote or touched up with one of your decisions stays in the materials, unless it repeats a sentence of the node word for word. In that case, if the finding comes from the check, sentences of other nodes that it repeats may also be left out. The materials still go through your review.",
     aff_footer_changed: "The map changed after the check: to create the materials the full review applies again.",
+    // packet 0123, lotto 3b: the review footer has already said the map changed
+    aff_footer_changed_breve: "To create the materials the full review applies again.",
     aff_footer_labels: "To create the materials before deciding everything, first decide the findings on node titles.",
     aff_coverage_rounds: "descriptions examined in at least one round:",
     aff_block_title: "Statements in the descriptions",
@@ -4486,7 +4488,6 @@ const en_translations = {
     rv_veste_g1_resta_conflitto: "1 concept or connection with open notes or conflicting choices remains.",
     rv_veste_g1_restano_conflitto: "{n} concepts and connections with open notes or conflicting choices remain.",
     rv_veste_g1_sospese_senza_riga: "The decisions cannot be applied to the map yet, but no row in the list is the cause: close with {piu_tardi} and reopen the review. The decisions you made stay saved.",
-    rv_veste_g1_stantia: "The map or the sources do not match the version of this review: before continuing, reopen the review on the right version of the project.",
     // 0097: an approved G1 whose map changed afterwards — the footer says what to do, and the button does it
     rv_veste_g1_approvata_cambiata: "The map has changed: to continue, press “Check the map now”. The approved decisions remain saved.",
     rv_ricontrolla_mappa: "Check the map now",
