@@ -946,10 +946,13 @@
         return new Promise(function (risolvi) {
             var apriva = document.activeElement;
             /* 0122, lotto 4a: «un velo solo» anche sopra un velo di un'altra famiglia (una finestra a mano
-               con .mm-velo, uno statico di index.html aperto): il secondo velo è trasparente */
-            var altroVelo = !pila.length && document.body && document.body.querySelector &&
+               con .mm-velo, uno statico di index.html aperto): il secondo velo è trasparente.
+               Lotto 4b2 (Giacomo, 23/10: «lo sfondo della CABINA deve essere dimmato e blurrato come con tutti gli
+               altri modali»): una console è una pagina piena, non un velo — sopra di lei il velo c'è */
+            var veloInPila = pila.some(function (v) { return !(v.querySelector && v.querySelector('.mm-box--console')); });
+            var altroVelo = !veloInPila && document.body && document.body.querySelector &&
                 !!document.body.querySelector(':scope > .mm-velo, :scope > [id$="-modal"].flex, :scope > [id$="-modal"]:not(.hidden)[style*="display: flex"]');
-            var velo = el('div', 'mm-overlay' + ((pila.length || altroVelo) ? ' mm-overlay--sopra' : ''));
+            var velo = el('div', 'mm-overlay' + ((veloInPila || altroVelo) ? ' mm-overlay--sopra' : ''));
             velo.style.zIndex = String(prossimoZ());
             var box = null;
 

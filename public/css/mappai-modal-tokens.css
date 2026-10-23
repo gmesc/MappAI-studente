@@ -3093,6 +3093,11 @@ html[data-app="docente"] .mm-box--console:has(.mm-nav__v--segnala) .mm-console__
     border-color: transparent;
     background: var(--mm-fondo-sez);
 }
+/* 0122 lotto 4b2 (Giacomo, 23/10: «disegna il frame attorno ai bottoni»): in «Gestione cartelle» i secondari riprendono la
+   cornice; il resto del Profilo resta col bordo trasparente dello 0087 */
+html[data-app="docente"] .mm-box--console:has(.mm-nav__v--segnala) .mm-console__area:has(#mmf-nome) .mm-sez__azioni:has([data-azione="cart-cambia"]) .mm-btn--secondario {
+    border-color: var(--mm-bordo);
+}
 html[data-app="docente"] .mm-box--console:has(.mm-nav__v--segnala) .mm-console__area:has(#mmf-ud-vista) :is(.mm-btn--secondario, .mm-tab-wrap) {
     border-color: transparent;
     background: var(--mm-neutro);

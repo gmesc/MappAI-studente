@@ -412,13 +412,18 @@
         _zSopra(modal);
         if (window.safeCreateIcons) window.safeCreateIcons();
 
-        const escHandler = function (e) {
-            if (e.key === 'Escape') {
-                modal.remove();
-                document.removeEventListener('keydown', escHandler);
-            }
-        };
-        document.addEventListener('keydown', escHandler);
+        /* 0122 lotto 4b2: velo, piano, sfondo bloccato ed Esc li fa MappAIVelo (mappai-velo.js); l'Esc proprio resta
+           come riserva per chi non carica l'aiutante (il reader copia questo file) */
+        if (window.MappAIVelo) window.MappAIVelo.monta(modal, function () { modal.remove(); });
+        else {
+            const escHandler = function (e) {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        }
     };
 
     // ── Generazione AI ─────────────────────────────────────────────────────
@@ -792,13 +797,18 @@
         _zSopra(modal);
         if (window.safeCreateIcons) window.safeCreateIcons();
 
-        const escHandler = function (e) {
-            if (e.key === 'Escape') {
-                modal.remove();
-                document.removeEventListener('keydown', escHandler);
-            }
-        };
-        document.addEventListener('keydown', escHandler);
+        /* 0122 lotto 4b2: velo, piano, sfondo bloccato ed Esc li fa MappAIVelo (mappai-velo.js); l'Esc proprio resta
+           come riserva per chi non carica l'aiutante (il reader copia questo file) */
+        if (window.MappAIVelo) window.MappAIVelo.monta(modal, function () { modal.remove(); });
+        else {
+            const escHandler = function (e) {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        }
     }
 
     // ── Costruzione HTML stampabile (condiviso da stampa + salvataggio) ──────
@@ -2062,6 +2072,7 @@ ${_bsPie(data.mapName)}
         document.body.appendChild(modal);
         _zSopra(modal);
         if (window.safeCreateIcons) window.safeCreateIcons();
+        if (window.MappAIVelo) window.MappAIVelo.monta(modal, function () { modal.remove(); });   /* 0122 lotto 4b2: velo, piano, sfondo bloccato ed Esc li fa MappAIVelo (mappai-velo.js) */
         // Guardia: fra la registrazione e la consegna il testo può essere stato
         // modificato (l'editor documenti è aperto lì accanto). In quel caso
         // l'HTML uscirebbe con parole nuove e voce vecchia, e i cue slittati.

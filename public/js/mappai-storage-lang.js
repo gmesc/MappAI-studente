@@ -1915,6 +1915,9 @@ window.showLanguageOnboarding = function () {
       </div>`;
     document.body.appendChild(modal);
     if (window.safeCreateIcons) window.safeCreateIcons();
+    /* 0122 lotto 4b2: velo, piano, sfondo bloccato ed Esc li fa MappAIVelo (mappai-velo.js); qui Esc conferma le scelte già segnate
+       (è la prima scelta della lingua: chiudere senza scegliere la riproporrebbe al prossimo avvio) */
+    if (window.MappAIVelo) window.MappAIVelo.monta(modal, function () { var ok = document.getElementById('lang-onb-ok'); if (ok) ok.click(); });
     document.getElementById('lang-onb-ok').onclick = () => {
         const uiLang = (modal.querySelector('input[name="onb-ui-lang"]:checked') || {}).value || 'it';
         const mapLang = (modal.querySelector('input[name="onb-map-lang"]:checked') || {}).value || 'ui';

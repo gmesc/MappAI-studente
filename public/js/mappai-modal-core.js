@@ -507,7 +507,9 @@
             /* contratto tastiera: i valori di default SONO la decisione presa */
             esc: s.esc !== false,
             invio: s.invio !== false,
-            veloChiude: s.veloChiude !== false,
+            /* 0122 lotto 4b2 («[…] devono avere veloChiude spento e chiudersi solo con 'x' e ESC», Giacomo, 23/10):
+               il clic sul velo non chiude più nessuna finestra; si esce con la × o con Esc */
+            veloChiude: false,
             /* un modale con dati in scrittura non si chiude per sbaglio */
             sporco: (typeof s.sporco === 'function') ? s.sporco : !!s.sporco,   /* funzione = si chiede al momento di uscire */
             nota: s.nota ? String(s.nota) : ''
