@@ -1124,11 +1124,12 @@ html[data-app="docente"] :is(input, textarea, select):focus-visible {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 4px 12px;
-    font-size: 12px;
+    font-size: var(--mm-ctl-fs);   /* 0122 lotto 4c (22/10): era 12 letterale, fuori dalla famiglia C */
     line-height: 1.5;
 }
 
 .mm-dati dt {
+    font-size: var(--mm-fs-label);
     color: var(--mm-testo-3);
     white-space: nowrap;
 }
@@ -1377,7 +1378,7 @@ html[data-app="docente"] .mm-tela--colonna :is(input.form_input, select):hover:n
 }
 
 .mm-tela__vuota {
-    font-size: 12px;
+    font-size: var(--mm-fs-testo);   /* 0122 lotto 4c (22/10): era 12; un vuoto si legge come gli altri testi */
     color: var(--mm-testo-3);
     text-align: center;
     padding: 24px;
@@ -2003,7 +2004,8 @@ html .border-slate-200\/60 {
 }
 
 .mm-nav__v--segnala .mm-nav__s {
-    font-size: var(--mm-fs-testo);
+    font-size: var(--mm-fs-label);   /* 0122 lotto 4c (22/10): col testo a 16 (4a) superava la voce e si troncava; a 14 con Space Mono
+                                        servono 172 px su 170 (misurato al gate): 13, «Sì, porta «Invia feedback o bug» a 13 px» (Giacomo) */
     font-weight: 700;
     line-height: 20px;
     opacity: .7;
@@ -2343,7 +2345,7 @@ html .border-slate-200\/60 {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 12px;
+    font-size: var(--mm-ctl-fs);   /* 0122 lotto 4c (22/10): celle 12 → 14; le testate restano --mm-fs-sez */
 }
 
 .mm-tab th {
