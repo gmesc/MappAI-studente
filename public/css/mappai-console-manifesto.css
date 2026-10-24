@@ -836,6 +836,14 @@ html.manifesto .mn-bric-menu__nuovo {
     margin-top: 4px;
     padding-top: 8px;
 }
+/* 0124: più azioni in fondo al menu del progetto («Rinomina…», «Riassegna…», «Copia…»):
+   un filetto solo, sopra la prima; nessuno se il menu comincia con le azioni */
+html.manifesto .mn-bric-menu__nuovo + .mn-bric-menu__nuovo,
+html.manifesto .mn-bric-menu__nuovo:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 4px;
+}
 
 /* ── i pezzi che il bento di una console disegna (e CREA non ha) ─────────── */
 html.manifesto .mn-seg { display: inline-flex; gap: 4px; flex-wrap: wrap; }
