@@ -2640,8 +2640,7 @@ th[aria-sort="descending"] {
 .mappai-ridotta #gen-settings-box>*:not(#step-kg-density-container),
 /* — la stima dei costi vive nella Cabina — */
 .mappai-ridotta #token-cost-estimator-card,
-/* — degli avvii rapidi resta la sola «Mappa manuale» — */
-.mappai-ridotta #qa-apri-vault,
+/* — degli avvii rapidi restano «Mappa manuale» e «Importa vault», l'unica porta dei progetti (0124) — */
 .mappai-ridotta #qa-apri-json,
 /* — «Analisi (docente)»: nascosta qui, intatta nella vista completa — */
 .mappai-ridotta #meta-analisi-docente,

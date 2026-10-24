@@ -222,13 +222,6 @@ window.directLoadVault = async function (folderPath) {
 
             window.switchToMapLayout();
 
-            // Mostra tasto Sincronizza Vault
-            const syncBtn = document.getElementById('sync-vault-btn');
-            if (syncBtn) {
-                syncBtn.classList.remove('hidden');
-                syncBtn.classList.add('flex');
-            }
-
             setTimeout(() => { initD3Visualization(); }, 200);
             window.showToast(window.t('tst_vault_loaded', "Vault caricato con successo!"), "success");
             // 011: pipeline materiali incompleta su questo vault → proponi la ripresa.
@@ -261,10 +254,5 @@ window.resetVaultState = function () {
     if (typeof StorageManager !== 'undefined') {
         StorageManager.currentProjectId = 'proj_' + Date.now();
         StorageManager.idInCartella = null;
-    }
-    const syncBtn = document.getElementById('sync-vault-btn');
-    if (syncBtn) {
-        syncBtn.classList.add('hidden');
-        syncBtn.classList.remove('flex');
     }
 };

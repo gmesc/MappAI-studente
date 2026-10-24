@@ -1399,15 +1399,6 @@ const StorageManager = {
                 });
             }
 
-            // Mostra tasto Sincronizza se c'è un vault
-            const syncBtn = document.getElementById('sync-vault-btn');
-            if (syncBtn && appState.activeVaultPath) {
-                syncBtn.classList.remove('hidden');
-                syncBtn.classList.add('flex');
-            } else if (syncBtn) {
-                syncBtn.classList.add('hidden');
-            }
-
             window.switchToMapLayout();
             setTimeout(() => {
                 try {
