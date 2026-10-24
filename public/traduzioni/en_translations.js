@@ -4726,4 +4726,7 @@ const en_translations = {
     rc_copia_ko: "The project could not be copied.",
     rc_riassegnato: "Moved to {d}.",
     rc_copiato: "Copied to {d}.",
+    // packet 0124, lotto 3: un progetto fuori da «MappAI - file» sparisce dall'app (mappai-vault-manager.js)
+    pf_titolo: "Project outside «MappAI - file»",
+    pf_fuori: "This project is no longer in «MappAI - file». To get it back, use «Import vault» in Create.",
 };
