@@ -23,6 +23,12 @@
     function PC() { return window.MappAIProvaCore; }
     function SC() { return window.MappAIScelta; }
     function SV() { return window.MappAISceltaView; }
+    /* «Prove: Semplice / Meta» (0126), la preferenza della console: la regola è di studia-core */
+    function modo() {
+        var v = null; try { v = localStorage.getItem('mappai_studente_prove_modo'); } catch (e) { }
+        var C = window.MappAIStudiaCore;
+        return (C && C.modoProve) ? C.modoProve(v) : 'semplice';
+    }
 
     /* ── i fogli di domande aperte: dai gemelli `Materiale Studio/Sorgenti/*.html` ── */
     function leggiFogli(vp) {
@@ -111,12 +117,12 @@
                Il player storico di MappAI (`loadStudySet`) qui non si apre più. */
             var poolMC = PC().poolAperte([PC().foglioDaSet(set)]);
             return prova({ titolo: 'Quiz — ' + (set.title || 'set'), pool: poolMC, dueTempi: false, tipo: 'quiz', mc: true, split: true,
-                           ambito: '', angoliEt: set.angle ? SV().etAngolo(window.t, set.angle) : '' });
+                           ambito: '', angoliEt: set.angle ? SV().etAngolo(window.t, set.angle) : '', angolo: set.angle || '' });
         }
         if (st.sel === 'set-aperte') {
             var f = fg[st.foglio]; if (!f) return;
             return prova({ titolo: f.titolo, pool: PC().poolAperte([f]), dueTempi: false, tipo: 'foglio', split: true,
-                           ambito: '', angoliEt: f.angle ? SV().etAngolo(window.t, f.angle) : '' });
+                           ambito: '', angoliEt: f.angle ? SV().etAngolo(window.t, f.angle) : '', angolo: f.angle || '' });
         }
         if (st.sel === 'su-misura') {
             var c = PC().componi(poolAp, {
@@ -138,15 +144,47 @@
        calcola qui (`MappAIProvaCore.verdetto`) e lo inietta nella view. */
     function prova(o) {
         var stato = PC().statoIniziale(o.pool, o.dueTempi);
-        /* autovalutazione ACCESA per le aperte: è l'unica misura di una risposta aperta */
-        var cfg = SC().normalizzaCfg({ minimo: 1, minimoAree: 1, perRamo: true, autovalutazione: !o.mc });
-        var host = null, consegnato = false, ridisegna = null, api = null, verdetti = {};
+        /* 0126 (Giacomo, 24/10): in SEMPLICE, di serie, la prova del LIVE dei telefoni — tutte le
+           domande subito, niente scelta, osservazioni né autovalutazione (le spegne `cfg.semplice`
+           nel core), i criteri solo da leggere, «Consegna» all'ultima. Il «su misura» è di Meta. */
+        var semplice = modo() === 'semplice' && o.tipo !== 'su-misura';
+        /* autovalutazione ACCESA per le aperte, in Meta: è l'unica misura di una risposta aperta */
+        /* `osservazioni: false` (0126, gate del 26/10, Giacomo: «Elimina il campo delle osservazioni in fondo alla
+           scheda della risposta»); il foglio le mostra ancora se una sessione vecchia le ha */
+        var cfg = SC().normalizzaCfg({ minimo: 1, minimoAree: 1, perRamo: true, autovalutazione: !o.mc, semplice: semplice, osservazioni: false });
+        var host = null, consegnato = false, ridisegna = null, api = null, verdetti = {}, conta = null, pieno = false;
+        function svuotaConta() { if (conta) conta.innerHTML = ''; }
         function opzioniView() {
             return {
                 pool: o.pool, cfg: cfg, stato: stato, t: window.t, verdetti: verdetti,
-                mostraAngolo: o.dueTempi, senzaAree: true,
-                /* le aperte coi criteri si autovalutano spuntandoli, DOPO la risposta (16/9) */
-                criteri: !o.mc,
+                /* 0126, gate del 26/10 (Giacomo): «Nella schermata delle domande da scegliere nascondi
+                   il nome dell'angolo a cui appartengono le domande» (dal 6/9 c'era coi due tempi) */
+                mostraAngolo: false, senzaAree: true,
+                /* 0126, allargamento 4 (Giacomo, 26/10: «ridurre il carico cognitivo di fronte alla schermata
+                   di scelta delle domande su misura, rendere più leggibili i testi»): una serie di tagli alla
+                   volta col ramo in testa, i chip in un velo, il 🔊 su ogni domanda, niente «‹ Torna alle
+                   domande» (la view li usa solo dove servono: le serie e il velo nella sessione per angoli) */
+                aPagine: true, chipVelo: true, leggiDomande: true, senzaTorna: true,
+                /* sotto la casella «Confermo» (Giacomo, 26/10), i criteri appaiono lo stesso */
+                confermo: true,
+                /* il 🔊 accanto alla domanda, alla risposta e a ogni criterio (Giacomo, 26/10) */
+                leggiRisposta: true,
+                /* la scelta «a schermo intero», poi con «Comincia a rispondere» «metà schermo mappa, metà
+                   schermo domande»; si chiede al pannello solo quando il passo cambia, così il quiz a
+                   schermo pieno resta com'è */
+                onFase: function (f) {
+                    var si = f === 'scegli' || f === 'aree';
+                    if (si === pieno || !D || !D.pieno) return;
+                    pieno = si; D.pieno(si);
+                },
+                /* le aperte coi criteri si autovalutano spuntandoli, DOPO la risposta (16/9); in
+                   semplice si leggono e basta (0126: «solo da leggere, senza spunte») */
+                criteri: o.mc ? false : (semplice ? 'leggi' : true),
+                /* il contatore nella barra della × del pannello (0126), in tutte e due le modalità */
+                contatore: conta,
+                /* «Consegna» solo all'ultima domanda presa, anche in Meta (0126, Giacomo: «solo dopo
+                   che sono arrivato all'ultima domanda selezionata») */
+                consegnaAllaFine: true,
                 chip: o.dueTempi ? PC().CHIP_PERCHE : [],
                 chipPrende: o.dueTempi ? 'capito' : '',
                 raggruppa: o.dueTempi ? 'domanda-per-angoli' : '',
@@ -173,7 +211,8 @@
             host = D.apri({
                 titolo: o.titolo,
                 mappaChiusa: !o.split,
-                monta: function (h) { h.style.padding = '0'; api = SV().monta(h, opzioniView()); },
+                contatore: true,
+                monta: function (h, c) { h.style.padding = '0'; conta = c || null; api = SV().monta(h, opzioniView()); },
                 chiediChiusura: function () {
                     if (consegnato) return Promise.resolve(true);
                     var testo = t('st_lascia', 'Lasciare la prova? Le risposte scritte vanno perse.');
@@ -195,6 +234,7 @@
             MM().open(schema);
         }
         function fine(testo) {
+            svuotaConta();
             if (inDock) {
                 if (!host) return;
                 host.innerHTML = '<div class="sd-esito"><p>' + esc(testo) + '</p><button type="button" class="sd-esito__b">' + esc(t('mm_chiudi', 'Chiudi')) + '</button></div>';
@@ -203,15 +243,54 @@
                 ridisegna(Object.assign({}, schema, { sporco: false, suApertura: null, sezioni: [{ testo: testo }], azioni: [{ id: 'chiudi', etichetta: t('mm_chiudi', 'Chiudi'), ruolo: 'primario' }] }));
             }
         }
+        /* la chiusura è quella del LIVE (0126; in Meta dal gate del 25/10, Giacomo: «dopo che ho consegnato
+           appare una schermata troppo tecnica»): 🎉, «Hai finito!», «Risposte: n / N»
+           e il 💾, che apre il foglio delle risposte appena scritto (Giacomo, 25/10: «Apre il
+           foglio») per la strada di «Le tue prove › apri». La scrittura parte alla consegna, da
+           sola: il 💾 la aspetta, non la comanda. */
+        function prese(n) { return { scritte: n.scritte, totale: n.scelte || n.totale }; }
+        function esitoLive(st, scrittura) {
+            svuotaConta();
+            if (!host) return;
+            SV().mostraEsito(host, {
+                /* «Risposte: scritte / prese»: in Semplice le prese sono tutte, in Meta quelle scelte dallo studente */
+                t: window.t, cfg: Object.assign({}, cfg, { semplice: true }), profilo: { righe: [], conteggio: prese(SC().conteggio(o.pool, st)) },
+                /* gate del 25/10 (Giacomo): «'Hai finito!' grande come il 70% della larghezza della vista» */
+                titoloLargo: 0.7,
+                onSalva: function () {
+                    scrittura.then(function (r) {
+                        if (!r || !r.ok) { toast(t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ') + ((r && r.error) || ''), 'error'); return; }
+                        /* il report porta nella barra «[progetto] · [genere] · [angolo] · Report allievo» (gate del 25/10);
+                           le domande aperte anche loro, con «Meta» al posto dell'angolo nella prova su misura (26/10), e
+                           si aprono col nome del file, che è quello che la stampa propone per il PDF */
+                        var C = window.MappAIStudiaCore;
+                        var ang = o.mc ? (o.angoliEt || '') : (o.tipo === 'su-misura' ? t('st_modo_meta', 'Meta') : (o.angoliEt || ''));
+                        var tb = (C && C.titoloReport) ? C.titoloReport({ mappa: S().rootNodeLabel || '', tipo: o.mc ? 'mc' : 'aperte', angolo: ang, t: window.t }) : '';
+                        window.MappAIStudenteDocumenti.apriFile(S().activeVaultPath, r.rel + '/' + (o.mc ? 'report.html' : 'risposte.html'), r.nomeFile || r.rel.split('/').pop(), { titoloBarra: tb });
+                    });
+                }
+            });
+        }
         function consegna(st) {
             if (consegnato) return;
             consegnato = true;
             var voci = PC().voci(o.pool, st, S().db.nodes);
             registra(o, voci);
+            if (inDock) {
+                var scrittura = o.mc
+                    ? scriviReport(PC().reportMCDaStato(o.pool, st, { mappa: S().rootNodeLabel || '', titolo: o.titolo, data: PC().fmtData(new Date()), chi: t('st_io', 'Io') }), o.titolo, o.angoliEt, o.angolo)
+                    : scriviSessione(o, st);
+                esitoLive(st, scrittura);
+                scrittura.then(function (r) {
+                    toast(r.ok ? (o.mc ? t('st_report_ok', 'Report della prova salvato in «Le tue prove»') : t('st_foglio_ok_toast', 'Foglio delle risposte salvato'))
+                        : (o.mc ? t('st_report_ko', 'Report non salvato: ') : t('st_foglio_ko', 'Il foglio delle risposte non è stato scritto: ')) + (r.error || ''), r.ok ? 'success' : 'error');
+                });
+                return;
+            }
             if (o.mc) {
                 var rep = PC().reportMCDaStato(o.pool, st, { mappa: S().rootNodeLabel || '', titolo: o.titolo, data: PC().fmtData(new Date()), chi: t('st_io', 'Io') });
                 fine(t('st_mc_esito', 'Risposte giuste: {g} su {n}.').replace('{g}', rep.giuste).replace('{n}', rep.totale) + ' ' + t('st_scrivo', 'Scrivo il report…'));
-                scriviReport(rep, o.titolo).then(function (r) {
+                scriviReport(rep, o.titolo, o.angoliEt, o.angolo).then(function (r) {
                     fine(t('st_mc_esito', 'Risposte giuste: {g} su {n}.').replace('{g}', rep.giuste).replace('{n}', rep.totale) + ' ' +
                         (r.ok ? t('st_report_ok', 'Report della prova salvato in «Le tue prove»') : t('st_report_ko', 'Report non salvato: ') + (r.error || '')));
                 });
@@ -248,39 +327,53 @@
     function scriviSessione(o, st) {
         var s = S(), QP = window.MappAIQuizPrint;
         if (!s || !s.activeVaultPath) return Promise.resolve({ ok: false, error: 'nessun vault' });
-        var righe = PC().foglioCompilato(o.pool, st, PC().CHIP_PERCHE, function (a) { return a ? SV().etAngolo(window.t, a) : ''; });
+        var etA = function (a) { return a ? SV().etAngolo(window.t, a) : ''; };
+        var righe = PC().foglioCompilato(o.pool, st, PC().CHIP_PERCHE, etA);
+        /* 0126, allargamento 3: le domande lasciate col loro «Perché:» e le osservazioni dell'allievo */
+        var scartate = PC().scartate(o.pool, st, PC().CHIP_PERCHE, etA), note = String((st && st.note) || '').trim();
         var data = new Date();
+        /* 0126, gate del 26/10 (Giacomo): in testa le domande disponibili e quanti «la so», «non la so», «non ho capito»
+           (solo con i chip, cioè nella prova su misura per angoli); nella barra «Meta» al posto dell'angolo; il file come
+           i fogli delle domande, «Domande-aperte-<mappa>-<angolo>-GG-MM-AAAA», con «meta» nella prova su misura */
+        var giudizi = o.dueTempi ? PC().giudizi(o.pool, st, PC().CHIP_PERCHE) : null;
+        var etAng = o.tipo === 'su-misura' ? t('st_modo_meta', 'Meta') : (o.angoliEt || '');
+        var nomeFile = window.MappAIStudiaCore.nomeDocumento({ progetto: s.rootNodeLabel || '', tipo: 'Domande aperte', angolo: o.tipo === 'su-misura' ? 'meta' : (o.angolo || ''), data: data });
         var meta = { tipo: 'Domande aperte', titolo: o.titolo, mappa: s.rootNodeLabel || '', data: data.toISOString(), ambito: o.ambito || '', angoli: o.angoliEt || '', dueTempi: !!o.dueTempi };
         var cart = null;
         return cartellaSessione(o).then(function (c) {
             cart = c;
-            var sessione = Object.assign({ nome: c.nome, html: 'risposte.html', pdf: 'risposte.pdf', ids: o.pool.map(function (v) { return v.id; }), stato: st, righe: righe }, meta);
+            var sessione = Object.assign({ nome: c.nome, html: 'risposte.html', pdf: 'risposte.pdf', ids: o.pool.map(function (v) { return v.id; }), stato: st, righe: righe, scartate: scartate, note: note,
+                angolo: etAng, nomeFile: nomeFile, giudizi: giudizi }, meta);
             return scrivi(c.rel + '/sessione.json', { text: JSON.stringify(sessione, null, 2) });
         }).then(function () {
             var html = QP.buildOpenQuestionsHtml({ id: 'prova', title: o.titolo, type: 'Domande aperte', items: PC().itemsHtml(righe) },
                 { mapName: s.rootNodeLabel || '', includeBar: false, includeAnswers: false, now: PC().fmtData(data) });
-            return scrivi(cart.rel + '/risposte.html', { text: html });
+            html = PC().conTesta(html, PC().testaHtml(giudizi));
+            return scrivi(cart.rel + '/risposte.html', { text: PC().conCoda(html, PC().codaHtml({ scartate: scartate, note: note })) });
         }).then(function () {
-            return window.MappAIStudentePdf.risposte({ titolo: o.titolo, mappa: s.rootNodeLabel || '', data: PC().fmtData(data), ambito: meta.ambito, angoli: meta.angoli, righe: righe })
+            return window.MappAIStudentePdf.risposte({ titolo: o.titolo, mappa: s.rootNodeLabel || '', data: PC().fmtData(data), ambito: meta.ambito, angoli: meta.angoli, righe: righe, scartate: scartate, note: note, giudizi: giudizi })
                 .then(function (b64) { return scrivi(cart.rel + '/risposte.pdf', { base64: b64 }); });
-        }).then(function () { return { ok: true, rel: cart.rel }; })
+        }).then(function () { return { ok: true, rel: cart.rel, nomeFile: nomeFile }; })
           .catch(function (e) { console.warn('[autotest] sessione', e); return { ok: false, error: e && e.message }; });
     }
     /* Il set a scelta multipla gira nel player di MappAI: alla fine (`showStudySummary`)
        si archivia il REPORT come dopo l'attività QR — l'HTML `lr-*` di
        `buildStudentsReportHtml`, con `results.json` e `sessione.json` accanto. */
-    function scriviReport(rep, titolo) {
+    /* `angolo` (0126): l'etichetta dell'angolo del set, perché «Le tue prove › apri» ridia lo stesso titolo nella barra */
+    /* `chiave` (0126, allargamento 6): la chiave dell'angolo, per il nome «Progetto-Scelta multipla-angolo-data» */
+    function scriviReport(rep, titolo, angolo, chiave) {
         var s = S(), R = window.MappAILiveReports;
         if (!s || !s.activeVaultPath || !R) return Promise.resolve({ ok: false, error: 'nessun vault' });
         var data = new Date(), cart = null;
+        var nomeFile = window.MappAIStudiaCore.nomeDocumento({ progetto: s.rootNodeLabel || '', tipo: 'Scelta multipla', angolo: chiave || '', data: data });
         return cartellaSessione({ tipo: 'quiz', ambito: '' }).then(function (c) {
             cart = c;
-            return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: 'Scelta multipla', titolo: titolo, mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct }, null, 2) });
+            return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: 'Scelta multipla', titolo: titolo, angolo: angolo || '', mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct, nomeFile: nomeFile }, null, 2) });
         }).then(function () {
             return scrivi(cart.rel + '/results.json', { text: JSON.stringify(rep.results, null, 2) });
         }).then(function () {
             return scrivi(cart.rel + '/report.html', { text: R.buildStudentsReportHtml(rep.meta, rep.results) });
-        }).then(function () { return { ok: true, rel: cart.rel }; })
+        }).then(function () { return { ok: true, rel: cart.rel, nomeFile: nomeFile }; })
           .catch(function (e) { console.warn('[autotest] report', e); return { ok: false, error: e && e.message }; });
     }
     function scriviReportMC() {

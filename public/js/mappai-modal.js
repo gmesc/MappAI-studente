@@ -292,9 +292,22 @@
     /* Più elenchi nella stessa vista, ognuno col suo titolo. Il titolo È il
        comando per richiuderli: un secondo bottone accanto sarebbe un comando in
        più per la stessa cosa. */
-    function tabelleHtml(lista) {
+    function tabelleHtml(lista, riga) {
         if (!lista || !lista.length) return '';
-        return lista.map(function (t) {
+        return lista.map(function (t, i) {
+            /* 0126, allargamento 2: una riga di comandi (le sezioni `colonna:'materiali'`) sulla riga del
+               titolo della PRIMA tabella — bottone del titolo, la riga, il contatore, la tabella, tutti
+               figli diretti di `.mm-tabg`, così freccia e piega restano quelle di sempre */
+            if (i === 0 && riga && t.titolo) {
+                return '<div class="mm-tabg mm-tabg--testa' + (t.chiusa ? ' is-chiusa' : '') + '" data-sez="' + esc(t.id) + '">' +
+                    (t.collassabile
+                        ? '<button type="button" class="mm-tabg__t mm-sez__t--tog" data-piega="' + esc(t.id) + '"' +
+                        ' aria-expanded="' + (t.chiusa ? 'false' : 'true') + '">' + icona('chevron-down') + '<span>' + esc(t.titolo) + '</span></button>'
+                        : '<span class="mm-tabg__t">' + esc(t.titolo) + '</span>') +
+                    riga + (t.collassabile ? '<span class="mm-tabg__n">' + t.righe.length + '</span>' : '') +
+                    '<div class="mm-sez__c">' + tabellaHtml(t) + '</div></div>';
+            }
+            if (i === 0 && riga) return riga + tabelleHtml([t]);
             var testa = t.collassabile
                 ? '<button type="button" class="mm-tabg__t mm-sez__t--tog" data-piega="' + esc(t.id) + '"' +
                 ' aria-expanded="' + (t.chiusa ? 'false' : 'true') + '">' +
@@ -709,10 +722,10 @@
         }
         return { vars: vars, attr: attr };
     }
-    function bentoVoceHtml(v, tabelle) {
+    function bentoVoceHtml(v, tabelle, testa) {
         if (v.forma === 'materiali') {
-            var cont = tabelle && tabelle.length ? tabelleHtml(tabelle)
-                : '<div class="mn-materiali-vuoto">' + esc(v.vuoto || '') + '</div>';
+            var cont = tabelle && tabelle.length ? tabelleHtml(tabelle, testa)
+                : (testa || '') + '<div class="mn-materiali-vuoto">' + esc(v.vuoto || '') + '</div>';
             return '<div class="mn-materiali">' + cont + '</div>';
         }
         if (v.forma === 'azione') {
@@ -726,7 +739,7 @@
         }
         return '';
     }
-    function bentoAreaHtml(moduli, tabelle) {
+    function bentoAreaHtml(moduli, tabelle, testa) {
         var CB = (typeof window !== 'undefined') ? window.MappAIConsoleBento : null;
         return '<div class="mn-bento-area">' + moduli.map(function (m) {
             var span = (CB && CB.spanDi) ? CB.spanDi(m) : (m.span || 4);
@@ -734,7 +747,7 @@
             var st = 'grid-column: span ' + span + ';' + (m.altezza ? 'min-height:' + m.altezza + 'px;' : '') + (p.vars || '');
             return '<div class="mn-card' + (m.nuda ? ' mn-card--nuda' : '') + '" style="' + st + '" ' +
                 (p.attr || '') + ' data-mod="' + esc(m.id) + '"><div class="mn-card__b">' +
-                (m.voci || []).map(function (v) { return bentoVoceHtml(v, tabelle); }).join('') +
+                (m.voci || []).map(function (v) { return bentoVoceHtml(v, tabelle, testa); }).join('') +
                 '</div></div>';
         }).join('') + '</div>';
     }
@@ -747,8 +760,15 @@
            altezza proprio dove serve al foglio. */
         var barra = s.sezioni.filter(function (x) { return x.colonna === 'barra'; });
         var lato = s.sezioni.filter(function (x) { return x.colonna === 'lato'; });
+        /* `colonna:'materiali'` (0126) = una riga di comandi sulla riga del titolo della PRIMA
+           tabella (`tabelleHtml`), nel riquadro `materiali` del bento o fra le `tabelle` senza
+           bento; senza tabelle, in cima. La usa MappAI Studente per «Prove: Semplice / Meta». */
+        var suTabelle = s.sezioni.filter(function (x) { return x.colonna === 'materiali'; });
+        var testaTab = suTabelle.length ? '<div class="mm-filtri mm-filtri--tabelle">' + suTabelle.map(function (f) {
+            return f.campi.map(campoHtml).join('') + f.azioni.map(bottoneHtml).join('');
+        }).join('') + '</div>' : '';
         var main = s.sezioni.filter(function (x) {
-            return x.colonna !== 'filtri' && x.colonna !== 'lato' && x.colonna !== 'barra';
+            return x.colonna !== 'filtri' && x.colonna !== 'lato' && x.colonna !== 'barra' && x.colonna !== 'materiali';
         });
         var areaMod = s.area === 'due' ? ' mm-console__sez--2' : s.area === 'tre' ? ' mm-console__sez--3' : '';
         /* La maniglia vive sul CONFINE fra colonna e area, e si sposta con lui:
@@ -782,10 +802,11 @@
             /* Col bento l'area È i moduli (comandi + materiali): il box `materiali`
                consuma le `tabelle`, quindi non si rendono anche impilate qui. */
             (s.bento && s.bento.length
-                ? bentoAreaHtml(s.bento, s.tabelle)
+                ? bentoAreaHtml(s.bento, s.tabelle, testaTab)
                 : (main.length ? '<div class="mm-console__sez' + areaMod + '">' + main.map(sezioneHtml).join('') + '</div>' : '') +
                 tabellaHtml(s.tabella) +
-                tabelleHtml(s.tabelle) +
+                (s.tabelle.length ? '' : testaTab) +
+                tabelleHtml(s.tabelle, testaTab) +
                 (s.tela ? '<div class="mm-tela' + (s.tela.forma === 'colonna' ? ' mm-tela--colonna' : '') + '" data-tela="' + esc(s.tela.id) + '"' +
                     (s.tela.altezza ? ' style="flex:0 0 ' + esc(s.tela.altezza) + '"' : '') + '>' +
                     (s.tela.segnaposto ? '<span class="mm-tela__vuota">' + esc(s.tela.segnaposto) + '</span>' : '') +

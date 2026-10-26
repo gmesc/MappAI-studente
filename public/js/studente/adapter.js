@@ -486,7 +486,12 @@
             var vp = window.appState && window.appState.activeVaultPath; if (!vp) return this;
             var n = String(nome || 'stampa.pdf').replace(/[\\/:*?"<>|]+/g, '-'); if (!/\.pdf$/i.test(n)) n += '.pdf';
             var b64 = this.output('datauristring').split(',')[1];
-            saveVaultFile({ vaultPath: vp, relPath: 'Studio Attivo/Stampe/' + n, base64: b64 }).then(function (r) {
+            /* 0126, allargamento 6: se il nome c'è già nella cartella, « (2)», « (3)»… (studia-core › nomeLibero) */
+            FS.lista(vp + '/Studio Attivo/Stampe').catch(function () { return []; }).then(function (figli) {
+                var C = window.MappAIStudiaCore;
+                if (C && C.nomeLibero) n = C.nomeLibero(n, (figli || []).map(function (f) { return f.name; }));
+                return saveVaultFile({ vaultPath: vp, relPath: 'Studio Attivo/Stampe/' + n, base64: b64 });
+            }).then(function (r) {
                 if (!r || !r.ok) { if (window.showToast) window.showToast('PDF non salvato: ' + (r && r.error), 'error'); return; }
                 var Fs = plugin('Filesystem'), Sh = plugin('Share'); if (!Fs || !Sh) return;
                 var rel = vp.replace(/^Documents\/?/, ''); rel = (rel ? rel + '/' : '') + 'Studio Attivo/Stampe/' + n;

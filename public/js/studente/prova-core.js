@@ -20,11 +20,18 @@
     function _s(x) { return String(x == null ? '' : x); }
     function _chiave(x) { try { return _s(x).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim(); } catch (e) { return _s(x).toLowerCase().trim(); } }
 
-    /* i tre chip «Perché:» della sessione metacognitica — testo scuro su fondo chiaro */
+    /* i tre chip «Perché:» della sessione metacognitica — testo scuro su fondo chiaro.
+       0126, gate del 26/10 (Giacomo): «'la so', 'non la so' e 'non ho capito'»; le chiavi
+       restano, così gli stati già salvati si leggono ancora. Poi: «per il 'la so' usa il verde
+       dei bottoni di MappAI» — il token, cornice e sfondo del colore pieno, il testo nel verde
+       leggibile della stessa famiglia (il verde pieno sul bianco fa 1,6:1); «arancione='non la so'»
+       — l'arancio acceso del foglio dei nodi, col testo nel suo arancio leggibile (il pieno fa
+       2,8:1); «viola='non ho capito'», il colore dei bottoni — l'accento, leggibile anche come
+       testo (6,3:1) */
     var CHIP_PERCHE = [
-        { k: 'capito', et: 'ho capito cosa rispondere', colore: '#15803d' },
-        { k: 'nonso', et: 'non so la risposta', colore: '#b45309' },
-        { k: 'noncapita', et: 'non ho capito la domanda', colore: '#1d4ed8' }
+        { k: 'capito', et: 'la so', colore: 'var(--man-verde, #41e6aa)', testo: 'var(--mm-ok, #059669)' },
+        { k: 'nonso', et: 'non la so', colore: 'var(--mm-genere-foglio, #f97316)', testo: 'var(--mm-genere-foglio-testo, #c2410c)' },
+        { k: 'noncapita', et: 'non ho capito', colore: 'var(--mm-accent, #4f46e5)' }
     ];
 
     /* i set a scelta multipla giocabili: mode quiz con opzioni (stesso filtro di leggiFogli) */
@@ -143,12 +150,79 @@
             };
         });
     }
+    /* Le domande SCARTATE (0126, Giacomo: «anche le domande scartare per i motivi 'non la so'
+       e 'non ho capito la domanda'»): lette col «Perché:» e non prese, nell'ordine del pool.
+       Stessa forma delle righe del foglio compilato, senza la risposta. */
+    function scartate(pool, stato, chips, etAngolo) {
+        var R = (stato && stato.risposte) || {}, L = (stato && stato.letture) || {};
+        var etChip = function (k) { var c = (chips || []).filter(function (x) { return x.k === k; })[0]; return c ? c.et : k; };
+        var chipDi = function (k) { return (chips || []).filter(function (x) { return x.k === k; })[0] || {}; };
+        return (pool || []).filter(function (v) { return !(v.id in R) && L[v.id] && L[v.id].chip; }).map(function (v) {
+            var c = chipDi(L[v.id].chip);
+            /* il colore del chip viaggia con la riga: il foglio lo disegna come lo studente l'ha visto (0126) */
+            return { ramo: v.ramo || '', angolo: etAngolo ? etAngolo(v.angle) : (v.angle || ''), domanda: v.testo, perche: etChip(L[v.id].chip), colore: c.colore || '', testo: c.testo || '', id: v.id };
+        });
+    }
+    /* il riepilogo dei giudizi (0126, Giacomo: «il numero di domande totali disponibili e la quantità di tag 'La so',
+       'Non la so' e 'Non ho capito' selezionati»): le domande del pool e quante ne ha ogni chip */
+    function giudizi(pool, stato, chips) {
+        var L = (stato && stato.letture) || {};
+        return {
+            totale: (pool || []).length,
+            voci: (chips || []).map(function (c) {
+                var n = (pool || []).filter(function (v) { return L[v.id] && L[v.id].chip === c.k; }).length;
+                return { k: c.k, et: c.et, colore: c.colore || '', testo: c.testo || '', n: n };
+            })
+        };
+    }
+    function _esc(x) { return _s(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    /* il chip come lo studente l'ha visto: cornice e testo del suo colore, sfondo al 15% */
+    function chipHtml(testo, colore, testoColore) {
+        var c = colore || '#475569';
+        return '<span class="oq-chip" style="display:inline-block; border:2px solid ' + c + '; color:' + (testoColore || c) +
+            '; background:color-mix(in srgb, ' + c + ' 15%, white); border-radius:999px; padding:3px 12px; font-size:13px; font-weight:700;">' + _esc(testo) + '</span>';
+    }
+    /* la coda del foglio HTML: «Domande scartate» e «Osservazioni», con le classi e i colori
+       di `buildOpenQuestionsHtml` (che resta com'è); vuota se non c'è niente da dire */
+    function codaHtml(o) {
+        o = o || {};
+        var sc = o.scartate || [], note = _s(o.note).trim(), out = '';
+        if (sc.length) out += '<h2 class="oq-section-title" style="margin-top:28px">Domande scartate</h2>' + sc.map(function (r) {
+            var kicker = [r.ramo, r.angolo].filter(Boolean).map(_esc).join(' · ');
+            return '<section class="oq-scartata" style="background:white; border-radius:12px; padding:14px 22px; margin-bottom:12px; border-left:4px solid #94a3b8; page-break-inside:avoid;">' +
+                (kicker ? '<div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#475569; margin-bottom:6px;">' + kicker + '</div>' : '') +
+                '<h3 style="font-size:13pt; font-weight:bold; margin:0 0 8px; color:#1e293b; line-height:1.55;">' + _esc(r.domanda) + '</h3>' +
+                chipHtml(r.perche, r.colore, r.testo) + '</section>';
+        }).join('');
+        if (note) out += '<h2 class="oq-section-title" style="margin-top:28px">Osservazioni</h2>' +
+            '<div class="oq-osservazioni" style="white-space:pre-wrap; background:white; border-radius:12px; padding:14px 22px; border-left:4px solid #0f766e; font-size:13px; line-height:1.6; color:#1e293b;">' + _esc(note) + '</div>';
+        return out;
+    }
+    /* in cima al foglio, sotto la testata: le domande disponibili e i chip coi loro conteggi */
+    function testaHtml(g) {
+        if (!g || !g.voci || !g.voci.length) return '';
+        return '<section class="oq-giudizi" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 20px;">' +
+            '<b style="font-size:14px; color:#1e293b; margin-right:4px;">' + g.totale + ' domande disponibili</b>' +
+            g.voci.map(function (v) { return chipHtml(v.et + ': ' + v.n, v.colore, v.testo); }).join('') + '</section>';
+    }
+    function conTesta(html, testa) {
+        if (!testa) return html;
+        var m = /<main[^>]*>/.exec(html);
+        return m ? html.slice(0, m.index + m[0].length) + testa + html.slice(m.index + m[0].length) : html;
+    }
+    /* la coda entra prima della chiusura di <main> (il foglio ne ha uno solo); senza, in fondo al body */
+    function conCoda(html, coda) {
+        if (!coda) return html;
+        var i = html.indexOf('</main>');
+        if (i < 0) i = html.lastIndexOf('</body>');
+        return i < 0 ? html + coda : html.slice(0, i) + coda + html.slice(i);
+    }
     /* gli item per `buildOpenQuestionsHtml`: `risposta` al posto delle righe,
        il «Perché:» in testa alla risposta (il foglio non ha un campo suo) */
     function itemsHtml(righe) {
         return (righe || []).map(function (r) {
-            return { question: r.domanda, areas: r.ramo ? [r.ramo] : [], l1: r.ramo, lines: 4,
-                     risposta: (r.perche ? 'Perché: ' + r.perche + '\n' : '') + (r.risposta || '') };
+            /* niente «Perché: la so» sopra la risposta (Giacomo, 26/10): le prese sono tutte «la so» */
+            return { question: r.domanda, areas: r.ramo ? [r.ramo] : [], l1: r.ramo, lines: 4, risposta: r.risposta || '' };
         });
     }
     /* il report di un set a scelta multipla dal player di MappAI: `items` =
@@ -212,5 +286,5 @@
         };
     }
 
-    return { CHIP_PERCHE: CHIP_PERCHE, nomeSessione: nomeSessione, orientamento: orientamento, clampSplit: clampSplit, foglioDaSet: foglioDaSet, verdetto: verdetto, reportMCDaStato: reportMCDaStato, fmtData: fmtData, foglioCompilato: foglioCompilato, itemsHtml: itemsHtml, reportMC: reportMC, setMC: setMC, foglioDaHtml: foglioDaHtml, poolAperte: poolAperte, opzioni: opzioni, componi: componi, statoIniziale: statoIniziale, nodoDelRamo: nodoDelRamo, voci: voci };
+    return { CHIP_PERCHE: CHIP_PERCHE, nomeSessione: nomeSessione, orientamento: orientamento, clampSplit: clampSplit, foglioDaSet: foglioDaSet, verdetto: verdetto, reportMCDaStato: reportMCDaStato, fmtData: fmtData, foglioCompilato: foglioCompilato, scartate: scartate, giudizi: giudizi, codaHtml: codaHtml, conCoda: conCoda, testaHtml: testaHtml, conTesta: conTesta, itemsHtml: itemsHtml, reportMC: reportMC, setMC: setMC, foglioDaHtml: foglioDaHtml, poolAperte: poolAperte, opzioni: opzioni, componi: componi, statoIniziale: statoIniziale, nodoDelRamo: nodoDelRamo, voci: voci };
 }));

@@ -28,7 +28,8 @@
 
     /* il nome del lavoro di stampa = il nome del file senza estensione: è il
        nome che «Salva su File» propone per il PDF */
-    function senzaEstensione(n) { return String(n == null ? '' : n).replace(/\.[^./]+$/, '').trim(); }
+    /* solo un'estensione vera, lettere e cifre (0126): «Cap. 3-Domande aperte-…» non ne ha, e restava «Cap» */
+    function senzaEstensione(n) { return String(n == null ? '' : n).replace(/\.[a-z0-9]{1,5}$/i, '').trim(); }
     function messaggio(e) {
         var m = e && (e.message || e.errorMessage);
         return String(m || e || 'errore sconosciuto');

@@ -49,6 +49,34 @@ html.studente #studente-dock.sd--senza-mappa.sd--destra .sd-man, #studente-dock.
 #studente-dock .sd-testa { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid #e2e8f0; min-height: 52px; }
 #studente-dock .sd-titolo { font-size: 13px; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #studente-dock .sd-sp { flex: 1; }
+/* il contatore di una prova nella barra della × (0126: «i comandi base nella barra»); vuoto, non occupa lo spazio fra titolo e × */
+#studente-dock .sd-conta { display: flex; align-items: center; min-width: 0; }
+#studente-dock .sd-conta:empty { display: none; }
+/* gate del 25/10 (Giacomo): sull'iPad i due contatori a 16 px, e nella chiusura «Risposte: n / N» a 19
+   e la frase sotto a 16 («Hai finito!» e l'emoji li misura la view, `titoloLargo`). I telefoni del LIVE
+   tengono le misure della view (13 · 14 · 15 · 14). */
+#studente-dock .sd-conta .sc-cnt { font-size: 16px; }
+#studente-dock .sc-nav__n { font-size: 16px; }
+#studente-dock .sc-fine__recap { font-size: 19px; }
+#studente-dock .sc-fine p { font-size: 16px; }
+/* gate dell'allargamento 4 (Giacomo, 26/10: «'Che cosa c'è nella tua risposta? Spunta ciò che hai scritto.' deve avere
+   un corpo più grande»): gli inviti della prova (la view li fa a 12) a 16, come le frasi di spiegazione */
+#studente-dock .sc-lbl { font-size: 16px; }
+/* allargamento 3 (Giacomo: «il bottone viole con il floppy sembra un po' distorto»): la view lo fa largo 54 e
+   lo stira all'altezza del riquadro (~62 col testo a 19), un rettangolo in piedi. Qui riquadro e 💾 hanno
+   la stessa altezza fissa, 28 + 2 × 16 + 2 di bordo = 62, e il 💾 è quadrato. */
+#studente-dock .sc-fine__top { align-items: center; }
+#studente-dock .sc-fine__recap { box-sizing: border-box; line-height: 28px; padding: 16px 22px; }
+#studente-dock .sc-fine__salva { box-sizing: border-box; width: 62px; height: 62px; flex: none; padding: 0; border: 0; border-radius: 14px; font-size: 28px; line-height: 1; }
+/* allargamento 4 (Giacomo, 26/10, sul mockup: «landscape B»): con l'iPad sdraiato la scelta a pagine sta in una
+   colonna centrata di 760 px — 55 caratteri per riga a 19 px, la misura dei libri; a tutta larghezza erano 89 */
+#studente-dock.sd--destra .sc--pagine .sc-list,
+#studente-dock.sd--destra .sc--pagine .sc-foot,
+#studente-dock.sd--destra .sc--pagine .sc-top { padding-left: max(16px, calc((100% - 760px) / 2)); padding-right: max(16px, calc((100% - 760px) / 2)); }
+/* gate del 25/10 (Giacomo): nel quiz le correzioni a 19 px e, dato il verdetto, resta solo l'opzione scelta
+   («nascondi le altre scelte per lasciare spazio alla risposta»): il verdetto le rende `disabled` */
+#studente-dock .qmc .verd, #studente-dock .qmc .verd .sp { font-size: 19px; }
+#studente-dock .qmc .opt-row:has(.opt:disabled):not(:has(.opt.sel)) { display: none; }
 #studente-dock .sd-chiudi { width: 44px; height: 44px; border: 0; border-radius: 10px; background: #f1f4f8; color: #404040; font-size: 22px; line-height: 1; cursor: pointer; }
 /* la stampante dei PDF, accanto alla × (task 0036): i PDF non hanno una barra loro */
 #studente-dock .sd-stampa { width: 44px; height: 44px; border: 0; border-radius: 10px; background: #f1f4f8; color: #404040; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
@@ -56,14 +84,15 @@ html.studente #studente-dock.sd--senza-mappa.sd--destra .sd-man, #studente-dock.
 #studente-dock .sd-corpo { flex: 1; min-height: 0; overflow: auto; padding: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 #studente-dock .sd-iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 #studente-dock .sd-vuoto { padding: 18px 16px; color: #475569; font-size: 13px; }
-#studente-dock .sd-h { margin: 18px 16px 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #64748b; }
+/* il pannello «Materiali» per gli studenti (0126, allargamento 2): intestazione a 16, righe a 19/16 con la frase che dice a che cosa servono */
+#studente-dock .sd-h { margin: 18px 16px 6px; font-size: 16px; font-weight: 700; color: #475569; }
 #studente-dock .sd-riga { display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 6px 12px; min-height: 56px;
   padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; text-align: left; cursor: pointer; font: inherit; color: #0f172a; }
 #studente-dock .sd-riga:hover { border-color: #4f46e5; background: #eef2ff; }
 #studente-dock .sd-riga i, #studente-dock .sd-riga svg { width: 20px; height: 20px; flex: 0 0 auto; color: #4f46e5; }
 #studente-dock .sd-riga__t { display: flex; flex-direction: column; min-width: 0; }
-#studente-dock .sd-riga__t b { font-size: 14px; }
-#studente-dock .sd-riga__t small { font-size: 11px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#studente-dock .sd-riga__t b { font-size: 19px; }
+#studente-dock .sd-riga__t small { font-size: 16px; line-height: 1.35; color: #475569; overflow-wrap: anywhere; }
 
 /* ── i comandi del docente nei moduli copiati ─────────────────────────── */
 html.studente #study-player-regen,
@@ -84,11 +113,14 @@ html.studente #total-cost-display, html.studente #total-tokens-display, html.stu
 #studente-dock .sd-esito { padding: 24px 20px; font-size: 15px; line-height: 1.6; color: #0f172a; }
 #studente-dock .sd-esito__b { margin-top: 16px; min-height: 44px; padding: 10px 22px; border: 0; border-radius: 12px; background: #4f46e5; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 
-/* sotto i 900px (iPad in piedi) il bottone del menu finiva SOPRA la barra dei comandi
-   della mappa: si alza. `!important` perché la posizione è una classe Tailwind (trappola 6) */
-@media (max-width: 900px) {
-  html.studente #floating-actions-container { bottom: 104px !important; }
-}
+/* Il bottone giallo del menu (48 px) sta sulla RIGA della barra dei comandi della mappa, centrato
+   su di lei, e col dock in basso sale con lei (`--sd-h`). Gate dello 0126 (Giacomo, 26/10: «deve
+   sempre essere allineato alla navbar della mappa»). Prima, sotto i 900 px, si alzava di 104 px
+   per non finire SOPRA la barra (7/9): dall'8/9 la barra comincia dopo di lui (`left: 96px`),
+   e da alzato non seguiva il dock — col pannello in basso finiva sotto il documento.
+   La barra è alta 60 (bottoni da 42 + 8 + 8 + i bordi): 16 + (60 − 48) / 2 = 22. `!important`
+   perché la posizione è di style.css e di una classe Tailwind (trappola 6). */
+html.studente #floating-actions-container { bottom: calc(22px + var(--sd-h, 0px)) !important; }
 
 /* ── iPad: la barra di stato e la home bar (7/9) ──────────────────────────
    Con `viewport-fit=cover` la webview arriva fin sotto la barra di stato: le
@@ -115,8 +147,10 @@ html.studente #map-control-card {
   /* ⚠️ `left: 96px` e non 12: a sinistra, in basso, vive il bottone tondo del menu
      (`#floating-actions-container`, 48 px a 32 px dal bordo) e ci finiva SOPRA
      «Centra» (misurato l'8/9 sull'iPad di Giacomo). La barra comincia dopo di lui. */
-  left: 96px !important; right: calc(12px + var(--sd-w, 0px)) !important; transform: none !important;
-  width: auto; min-width: 0 !important; max-width: 720px; margin: 0 auto;
+  /* 0126 (Giacomo, 26/10): larga quanto il suo contenuto, subito dopo il bottone giallo, col cursore
+     dei livelli corto («i livelli sono sempre pochi, in media 3 […] fino a 5»); mai oltre il canvas */
+  left: 96px !important; right: auto !important; transform: none !important;
+  width: max-content; min-width: 0 !important; max-width: calc(100% - 108px - var(--sd-w, 0px)); margin: 0;
   flex-wrap: nowrap !important; justify-content: space-between !important;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--sd-h, 0px)) !important;
   transition: none !important;   /* `transition-all` di Tailwind: la barra deve seguire il dock subito */
@@ -142,8 +176,9 @@ html.studente #d3-container {
   min-height: 0 !important;
 }
 html.studente #map-control-card > button { flex: 0 0 auto; }
-html.studente #map-control-card #level-filter-control,
 html.studente #map-control-card #min-link-control { flex: 1 1 8rem; width: auto !important; min-width: 6rem; }
+/* il cursore dei livelli alla misura di MappAI (`w-44`): da tre a cinque livelli non serve di più (0126) */
+html.studente #map-control-card #level-filter-control { flex: 0 0 11rem; width: 11rem !important; }
 
 /* ── il velo dello scambio (Ricevo n/N · Consegno) ─────────────────────── */
 #sc-velo { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: flex; align-items: center; justify-content: center; font-family: var(--app-font, 'Space Mono', ui-monospace, monospace); }
@@ -165,6 +200,64 @@ html.studente .mn-bento-area .mn-cmd > span {
   font-size: 17px !important; line-height: 1.15; white-space: normal;
 }
 html.studente .mn-bento-area .mn-card[data-mod="mappa-azioni"] { min-height: 0; }
+/* 0126: i due radio «Prove: Semplice / Meta» si toccano col dito: 44 px di bersaglio (inv. 16), come la × */
+html.studente .mm-filtri .mm-opz { min-height: 44px; }
+html.studente .mm-filtri { align-items: center; }
+html.studente .mm-filtri .mm-nota { margin: 0; }
+/* l'interruttore sulla riga del titolo della prima tabella (allargamento 2, Giacomo: «di fianco al titolo della tabella
+   'DOMANDE APERTE'»): il motore mette titolo, riga, contatore e tabella fra i figli di `.mm-tabg--testa` */
+html.studente .mm-tabg--testa { display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; }
+html.studente .mm-tabg--testa > .mm-tabg__t { width: auto; flex: 0 0 auto; }
+html.studente .mm-tabg--testa > .mm-filtri--tabelle { flex: 0 1 auto; margin: 0; padding: 0; border: 0; background: none; }
+html.studente .mm-tabg--testa > .mm-tabg__n { margin-left: auto; }
+html.studente .mm-tabg--testa > .mm-sez__c { flex: 0 0 100%; }
+/* i radio con precisione sulla riga del titolo (gate del 25/10): il motore allinea l'etichetta di un radio in alto
+   (pallino con 2 px di margine), il titolo è al centro dei suoi 44 px; qui tutto al centro, testo nel corpo delle
+   etichette (13 px, il titolo è a 15): misurato, le linee di base coincidono (292,8 px) e i pallini hanno il centro del testo */
+html.studente .mm-tabg--testa .mm-opz { align-items: center; padding: 0; min-height: 44px; }
+html.studente .mm-tabg--testa .mm-opz input { margin: 0; }
+html.studente .mm-tabg--testa .mm-opz__t { font-size: var(--mm-fs-label); }
+
+/* ── «Domande su misura» grande come la prova (allargamento 2, variante E del mockup) ─────
+   Le due sezioni dello schema (`dove`, `quali`, launcher-core.js): ogni scelta una riga da toccare
+   da 56 px col testo a 19; la tendina solo dopo «Un ramo» o «Un angolo solo»; in orizzontale le
+   due domande affiancate (in colonna la seconda finiva sotto il bordo, misurato sul mockup). */
+.mm-sez[data-sez="dove"] .mm-opz, .mm-sez[data-sez="quali"] .mm-opz { display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 12px 16px; margin: 0 0 10px; border: 2px solid #cbd5e1; border-radius: 14px; background: #fff; }
+.mm-sez[data-sez="dove"] .mm-opz:has(input:checked), .mm-sez[data-sez="quali"] .mm-opz:has(input:checked) { border-color: #4f46e5; background: #eef2ff; }
+.mm-sez[data-sez="dove"] .mm-opz input, .mm-sez[data-sez="quali"] .mm-opz input { width: 24px; height: 24px; accent-color: #4f46e5; flex: 0 0 auto; }
+.mm-sez[data-sez="dove"] .mm-opz__t, .mm-sez[data-sez="quali"] .mm-opz__t { font-size: 19px !important; font-weight: 700; }
+.mm-sez[data-sez="dove"] .mm-opz__d, .mm-sez[data-sez="quali"] .mm-opz__d { display: block; font-size: 16px !important; line-height: 1.4; }
+.mm-sez[data-sez="dove"] .mm-campo-riga, .mm-sez[data-sez="quali"] .mm-campo-riga { width: 100% !important; max-width: none !important; flex: 1 1 100% !important; }
+.mm-sez[data-sez="dove"] select.mm-campo, .mm-sez[data-sez="quali"] select.mm-campo { width: 100% !important; max-width: none !important; min-height: 52px; font-size: 19px !important; border-radius: 12px; }
+.mm-sez[data-sez="dove"] .mm-campo-riga:has(select[data-campo="ramo"]), .mm-sez[data-sez="quali"] .mm-campo-riga:has(select[data-campo="angolo"]) { display: none; }
+.mm-sez[data-sez="dove"]:has(input[data-campo="amb-ramo"]:checked) .mm-campo-riga:has(select[data-campo="ramo"]) { display: block; }
+.mm-sez[data-sez="quali"]:has(input[data-campo="ang-uno"]:checked) .mm-campo-riga:has(select[data-campo="angolo"]) { display: block; }
+.mm-sez[data-sez="dove"] .mm-sez__t, .mm-sez[data-sez="quali"] .mm-sez__t { font-size: 16px !important; }
+.mm-box:has(.mm-sez[data-sez="dove"]) .mm-btn { min-height: 52px !important; font-size: 19px !important; padding: 0 24px !important; border-radius: 14px !important; }
+.mm-box:has(.mm-sez[data-sez="dove"]) .mm-close { width: 44px !important; height: 44px !important; font-size: 22px !important; }
+@media (orientation: landscape) { .mm-body:has(> .mm-sez[data-sez="dove"]) { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; } }
+
+/* ── «Foglio dei nodi» dello studente (allargamento 2): a tutto schermo, una riga sola di comandi ── */
+#sf-nodi { position: fixed; inset: 0; z-index: 12500; display: flex; flex-direction: column; background: #fafbff; color: #404040; font-family: inherit;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+#sf-nodi .sf-barra { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 8px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+#sf-nodi .sf-seg { display: flex; gap: 6px; flex: 0 0 auto; }
+#sf-nodi .sf-seg button { min-height: 44px; padding: 0 12px; border: 2px solid #cbd5e1; border-radius: 10px; background: #fff; color: #404040; font: inherit; font-size: 16px; white-space: nowrap; cursor: pointer; }
+#sf-nodi .sf-seg button[aria-checked="true"] { border-color: #4f46e5; background: #eef2ff; font-weight: 700; }
+/* la tendina alta come i bottoni (Giacomo, 26/10): sull'iPad un <select> nativo ignora la min-height, quindi
+   `appearance: none` e la freccia disegnata a destra */
+#sf-nodi .sf-liv { flex: 0 0 auto; width: auto; height: 44px; padding: 0 34px 0 10px; border: 2px solid #cbd5e1; border-radius: 10px; -webkit-appearance: none; appearance: none; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23404040' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; color: #404040; font: inherit; font-size: 16px; }
+#sf-nodi .sf-sp { flex: 1; }
+#sf-nodi .sf-pdf { flex: 0 0 auto; min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: #4f46e5; color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+#sf-nodi .sf-x { flex: 0 0 auto; width: 44px; height: 44px; border: 0; border-radius: 10px; background: #f1f4f8; color: #404040; font-size: 22px; line-height: 1; cursor: pointer; }
+#sf-nodi .sf-ante { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; background: #e2e8f0; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+#sf-nodi .sf-ante canvas { background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,.18); border-radius: 4px; }
+#sf-nodi .sf-msg { margin: 0; font-size: 16px; color: #475569; }
+#sf-nodi .sf-msg:empty { display: none; }
+/* frecce e «n/N» piccoli (Giacomo: «riduci la dimensione dei bottoni '<' e '>' e del testo 'Pagina n di N'»); si sfoglia anche col dito */
+#sf-nodi .sf-pag { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #334155; }
+#sf-nodi .sf-pag button { width: 36px; height: 36px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #4f46e5; font-size: 18px; line-height: 1; cursor: pointer; }
+#sf-nodi .sf-pag button:disabled { opacity: .35; cursor: default; }
 
 /* ── la testata del pannello: solo la × (7/9) ─────────────────────────────
    Il nome del documento lo dice il documento stesso, e nel pannello stretto si
@@ -175,6 +268,16 @@ html.studente #studente-dock .sd-titolo {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+/* il report del quiz (0126, gate del 25/10): «[Nome progetto] · [Nome del materiale] · Report allievo» si VEDE
+   nella barra della ×, accanto a «Stampa / PDF»; la barra del file è nascosta (documenti.js › vestiReport) */
+html.studente #studente-dock.sd--con-titolo .sd-titolo {
+  position: static; width: auto; height: auto; margin: 0; clip: auto;
+  flex: 0 1 auto; min-width: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* la stampante della fila del lettore (sintesi) sul viola dei bottoni, come «Stampa / PDF» degli altri materiali
+   (Giacomo, 26/10: «In sintesi colora di viola il bottone con l'icona della stampante») */
+#studente-dock .mai-fila-bt:has([data-lucide="printer"], .lucide-printer) { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+#studente-dock .sd-stampa-pdf { flex: 0 0 auto; min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: #4f46e5; color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 
 /* ── il visore PDF (studente/pdf-vista.js) ───────────────────────────────── */
 #studente-dock .sd-corpo--pdf { background: #f1f5f9; }

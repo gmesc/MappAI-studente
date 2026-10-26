@@ -85,11 +85,12 @@ test('foglioCompilato: le domande prese con «Perché:» e risposta; senza prese
     st.risposte[pool[1].id] = {};
     const r = P.foglioCompilato(pool, st, P.CHIP_PERCHE, a => a.toUpperCase());
     assert.strictEqual(r.length, 2);
-    assert.deepStrictEqual([r[0].ramo, r[0].angolo, r[0].perche, r[0].risposta], ['Atmosfera', 'DEFINIZIONE', 'ho capito cosa rispondere', 'La mia risposta']);
+    assert.deepStrictEqual([r[0].ramo, r[0].angolo, r[0].perche, r[0].risposta], ['Atmosfera', 'DEFINIZIONE', 'la so', 'La mia risposta']);
     assert.strictEqual(r[1].risposta, '');
     assert.strictEqual(P.foglioCompilato(pool, {}, P.CHIP_PERCHE).length, pool.length, 'niente prese: tutte');
     const it = P.itemsHtml(r);
-    assert.ok(/^Perché: ho capito/.test(it[0].risposta) && it[0].risposta.indexOf('La mia risposta') > 0);
+    /* gate del 26/10 (Giacomo): «nei riquadri con la risposta data dall'allievo non mostrare il tag 'Perché: la so'» */
+    assert.strictEqual(it[0].risposta, 'La mia risposta');
     assert.strictEqual(it[1].risposta, '');
 });
 
@@ -145,3 +146,86 @@ test('misti e criteri: `auto` non è un angolo, base prima di ponte, voci = spun
     st.risposte[pool[1].id] = { testo: 'y', auto: 2 };
     assert.deepStrictEqual(P.voci(pool, st, NODES).map(x => x.score), [0.5, 0.5], 'coi criteri vincono le spunte; senza, la scala a tre');
 });
+
+/* 0126, allargamento 3 (Giacomo al gate, 25/10): «il rapporto deve indicare anche le eventuali
+   osservazioni dell'allievo e anche le domande scartare per i motivi 'non la so' e 'non ho capito
+   la domanda'». Il foglio compilato tiene le prese; le scartate e le osservazioni vanno in coda. */
+const POOL_SC = [
+    { id: 'q1', testo: 'D1', ramo: 'Atmosfera', angle: 'causa' },
+    { id: 'q2', testo: 'D2', ramo: 'Atmosfera', angle: 'definizione' },
+    { id: 'q3', testo: 'D3', ramo: 'Oceani', angle: 'causa' },
+    { id: 'q4', testo: 'D4', ramo: 'Oceani', angle: 'causa' }
+];
+test('scartate: le domande lette col «Perché:» e non prese, nell\'ordine del pool', () => {
+    const st = { risposte: { q1: { testo: 'ok' } }, letture: { q1: { chip: 'capito' }, q3: { chip: 'nonso' }, q2: { chip: 'noncapita' } } };
+    const s = P.scartate(POOL_SC, st, P.CHIP_PERCHE, a => a ? a.toUpperCase() : '');
+    assert.deepStrictEqual(s.map(r => [r.id, r.perche]), [['q2', 'non ho capito'], ['q3', 'non la so']]);
+    assert.deepStrictEqual([s[0].ramo, s[0].angolo, s[0].domanda], ['Atmosfera', 'DEFINIZIONE', 'D2']);
+    assert.strictEqual(s[1].colore, P.CHIP_PERCHE[1].colore, 'il colore del chip, per disegnarlo');
+    assert.strictEqual(s[1].testo, P.CHIP_PERCHE[1].testo);
+    assert.deepStrictEqual(P.scartate(POOL_SC, { risposte: {}, letture: {} }, P.CHIP_PERCHE), [], 'senza letture nessuna');
+    assert.deepStrictEqual(P.scartate(POOL_SC, null, P.CHIP_PERCHE), []);
+});
+test('codaHtml: «Domande scartate» e «Osservazioni» con le classi del foglio; niente senza contenuto', () => {
+    assert.strictEqual(P.codaHtml({ scartate: [], note: '   ' }), '');
+    assert.strictEqual(P.codaHtml(), '');
+    const h = P.codaHtml({ scartate: [{ ramo: 'Atmosfera', angolo: 'Causa', domanda: 'D <2>', perche: 'non la so', colore: '#f97316', testo: '#c2410c' }], note: 'Ho scelto & basta' });
+    assert.ok(/class="oq-section-title"[^>]*>Domande scartate</.test(h), 'il titolo della sezione');
+    assert.ok(h.includes('D &lt;2&gt;'), 'la domanda escapata');
+    /* gate del 26/10 (Giacomo): «usa il chip del tag che l'allievo ha attribuito» */
+    assert.ok(/class="oq-chip"[^>]*border:2px solid #f97316[^>]*color:#c2410c[^>]*>non la so</.test(h), 'il motivo come chip, coi suoi colori');
+    assert.ok(!h.includes('Perché:'));
+    assert.ok(/class="oq-section-title"[^>]*>Osservazioni</.test(h));
+    assert.ok(h.includes('Ho scelto &amp; basta'));
+    const soloNote = P.codaHtml({ scartate: [], note: 'x' });
+    assert.ok(!soloNote.includes('Domande scartate') && soloNote.includes('Osservazioni'));
+});
+test('conCoda: la coda entra prima della chiusura di <main>; senza coda il foglio non cambia', () => {
+    const foglio = '<body><main><h2>Domande</h2></main><script>"</main>"</script></body>';
+    assert.strictEqual(P.conCoda(foglio, ''), foglio);
+    assert.strictEqual(P.conCoda('<main>a</main>x', '<b>c</b>'), '<main>a<b>c</b></main>x');
+    assert.strictEqual(P.conCoda('<body>a</body>', '<b>c</b>'), '<body>a<b>c</b></body>', 'senza <main>, in fondo al body');
+});
+
+/* gate dell'allargamento 3 (Giacomo, 26/10): «Quando seleziono una domanda i tre chip devono avere i
+   seguenti testi: 'la so', 'non la so' e 'non ho capito'». Le chiavi restano: gli stati salvati valgono. */
+test('CHIP_PERCHE: «la so», «non la so», «non ho capito», con le chiavi di prima', () => {
+    assert.deepStrictEqual(P.CHIP_PERCHE.map(c => [c.k, c.et]), [['capito', 'la so'], ['nonso', 'non la so'], ['noncapita', 'non ho capito']]);
+});
+
+/* gate dell'allargamento 4 (Giacomo, 26/10): «per il 'la so' usa il verde dei bottoni di MappAI, per il 'non la so'
+   usa l'arancione acceso» — i token, col valore di riserva; il testo nel colore leggibile della stessa famiglia */
+test('CHIP_PERCHE: «la so» sul verde dei bottoni, «non la so» sull\'arancione acceso', () => {
+    const [so, nonso] = P.CHIP_PERCHE;
+    assert.strictEqual(so.colore, 'var(--man-verde, #41e6aa)');
+    assert.strictEqual(so.testo, 'var(--mm-ok, #059669)');
+    assert.strictEqual(nonso.colore, 'var(--mm-genere-foglio, #f97316)');
+    assert.strictEqual(nonso.testo, 'var(--mm-genere-foglio-testo, #c2410c)');
+    /* poi (26/10): «il viola lo stesso colore dei bottoni, per esempio del bottone 'Comincia a rispondere'», e la
+       correzione: «intendevo viola='non ho capito' e arancione='non la so'» — l'accento, leggibile anche come testo */
+    const noncapita = P.CHIP_PERCHE[2];
+    assert.strictEqual(noncapita.colore, 'var(--mm-accent, #4f46e5)');
+    assert.strictEqual(noncapita.testo, undefined);
+});
+
+/* gate del 26/10 (Giacomo): «Nella testata del report indica il numero di domande totali disponibili e la quantità di tag
+   'La so', 'Non la so' e 'Non ho capito' selezionati.»; «Il file esportato deve avere la formattazione del nome uguali agli
+   altri documenti e, in questo caso, la dicitura 'meta' al posto del nome dell'angolo» (alla domanda: con la data) */
+test('giudizi: le domande disponibili e quante per chip', () => {
+    const st = { risposte: { q1: {} }, letture: { q1: { chip: 'capito' }, q2: { chip: 'nonso' }, q3: { chip: 'nonso' }, q4: { chip: 'noncapita' } } };
+    const g = P.giudizi(POOL_SC, st, P.CHIP_PERCHE);
+    assert.strictEqual(g.totale, 4);
+    assert.deepStrictEqual(g.voci.map(v => [v.et, v.n]), [['la so', 1], ['non la so', 2], ['non ho capito', 1]]);
+    assert.strictEqual(g.voci[1].colore, P.CHIP_PERCHE[1].colore);
+});
+test('testaHtml e conTesta: il riepilogo in cima al foglio, dentro <main>', () => {
+    const g = { totale: 36, voci: [{ et: 'la so', n: 3, colore: '#41e6aa', testo: '#059669' }, { et: 'non la so', n: 2, colore: '#f97316', testo: '#c2410c' }] };
+    const h = P.testaHtml(g);
+    assert.ok(h.includes('36 domande disponibili'));
+    assert.ok(/class="oq-chip"[^>]*>la so: 3</.test(h) && /class="oq-chip"[^>]*>non la so: 2</.test(h));
+    assert.strictEqual(P.testaHtml(null), '');
+    assert.strictEqual(P.conTesta('<body><main><h2>D</h2></main></body>', '<p>T</p>'), '<body><main><p>T</p><h2>D</h2></main></body>');
+    assert.strictEqual(P.conTesta('<main>x</main>', ''), '<main>x</main>');
+});
+/* `nomeReport` (gate del 26/10) è diventato `nomeDocumento` di studia-core, per tutti i documenti (allargamento 6) */
+

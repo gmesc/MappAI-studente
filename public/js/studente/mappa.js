@@ -147,5 +147,39 @@
         [220, 500, 900].forEach(function (ms) { setTimeout(function () { if (split()) inquadra(); }, ms); });
     }
 
+    /* ── i passi dello slider dei livelli, «Fino a» (0126, allargamento 5) ──
+       Giacomo, 26/10: «non avere step 4 e tutti=5 se la mappa ha solo fino a L3». Il disegno
+       di MappAI (mappai-d3-render.js) fissa il massimo partendo da 5 e subito dopo chiama
+       `aggiornaScrittaLivelli`: qui, prima della scritta, il massimo torna al livello più
+       profondo dei nodi (almeno 1); «tutti» resta in fondo, una posizione a metà resta dov'è.
+       Non si corregge in MappAI: là `getGenDepth` usa lo slider come ripiego per la profondità
+       delle mappe nuove, e sull'iPad non si genera. */
+    function livelliDellaMappa() {
+        var sl = document.getElementById('level-slider'), s = S();
+        if (!sl || !conMappa()) return;
+        var prof = s.db.nodes.reduce(function (m, n) { return Math.max(m, Number(n && n.level) || 0); }, 0);
+        var max = Math.max(1, prof), prima = Number(sl.max) || 5, val = Number(sl.value);
+        if (max === prima) return;
+        sl.max = String(max);
+        if (val >= prima || val > max) sl.value = String(max);
+    }
+    /* la scritta a destra dice il livello, «L0 … Ln», anche in fondo (Giacomo, 26/10: «gli step da
+       mostrare sono: L0, L1, L2, L3 ... Non usare 0-0, 0-1»); MappAI scrive «0–n» e «tutti» */
+    function scrittaDeiLivelli() {
+        var sl = document.getElementById('level-slider');
+        if (!sl || !conMappa()) return;
+        var testo = 'L' + (Number(sl.value) || 0);
+        ['level-slider-val', 'sv-map-depth-out'].forEach(function (id) { var o = document.getElementById(id); if (o) o.textContent = testo; });
+    }
+    var scritta = window.aggiornaScrittaLivelli;
+    if (typeof scritta === 'function') {
+        window.aggiornaScrittaLivelli = function () {
+            livelliDellaMappa();
+            var r = scritta.apply(this, arguments);
+            scrittaDeiLivelli();
+            return r;
+        };
+    }
+
     window.MappAIStudenteMappa = { assetto: assetto, conDocumento: conDocumento, adatta: adatta, inquadra: inquadra, albero: albero, nascondiSidebar: nascondiSidebar, split: split };
 }());
