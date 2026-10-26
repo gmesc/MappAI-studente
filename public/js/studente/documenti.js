@@ -129,9 +129,14 @@
         corpo.classList.remove('sd-corpo--pdf');
         if (dock) dock.classList.remove('sd--senza-testa');
         var sb = dock && dock.querySelector('.sd-stampa'); if (sb) sb.remove();
+        /* il report del quiz (0126): il suo «Stampa / PDF» e il titolo visibile valgono solo per lui */
+        var sp = dock && dock.querySelector('.sd-stampa-pdf'); if (sp) sp.remove();
+        if (dock) dock.classList.remove('sd--con-titolo');
         /* la fila del lettore dell'app vale per il documento che se ne va: si
            toglie, e la voce o la lettura veloce di quel documento tacciono */
         var fila = dock && dock.querySelector('.sd-fila'); if (fila) fila.remove();
+        /* il contatore di una prova (0126) vale per la prova che se ne va */
+        var sc = dock && dock.querySelector('.sd-conta'); if (sc) sc.remove();
         /* un documento con un lettore suo (la sintesi con la voce naturale) parla dal
            SUO window: togliere l'iframe non lo zittisce — la voce di sistema non è
            appesa al DOM e sull'iPad continuava a pannello chiuso */
@@ -159,15 +164,23 @@
     }
     /* la stampante nella testata del pannello, per i documenti che non hanno una
        barra loro (i PDF): accanto alla × */
+    /* 0126, allargamento 6 (Giacomo: «Nella barra con la 'x' della fonte inserisci il bottone 'STAMPA/PDF' come
+       nelle barre degli altri materiali»): il bottone dei report al posto dell'icona della stampante */
     function stampante(fn) {
         var testa = dock.querySelector('.sd-testa'), x = testa.querySelector('.sd-chiudi');
         var b = document.createElement('button');
-        b.type = 'button'; b.className = 'sd-stampa';
-        b.setAttribute('title', t('st_stampa', 'Stampa')); b.setAttribute('aria-label', t('st_stampa', 'Stampa'));
-        b.innerHTML = '<i data-lucide="printer"></i>';
+        b.type = 'button'; b.className = 'sd-stampa-pdf';
+        /* «PDF», come il foglio dei nodi (Giacomo, 26/10: «Per coerenza modifica tutti i bottoni da 'STAMPA/PDF' in 'PDF'») */
+        b.textContent = t('st_stampa_pdf', 'PDF');
         b.addEventListener('click', function () { fn(); });
         testa.insertBefore(b, x);
-        if (window.safeCreateIcons) window.safeCreateIcons();
+    }
+    /* IL NOME DEI DOCUMENTI (0126, allargamento 6): «Progetto-Tipo-…-data» di studia-core; il progetto è la
+       mappa aperta (la sua radice), o la cartella del vault. Solo la fonte stampa col suo nome. */
+    function progetto(vp) { var s = S(); return (s && s.rootNodeLabel) || (vp ? String(vp).split('/').pop() : ''); }
+    function nomeDi(tipo) {
+        var C = window.MappAIStudiaCore, s = S();
+        return C && C.nomeDocumento ? C.nomeDocumento({ progetto: progetto(s && s.activeVaultPath), tipo: tipo, data: new Date() }) : tipo;
     }
     /* il file:// vero di un file del vault (sull'iPad), null nel browser */
     function uriVero(vaultPath, relPath) {
@@ -178,7 +191,10 @@
         return Fs.getUri({ path: (vp ? vp + '/' : '') + relPath, directory: 'DOCUMENTS' }).then(function (u) { return u.uri; });
     }
 
-    /* apri({ titolo, iframe: url, fileUri? } | { titolo, monta: fn(host) } | { titolo, html }, chiediChiusura: fn→Promise<bool>, stampa: fn ) */
+    /* apri({ titolo, iframe: url, fileUri? } | { titolo, monta: fn(host, conta), contatore? } | { titolo, html }, chiediChiusura: fn→Promise<bool>, stampa: fn ) */
+    /* 0126, allargamento 4 (Giacomo, 26/10): la scelta delle domande su misura «a schermo intero», poi di nuovo
+       «metà schermo mappa, metà schermo domande». Come la maniglia, ma lo chiede la prova (autotest › onFase). */
+    function pieno(si) { collasso = si ? 'mappa' : null; misura(memoria()); window.dispatchEvent(new Event('resize')); }
     function apri(o) {
         if (!monta()) return null;
         o = o || {};
@@ -188,12 +204,21 @@
         chiediChiusura = typeof o.chiediChiusura === 'function' ? o.chiediChiusura : null;
         /* `mappaChiusa`: il documento nasce a tutto schermo, la maniglia verde sul bordo riporta la mappa (quiz MC a schermo pieno) */
         collasso = o.mappaChiusa ? 'mappa' : null; misura(memoria());
+        /* I COMANDI BASE NELLA BARRA DELLA × (0126, Giacomo 24/10: «su iPad la barra con la 'x'
+           della split deve contenere altri comandi base», come l'audio della Sintesi). Il primo:
+           il contatore di una prova, a sinistra; chi monta lo riceve e lo dà alla view. */
+        var conta = null;
+        if (o.contatore) {
+            var testa = dock.querySelector('.sd-testa');
+            conta = document.createElement('span'); conta.className = 'sd-conta'; conta.setAttribute('aria-live', 'polite');
+            testa.insertBefore(conta, testa.querySelector('.sd-sp'));
+        }
         if (o.iframe) {
             var f = document.createElement('iframe'); f.className = 'sd-iframe'; f.src = o.iframe;
-            f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); });
+            f.addEventListener('load', function () { agganciaStampa(f, o); vesti(f); vestiReport(f, o); });
             corpo.appendChild(f);
         } else if (o.html) corpo.innerHTML = o.html;
-        else if (typeof o.monta === 'function') o.monta(corpo);
+        else if (typeof o.monta === 'function') o.monta(corpo, conta);
         if (typeof o.stampa === 'function') stampante(o.stampa);
         dock.hidden = false;
         window.dispatchEvent(new Event('resize'));
@@ -264,6 +289,42 @@
                 x.addEventListener('click', function () { chiudiChiedendo(); });
                 cmd.appendChild(x);
                 if (dock) dock.classList.add('sd--senza-testa');
+            }
+        } catch (e) { }
+    }
+    /* ── IL REPORT DEL QUIZ NELLA BARRA DELLA × (0126, gate del 25/10) ─────────
+       Il report del LIVE (`MappAILiveReports`, lo stesso «Report allievi» del docente) porta
+       una barra sua, fissa in alto: «MappAI Live · Report allievi», «Stampa / PDF», «Chiudi».
+       Nel pannello è una riga di troppo e «Chiudi» doppia la ×. Giacomo: «Sposta '[Nome
+       progetto] · [Nome dei materiale] · Report allievo' e il bottone 'Stampa/PDF' nella
+       barra dello split.» La barra del file (e lo spazio sotto, entrambi `.no-print`) si
+       nasconde; nella barra del pannello il titolo si vede e «Stampa / PDF» chiama la
+       stampa del documento (sull'iPad quella di iOS, `agganciaStampa`). */
+    function vestiReport(f, o) {
+        try {
+            var d = f.contentDocument;
+            if (!d || !d.head) return;
+            /* la sintesi e i documenti di MappAI con la barra del lettore (`#ap-topbar`, `.no-print`, col suo bottone
+               di stampa) non sono report: la stampante ce l'ha la fila dell'app (`lettoreApp`). Giacomo, 26/10: «Su
+               SINTESI non applicare il bottone 'STAMPA/PDF' perché ingombra troppo spazio.» */
+            if (d.getElementById('ap-topbar')) return;
+            /* un report del LIVE ha la sua barra di stampa, che qui si nasconde; il foglio delle risposte delle
+               domande aperte non l'ha, e col titolo prende lo stesso «Stampa / PDF» nella barra (0126, 26/10) */
+            var barra = d.querySelector('.no-print button[onclick*="print"]');
+            if (!barra && !o.titoloBarra) return;
+            if (barra) {
+                var st = d.createElement('style'); st.id = 'sd-report';
+                st.textContent = '.no-print{display:none !important}';
+                d.head.appendChild(st);
+            }
+            var testa = dock.querySelector('.sd-testa');
+            if (o.titoloBarra) { titolo.textContent = o.titoloBarra; dock.classList.add('sd--con-titolo'); }
+            if (!testa.querySelector('.sd-stampa-pdf')) {
+                var b = document.createElement('button');
+                b.type = 'button'; b.className = 'sd-stampa-pdf';
+                b.textContent = t('st_stampa_pdf', 'PDF');
+                b.addEventListener('click', function () { try { f.contentWindow.print(); } catch (e) { } });
+                testa.insertBefore(b, testa.querySelector('.sd-chiudi'));
             }
         } catch (e) { }
     }
@@ -424,7 +485,9 @@
         for (var i = 0; i < n; i++) u[i] = bin.charCodeAt(i);
         return new Blob([u], { type: tipo });
     }
-    function apriFile(vaultPath, relPath, nome) {
+    /* `extra.titoloBarra` (0126): il titolo che un report del LIVE mostra nella barra della × */
+    function apriFile(vaultPath, relPath, nome, extra) {
+        extra = extra || {};
         /* i PDF NON vanno in un iframe: nella WKWebView si vedrebbe solo la prima
            pagina, senza scorrimento né pinch (misurato sull'iPad il 7/9). Li disegna
            `studente/pdf-vista.js` con pdf.js. */
@@ -438,10 +501,10 @@
         if (Fs && C && C.convertFileSrc) {
             /* l'URI vero resta accanto all'iframe: è quello che la stampa di iOS carica */
             return uriVero(vaultPath, relPath).then(function (uri) {
-                apri({ titolo: nome, iframe: C.convertFileSrc(uri), fileUri: uri });
-            }).catch(function () { return apriBlob(vaultPath, relPath, nome); });
+                apri({ titolo: nome, iframe: C.convertFileSrc(uri), fileUri: uri, titoloBarra: extra.titoloBarra });
+            }).catch(function () { return apriBlob(vaultPath, relPath, nome, extra); });
         }
-        return apriBlob(vaultPath, relPath, nome);
+        return apriBlob(vaultPath, relPath, nome, extra);
     }
     function apriPdf(vaultPath, relPath, nome) {
         var V = window.MappAIStudentePdfVista;
@@ -586,11 +649,30 @@
             }
         });
     }
-    function apriBlob(vaultPath, relPath, nome) {
+    /* un PDF fatto qui (il foglio dei nodi) al menu di stampa di iOS, come la fonte (0126; Giacomo, 26/10: «è possibile
+       invece anche per questo bottone mostrare il menu di stampa?»): il file in Studio Attivo/Stampe (« (2)» se il nome
+       c'è già), poi `stampaPdf` col suo nome. `nome` senza estensione. */
+    function stampaPdfB64(base64, nome) {
+        var s = S(), vp = s && s.activeVaultPath, C = window.MappAIStudiaCore, FSx = window.MappAIStudenteFS;
+        if (!vp) { toast(t('st_no_vault', 'Apri prima una mappa.'), 'warning'); return Promise.resolve(); }
+        var b64 = String(base64 || '').replace(/^data:[^,]*,/, '');
+        return (FSx ? FSx.lista(vp + '/' + 'Studio Attivo/Stampe') : Promise.resolve([])).catch(function () { return []; }).then(function (figli) {
+            var file = C && C.nomeLibero ? C.nomeLibero(nome + '.pdf', (figli || []).map(function (f) { return f.name; })) : nome + '.pdf';
+            var rel = 'Studio Attivo/Stampe' + '/' + file;
+            return window.electronAPI.saveVaultFile({ vaultPath: vp, relPath: rel, base64: b64 }).then(function (r) {
+                if (!r || !r.ok) { toast(t('st_pdf_ko', 'Non riesco a salvare il PDF.') + (r && r.error ? ' ' + r.error : ''), 'error'); return; }
+                stampaPdf(vp, rel, file, b64);
+            });
+        });
+    }
+    function apriBlob(vaultPath, relPath, nome, extra) {
+        extra = extra || {};
         return window.electronAPI.readVaultFile({ vaultPath: vaultPath, relPath: relPath }).then(function (r) {
             if (!r || !r.ok) { toast(t('st_file_ko', 'Non riesco ad aprire il file.') + (r && r.error ? ' ' + r.error : ''), 'error'); return; }
-            var url = URL.createObjectURL(b64ToBlob(r.base64, mime(nome)));
-            apri({ titolo: nome, iframe: url });
+            /* il tipo dal nome, o dal percorso se il nome è un titolo senza estensione (0126: le prove
+               si aprono col nome della sessione, e un blob «octet-stream» resta una pagina bianca) */
+            var url = URL.createObjectURL(b64ToBlob(r.base64, mime(/\.[a-z0-9]+$/i.test(nome || '') ? nome : relPath)));
+            apri({ titolo: nome, iframe: url, titoloBarra: extra.titoloBarra });
             urlAperto = url;
         });
     }
@@ -603,6 +685,8 @@
            consegna o si chiude la prova (Giacomo, 7/9: l'elenco compariva sopra le domande) */
         if (chiediChiusura) { toast(t('st_prova_in_corso', 'C\'è una prova in corso: consegnala o chiudila prima di aprire i materiali.'), 'warning'); return; }
         apri({ titolo: t('st_materiali', 'Materiali'), monta: function (host) { host.innerHTML = '<p class="sd-vuoto">' + esc(t('st_carico', 'Leggo la cartella…')) + '</p>'; } });
+        /* «Materiali» scritto nella barra della × (0126, allargamento 2: il pannello per gli studenti) */
+        dock.classList.add('sd--con-titolo');
         var lista = function (dir) {
             return window.electronAPI.vaultMaterialsList(dir ? { vaultPath: vp, dir: dir } : { vaultPath: vp })
                 .then(function (x) { return (x && x.files) || []; }).catch(function () { return []; });
@@ -630,23 +714,53 @@
                 html += '<button type="button" class="sd-riga" data-rel="' + esc(f.relPath) + '" data-nome="' + esc(f.name) + '">' +
                     '<i data-lucide="' + g.icona + '"></i><span class="sd-riga__t"><b>' + esc(g.et) + '</b><small>' + esc(f.name) + '</small></span></button>';
             });
+            /* per gli studenti (0126, allargamento 2): sotto ogni voce una frase che dice a che cosa serve,
+               non il nome del file */
             html += '<h4 class="sd-h">' + esc(t('st_stampa_mappa', 'Stampa dalla mappa')) + '</h4>' +
-                '<button type="button" class="sd-riga" data-fn="openNodeLabelsPrintModal"><i data-lucide="scissors"></i><span class="sd-riga__t"><b>' + esc(t('st_foglio_nodi', 'Foglio dei nodi')) + '</b></span></button>' +
-                '<button type="button" class="sd-riga" data-fn="sintesi"><i data-lucide="sparkles"></i><span class="sd-riga__t"><b>' + esc(t('st_sintesi', 'Sintesi')) + '</b><small>' + esc(sintesi ? sintesi.name : t('st_sintesi_manca', 'questa mappa non ha una sintesi')) + '</small></span></button>' +
-                '<button type="button" class="sd-riga" data-fn="catena"><i data-lucide="git-branch"></i><span class="sd-riga__t"><b>' + esc(t('st_catena', 'Catena dei perché')) + '</b></span></button>';
+                '<button type="button" class="sd-riga" data-fn="foglio-nodi"><i data-lucide="scissors"></i><span class="sd-riga__t"><b>' + esc(t('st_foglio_nodi', 'Foglio dei nodi')) + '</b><small>' + esc(t('st_foglio_nodi_d', 'Le etichette della mappa da stampare e ritagliare.')) + '</small></span></button>' +
+                '<button type="button" class="sd-riga" data-fn="sintesi"><i data-lucide="sparkles"></i><span class="sd-riga__t"><b>' + esc(t('st_sintesi', 'Sintesi')) + '</b><small>' + esc(sintesi ? t('st_sintesi_d', 'Il riassunto della mappa, da leggere o da ascoltare.') : t('st_sintesi_manca', 'questa mappa non ha una sintesi')) + '</small></span></button>' +
+                '<button type="button" class="sd-riga" data-fn="catena"><i data-lucide="git-branch"></i><span class="sd-riga__t"><b>' + esc(t('st_catena', 'Catena dei perché')) + '</b><small>' + esc(t('st_catena_d', 'Le cause e gli effetti della mappa.')) + '</small></span></button>';
             corpo.innerHTML = html;
             corpo.onclick = function (e) {
                 var b = e.target.closest && e.target.closest('.sd-riga'); if (!b) return;
                 var fn = b.getAttribute('data-fn');
                 if (fn === 'sintesi') {
                     if (!sintesi) { toast(t('st_sintesi_manca_toast', 'Questa mappa non porta una sintesi: il docente non l\'ha pubblicata.'), 'info'); return; }
-                    apriFile(vp, sintesi.relPath, sintesi.name); return;
+                    apriFile(vp, sintesi.relPath, nomeDi('Sintesi')); return;
                 }
-                if (fn === 'catena') { if (window.MappAICausal && window.MappAICausal.openDoc) window.MappAICausal.openDoc(); return; }
+                if (fn === 'catena') { catenaNelPannello(); return; }
+                if (fn === 'foglio-nodi') {
+                    if (window.MappAIStudenteFoglioNodi) window.MappAIStudenteFoglioNodi.apri();
+                    else if (typeof window.openNodeLabelsPrintModal === 'function') window.openNodeLabelsPrintModal();
+                    return;
+                }
                 if (fn) { if (typeof window[fn] === 'function') window[fn](); return; }
-                apriFile(vp, b.getAttribute('data-rel'), b.getAttribute('data-nome'));
+                /* va in stampa col nome di `nomeDaStampare` (0126, allargamento 6) */
+                var C2 = window.MappAIStudiaCore, f2 = { name: b.getAttribute('data-nome'), relPath: b.getAttribute('data-rel') };
+                apriFile(vp, f2.relPath, C2 && C2.nomeDaStampare ? C2.nomeDaStampare(f2, progetto(vp), new Date()) : f2.name);
             };
             if (window.safeCreateIcons) window.safeCreateIcons();
+        });
+    }
+
+    /* «CATENA DEI PERCHÉ» NEL PANNELLO (0126, allargamento 2). `MappAICausal.openDoc` (copiato
+       da MappAI) scrive il documento in una finestra nuova (`window.open('', '_blank')`): nella
+       WKWebView dell'iPad la finestra non c'è e lo studente leggeva «Sblocca i popup». Qui la
+       finestra la fa il pannello: un `window.open` di passaggio raccoglie l'HTML, poi torna quello
+       vero, e il documento si apre accanto alla mappa come la sintesi. */
+    function catenaNelPannello() {
+        var C = window.MappAICausal; if (!C || !C.openDoc) return;
+        var preso = '', vero = window.open;
+        window.open = function () { return { document: { write: function (h) { preso += h; }, close: function () { } }, focus: function () { } }; };
+        try { C.openDoc(); } finally { window.open = vero; }
+        if (!preso) return;   /* niente nessi: openDoc ha già detto perché */
+        /* 0126, allargamento 6: da un file VERO in Studio Attivo/Stampe, col nome «Progetto-Catena perché-data»:
+           aperta da un blob, sull'iPad la stampa diceva «il documento non ha un percorso sul disco» */
+        var s = S(), vp = s && s.activeVaultPath; if (!vp) return;
+        var nome = nomeDi('Catena perché'), rel = 'Studio Attivo/Stampe/' + nome + '.html';
+        window.electronAPI.saveVaultFile({ vaultPath: vp, relPath: rel, text: preso }).then(function (r) {
+            if (!r || !r.ok) { toast(t('st_catena_ko', 'Non riesco ad aprire la catena: ') + ((r && r.error) || ''), 'error'); return; }
+            apriFile(vp, rel, nome);
         });
     }
 
@@ -671,14 +785,18 @@
         var base = 'Studio Attivo/Prove/' + s.id + '/';
         if (m[1] === 'apri') {
             if (window.MappAIStudente && window.MappAIStudente.apriMappa) {
-                window.MappAIStudente.apriMappa(vaultPath).then(function () { apriFile(vaultPath, base + (s.html || 'risposte.html'), s.nome || s.id); });
+                /* il report porta il suo titolo nella barra (0126): il quiz e, dal 26/10, le domande aperte (l'angolo,
+                   o «Meta», l'ha scritto la sessione); si apre col nome del file, quello che la stampa propone */
+                var C = window.MappAIStudiaCore, mc = s.tipo === 'Scelta multipla';
+                var tb = ((mc || s.tipo === 'Domande aperte') && C) ? C.titoloReport({ mappa: s.mappa, tipo: mc ? 'mc' : 'aperte', angolo: s.angolo, t: window.t }) : '';
+                window.MappAIStudente.apriMappa(vaultPath).then(function () { apriFile(vaultPath, base + (s.html || 'risposte.html'), s.nomeFile || s.nome || s.id, { titoloBarra: tb }); });
             }
             return;
         }
         if (m[1] === 'stampa') {
             if (pluginStampa() && window.MappAIStudenteStampa) {
                 window.MappAIStudenteStampa.stampaFile({
-                    plugin: pluginStampa, titolo: s.nome || s.id, avvisa: avvisaStampa, prefisso: t('st_stampa_ko', 'Non riesco a stampare: '),
+                    plugin: pluginStampa, titolo: s.nomeFile || s.nome || s.id, avvisa: avvisaStampa, prefisso: t('st_stampa_ko', 'Non riesco a stampare: '),
                     url: function () { return uriVero(vaultPath, base + (s.html || 'risposte.html')); }
                 });
                 return;
@@ -722,13 +840,16 @@
         if (!vp) { toast(t('st_no_vault', 'Apri prima una mappa.'), 'warning'); return Promise.resolve(); }
         var FSx = window.MappAIStudenteFS;
         return (FSx ? FSx.lista(vp + '/MAPPE PDF') : Promise.resolve([])).catch(function () { return []; }).then(function (figli) {
-            var nome = C.nomePdfMappa(vp.split('/').pop(), new Date(), (figli || []).map(function (f) { return f.name; }));
-            return api.saveVaultFile({ vaultPath: vp, relPath: 'MAPPE PDF/' + nome, base64: doc.output('datauristring') }).then(function (r) {
-                if (r && r.ok) toast(t('st_pdf_salvato', 'Mappa salvata in MAPPE PDF: ') + nome, 'success');
-                else toast(t('st_pdf_ko', 'Non riesco a salvare il PDF.') + (r && r.error ? ' ' + r.error : ''), 'error');
+            var nome = C.nomePdfMappa(progetto(vp), new Date(), (figli || []).map(function (f) { return f.name; }));
+            var b64 = doc.output('datauristring').split(',')[1];
+            return api.saveVaultFile({ vaultPath: vp, relPath: 'MAPPE PDF/' + nome, base64: b64 }).then(function (r) {
+                if (!r || !r.ok) { toast(t('st_pdf_ko', 'Non riesco a salvare il PDF.') + (r && r.error ? ' ' + r.error : ''), 'error'); return; }
+                toast(t('st_pdf_salvato', 'Mappa salvata in MAPPE PDF: ') + nome, 'success');
+                /* e il menu di stampa di iOS, come il foglio dei nodi (Giacomo, 26/10: «Anche in questo caso apri il menu di stampa») */
+                stampaPdf(vp, 'MAPPE PDF/' + nome, nome, b64);
             });
         });
     };
 
-    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, apriScheda: apriScheda, mostraFoto: mostraFoto, togliFoto: togliFoto, dossier: dossierAperto, azione: azione, genere: genere, corpo: function () { return corpo; } };
+    window.MappAIStudenteDocumenti = { aperto: function () { return !!(dock && !dock.hidden); }, apri: apri, pieno: pieno, stampaPdfB64: stampaPdfB64, chiudi: chiudi, chiudiChiedendo: chiudiChiedendo, orientamento: orientamento, materiali: materiali, apriFile: apriFile, apriScheda: apriScheda, mostraFoto: mostraFoto, togliFoto: togliFoto, dossier: dossierAperto, azione: azione, genere: genere, corpo: function () { return corpo; } };
 }());

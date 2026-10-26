@@ -57,7 +57,7 @@
          resta visibile, tetto di larghezza). Dopo la veste: ne usa i token. -->
     <link rel="stylesheet" href="css/mappai-console-manifesto.css?v=sync-20261013">
     <!-- la veste dello studente: bersagli a 44px, il dock, la console STUDIA -->
-    <link rel="stylesheet" href="css/studente.css?v=bordo1">
+    <link rel="stylesheet" href="css/studente.css?v=p0126-1">
 
     <!-- ⚠️ BOOT DELLA VESTE, e perché sta QUI (5/8/26) ─────────────────────────
          Le classi `manifesto` e `mappai-ridotta` le mettevano i due moduli a
@@ -737,7 +737,7 @@
                      cosa si sta guardando. Il gemello nella sidebar scrive QUI:
                      l'input è uno solo, così i due non possono divergere. -->
                 <div class="flex-col w-44 px-2 hidden" id="level-filter-control">
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide block mb-1" data-i18n="ui_show_depth" title="Filtro di vista: nasconde i nodi più profondi senza cancellarli. La profondità dei DATI si imposta con «Genera fino a» nella config AI.">Mostra fino al livello</span>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wide block mb-1" title="Nasconde i nodi più profondi senza cancellarli.">Fino a</span>
                     <div class="flex items-center gap-2">
                         <input type="range" id="level-slider" min="0" max="5" value="5"
                             class="flex-1 accent-indigo-600 cursor-pointer" oninput="window.onLevelSliderInput(this.value)">
@@ -1433,10 +1433,10 @@
 
     <!-- ══ MAPPAI STUDENTE — gli script, nell'ordine di MappAI (l'ordine di caricamento è una dipendenza) ══ -->
     <script src="traduzioni/it_translations.js?v=sync-20261013"></script>
-    <script src="traduzioni/en_translations.js?v=0119-1"></script>
+    <script src="traduzioni/en_translations.js?v=0119-1-0126-1"></script>
     <script src="traduzioni/i18n-helper.js"></script>
     <!-- la controfigura di electronAPI dello studente: PRIMA di ogni modulo (app.js la legge al caricamento) -->
-    <script src="js/studente/adapter.js?v=sync-20260925"></script>
+    <script src="js/studente/adapter.js?v=p0126-1"></script>
     <!-- gli stub del nocciolo duro (setTutorState, systemPromptsConfig, serializeTutorState, openEditModal,
          updateUserNotesSidebar) e la veste: prima di app.js -->
     <script src="js/studente/boot.js?v=stub-20260926"></script>
@@ -1447,7 +1447,7 @@
     <script src="js/mappai-font-core.js?v=em1"></script>
     <script src="js/mappai-font.js?v=st1"></script>
     <script src="js/mappai-modal-core.js?v=0119-20261021-2"></script>
-    <script src="js/mappai-modal.js?v=0119-20261021-3"></script>
+    <script src="js/mappai-modal.js?v=0119-20261021-3-0126-1"></script>
     <script src="js/mappai-console-bento.js?v=sync-20261013"></script>
     <script src="js/mappai-bento-composizione.js?v=sync-20261013b"></script>
     <script src="js/mappai-ui-modals.js?v=sync-20261013b"></script>
@@ -1484,7 +1484,7 @@
     <script src="js/mappai-console-manifesto.js?v=st1"></script>
     <script src="js/mappai-scelta-core.js?v=sync-20260916b"></script>
     <script src="js/mappai-quiz-mc-view.js?v=sync-20261019"></script>
-    <script src="js/mappai-scelta-view.js?v=sync-20261019"></script>
+    <script src="js/mappai-scelta-view.js?v=sync-0126-1"></script>
     <script src="js/mappai-scelta.js?v=st1"></script>
     <script src="js/mappai-files-core.js?v=sync-20261005b"></script>
     <script src="js/mappai-vista-core.js?v=sync-20261008"></script>
@@ -1548,20 +1548,22 @@
 
     <!-- i moduli dello studente: la potatura dei comandi del docente, il dock, la console STUDIA -->
     <script src="js/studente/pota.js?v=lv1"></script>
-    <script src="js/studente/stampa.js?v=stampa1"></script>
-    <script src="js/studente/documenti.js?v=sync0079"></script>
-    <script src="js/studente/prova-core.js?v=st36"></script>
-    <script src="js/studente/prova-pdf.js?v=st35"></script>
-    <script src="js/studente/launcher-core.js?v=p0117"></script>
-    <script src="js/studente/autotest.js?v=p0117"></script>
-    <script src="js/studente/studia-core.js?v=p0117"></script>
-    <script src="js/studente/console.js?v=p0117"></script>
+    <script src="js/studente/stampa.js?v=p0126-1"></script>
+    <script src="js/studente/documenti.js?v=p0126-1"></script>
+    <script src="js/studente/prova-core.js?v=p0126-1"></script>
+    <script src="js/studente/prova-pdf.js?v=p0126-1"></script>
+    <script src="js/studente/launcher-core.js?v=p0126-1"></script>
+    <script src="js/studente/foglio-nodi-core.js?v=p0126-1"></script>
+    <script src="js/studente/foglio-nodi.js?v=p0126-1"></script>
+    <script src="js/studente/autotest.js?v=p0126-1"></script>
+    <script src="js/studente/studia-core.js?v=p0126-1"></script>
+    <script src="js/studente/console.js?v=p0126-1"></script>
     <script src="js/studente/cabina.js?v=st36"></script>
     <script src="js/studente/scambio-core.js?v=0119-7"></script>
     <script src="js/studente/scambio.js?v=0119-2"></script>
     <script src="js/studente/demo.js?v=demo-albero"></script>
     <script src="js/studente/pdf-vista.js?v=foto1"></script>
-    <script src="js/studente/mappa.js?v=st35"></script>
+    <script src="js/studente/mappa.js?v=p0126-1"></script>
 </body>
 
 </html>

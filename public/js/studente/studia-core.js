@@ -109,15 +109,33 @@
         }).filter(Boolean);
     }
 
-    /* LE PROVE DEL PROGETTO (packet 0117, Giacomo 20/10): tre tabelle nella console,
-       «Domande aperte», «Scelta multipla», «Domande su misura». Una riga per foglio o
+    /* IL MODO DELLE PROVE (packet 0126, Giacomo 24/10: «un interruttore 'semplice/meta'
+       con default su 'semplice'»). «semplice»: le prove come il LIVE dei telefoni;
+       «meta»: la prova di prima (scelta, osservazioni, autovalutazione, su misura).
+       Una regola sola per la console e per autotest.js: «meta» solo se lo dice la
+       preferenza (`mappai_studente_prove_modo`), tutto il resto è «semplice». */
+    function modoProve(v) { return _s(v) === 'meta' ? 'meta' : 'semplice'; }
+
+    /* IL TITOLO DI UN REPORT NELLA BARRA DEL PANNELLO (gate dello 0126, Giacomo 25/10): «[Nome progetto] ·
+       [Nome del materiale] · Report allievo», e il materiale è genere e angolo, come nelle tabelle qui sotto.
+       o = { mappa, tipo: 'mc'|'aperte', angolo, t } */
+    function titoloReport(o) {
+        o = o || {};
+        var t = o.t || function (k, f) { return f; };
+        var genere = o.tipo === 'mc' ? t('st_g_prove_mc', 'Scelta multipla') : t('st_g_prove_aperte', 'Domande aperte');
+        return [_s(o.mappa).trim(), genere, _s(o.angolo).trim(), t('st_report_allievo', 'Report allievo')].filter(Boolean).join(' · ');
+    }
+
+    /* LE PROVE DEL PROGETTO (packet 0117, Giacomo 20/10): le tabelle nella console,
+       «Domande aperte» e «Scelta multipla». Una riga per foglio o
        per set col nome dell'angolo e il numero di domande; senza angolo (fogli e set
        vecchi) il titolo, e se due righe si chiamerebbero uguali prendono anche il
-       titolo. Su misura è una riga sola: ramo e angolo si scelgono nel modale.
+       titolo. Dal 0126 (Giacomo, 24/10) «Domande su misura» non è più una tabella: in
+       Meta è l'ultima riga di «Domande aperte», e ramo e angolo si scelgono nel modale.
        Le righe CONCLUDONO, come i materiali: la console si chiude, si apre la mappa
        e la prova parte accanto. `p` = null finché la console non le ha lette.
        p = { aperte:[{i,angolo,titolo,n}], mc:[{id,angolo,titolo,n}], suMisura:{n}|null } */
-    function tabelleProve(p, t) {
+    function tabelleProve(p, t, modo) {
         t = t || function (k, f) { return f; };
         if (!p) return [];
         var colN = { etichetta: t('st_col_domande', 'Domande'), larghezza: '120px' };
@@ -131,13 +149,16 @@
             });
         }
         var out = [];
-        if (p.aperte && p.aperte.length) out.push({ id: 'prove-aperte', titolo: t('st_g_prove_aperte', 'Domande aperte'), collassabile: true,
-            colonne: [{ etichetta: t('st_col_angolo', 'Angolo') }, colN], righe: righe(p.aperte, 'aperte:', 'i') });
+        if (p.aperte && p.aperte.length) {
+            /* in Meta solo «Su misura» (allargamento 2, Giacomo 25/10: «Solo «Su misura»»): con «Un angolo
+               solo» dà la stessa prova di una riga per angolo, quindi le righe sarebbero doppioni */
+            var meta = modoProve(modo) === 'meta' && p.suMisura;
+            var ra = meta ? [{ id: 'su-misura', celle: [t('st_su_misura_riga', 'Su misura: scegli ramo e angolo'), String(p.suMisura.n)] }] : righe(p.aperte, 'aperte:', 'i');
+            out.push({ id: 'prove-aperte', titolo: t('st_g_prove_aperte', 'Domande aperte'), collassabile: true,
+                colonne: [{ etichetta: t('st_col_angolo', 'Angolo') }, colN], righe: ra });
+        }
         if (p.mc && p.mc.length) out.push({ id: 'prove-mc', titolo: t('st_g_prove_mc', 'Scelta multipla'), collassabile: true,
             colonne: [{ etichetta: t('st_col_angolo', 'Angolo') }, colN], righe: righe(p.mc, 'mc:', 'id') });
-        if (p.suMisura) out.push({ id: 'prove-su-misura', titolo: t('st_g_su_misura', 'Domande su misura'), collassabile: true,
-            colonne: [{ etichetta: t('st_col_ramo_angolo', 'Ramo e angolo') }, colN],
-            righe: [{ id: 'su-misura', celle: [t('st_scegli_ramo_angolo', 'Scegli ramo e angolo'), String(p.suMisura.n)] }] });
         return out;
     }
 
@@ -293,8 +314,22 @@
                         vuoto: o.materiali === null ? t('st_carico_mat', 'Cerco i materiali di questa mappa…') : t('st_nessun_materiale', 'Questa mappa non porta materiali oltre ai set.') }]
                 }
             ];
+            /* l'interruttore delle prove (0126, Giacomo 25/10: «sopra la prima tabella mostrata
+               nella console e allineala orizzontalmente alle tabelle»; «solo quando sono
+               disponibili i materiali per cui l'opzione serve»): `colonna:'materiali'`, che il
+               motore disegna in cima al riquadro delle tabelle, e solo se il progetto ha domande
+               aperte o un quiz; senza «Prove:» davanti (gate del 25/10). I due radio non concludono:
+               il loro `__campo` lo raccoglie console.js, che scrive la preferenza e ridisegna */
+            var modo = modoProve(o.modo);
+            if (o.prove && ((o.prove.aperte || []).length || (o.prove.mc || []).length)) s.sezioni.push({
+                id: 'prove-modo', colonna: 'materiali',
+                campi: [
+                    { id: 'modo-semplice', tipo: 'radio', gruppo: 'prove-modo', etichetta: t('st_modo_semplice', 'Semplice'), valore: modo === 'semplice' },
+                    { id: 'modo-meta', tipo: 'radio', gruppo: 'prove-modo', etichetta: t('st_modo_meta', 'Meta'), valore: modo === 'meta' }
+                ]
+            });
             /* le prove (0117) prima dei materiali: si scelgono qui, la finestra «Studio attivo» non c'è più */
-            s.tabelle = tabelleProve(o.prove, t).concat(tabMat).concat([{
+            s.tabelle = tabelleProve(o.prove, t, modo).concat(tabMat).concat([{
                 id: 'sessioni', titolo: t('st_sessioni', 'Le tue prove'), collassabile: true,
                 vuota: t('st_sessioni_vuota', 'Nessuna prova ancora: componine una e il documento comparirà qui.'),
                 colonne: [
@@ -323,11 +358,37 @@
 
     /* il nome del PDF della mappa (Giacomo, 17/9): `mappa-<progetto>-GG-MM-AAAA-NN.pdf`,
        NN il primo numero libero di quel giorno fra i file già in «MAPPE PDF» (da 00) */
-    function nomePdfMappa(progetto, data, esistenti) {
-        var d = data || new Date(), p2 = function (n) { return String(n).padStart(2, '0'); };
-        var base = 'mappa-' + String(progetto || 'mappa').replace(/[\\/:*?"<>|]+/g, '-').trim() + '-' + p2(d.getDate()) + '-' + p2(d.getMonth() + 1) + '-' + d.getFullYear() + '-';
+    /* IL NOME DI OGNI DOCUMENTO DELL'IPAD (0126, allargamento 6; Giacomo, 26/10: «il nome del progetto sempre al
+       primo posto […], poi sempre il tipo di materiali […], l'angolo o 'meta', data»; alla domanda: «Trattini senza
+       spazi»): «Progetto-Tipo-angolo-GG-MM-AAAA», senza angolo la parte si salta. Solo la fonte tiene il suo nome. */
+    function nomeDocumento(o) {
+        o = o || {};
+        var d = o.data ? new Date(o.data) : new Date(); if (isNaN(d.getTime())) d = new Date();
+        var p2 = function (n) { return String(n).padStart(2, '0'); };
+        var pulito = function (x) { return _s(x).replace(/[\\/:*?"<>|]+/g, '-').trim(); };
+        return [pulito(o.progetto) || 'Progetto', pulito(o.tipo), pulito(o.angolo).toLowerCase()].filter(Boolean).join('-') +
+            '-' + p2(d.getDate()) + '-' + p2(d.getMonth() + 1) + '-' + d.getFullYear();
+    }
+    /* se il nome c'è già nella cartella, « (2)», « (3)»… prima dell'estensione (un punto seguito da spazi non lo è) */
+    function nomeLibero(nome, esistenti) {
         var presi = {}; (esistenti || []).forEach(function (n) { presi[n] = true; });
-        for (var i = 0; ; i++) { var nome = base + p2(i) + '.pdf'; if (!presi[nome]) return nome; }
+        if (!presi[nome]) return nome;
+        var m = /\.[a-z0-9]{1,5}$/i.exec(nome), est = m ? m[0] : '', base = est ? nome.slice(0, -est.length) : nome;
+        for (var i = 2; ; i++) { var n = base + ' (' + i + ')' + est; if (!presi[n]) return n; }
+    }
+    /* il nome con cui un materiale aperto dalla console o dal pannello va in stampa (0126, allargamento 6): la
+       sintesi del docente prende «Progetto-Sintesi-data»; la fonte tiene il suo nome (Giacomo: «Solo la stampa della
+       Fonte mantiene il nome originale del file»), e le mappe in PDF ce l'hanno già nuovo */
+    function nomeDaStampare(f, progetto, data) {
+        var nome = _s(f && f.name);
+        if (inAllegati(f)) return nome;
+        var g = genere(nome);
+        if (g && /^Sintesi/.test(g.et)) return nomeDocumento({ progetto: progetto, tipo: 'Sintesi', data: data });
+        return nome;
+    }
+    /* la mappa in PDF, nella cartella «MAPPE PDF» */
+    function nomePdfMappa(progetto, data, esistenti) {
+        return nomeLibero(nomeDocumento({ progetto: progetto, tipo: 'Mappa', data: data }) + '.pdf', esistenti);
     }
 
     /* le briciole: Studia › materia › mappa */
@@ -339,5 +400,5 @@
         return out;
     }
 
-    return { SENZA: SENZA, SCHEDA: SCHEDA, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, tabelleProve: tabelleProve, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi, markdownDaScheda: markdownDaScheda };
+    return { SENZA: SENZA, SCHEDA: SCHEDA, modoProve: modoProve, titoloReport: titoloReport, materiaDi: materiaDi, perMateria: perMateria, fmtData: fmtData, schema: schema, briciole: briciole, genere: genere, GRUPPI: GRUPPI, tabelleMateriali: tabelleMateriali, tabelleProve: tabelleProve, trovaSintesi: trovaSintesi, daMostrare: daMostrare, inAllegati: inAllegati, nomeDocumento: nomeDocumento, nomeLibero: nomeLibero, nomeDaStampare: nomeDaStampare, nomePdfMappa: nomePdfMappa, schedaDaNodi: schedaDaNodi, markdownDaScheda: markdownDaScheda };
 }));

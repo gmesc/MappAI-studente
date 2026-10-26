@@ -35,21 +35,67 @@
                 });
             }
             function spazio(mm) { y += mm; if (y > FONDO) { doc.addPage(); y = MY; } }
+            /* il chip come lo studente l'ha visto (0126): cornice e testo del suo colore, sfondo al 15%.
+               I colori arrivano come token (`var(--x, #hex)`): jsPDF vuole l'esadecimale di riserva */
+            function esa(c, ripiego) { var m = /#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/i.exec(String(c || '')); return m ? m[0] : ripiego; }
+            function tinta(h) {
+                h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+                var n = parseInt(h, 16);
+                return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) { return Math.round(255 + (v - 255) * 0.15); });
+            }
+            function pillola(testo, colore, testoColore, x) {
+                var c = esa(colore, '#475569'), f = tinta(c);
+                doc.setFont(F, 'bold'); doc.setFontSize(9);
+                var w = doc.getTextWidth(testo) + 7;
+                doc.setFillColor(f[0], f[1], f[2]); doc.setDrawColor(c); doc.setLineWidth(0.45);
+                doc.roundedRect(x, y - 4.3, w, 6.2, 3.1, 3.1, 'FD');
+                doc.setTextColor(esa(testoColore, c)); doc.text(testo, x + 3.5, y);
+                return w;
+            }
             /* testata */
             riga(o.titolo || 'Domande aperte', 15, 'bold', '#0f766e');
             riga([o.mappa, o.data, o.ambito, o.angoli].filter(Boolean).join(' · '), 9.5, 'normal', '#475569');
+            /* in testa le domande disponibili e i chip coi loro conteggi (Giacomo, 26/10) */
+            if (o.giudizi && o.giudizi.voci && o.giudizi.voci.length) {
+                spazio(3);
+                doc.setFont(F, 'bold'); doc.setFontSize(10); doc.setTextColor('#1e293b');
+                var tot = o.giudizi.totale + ' domande disponibili', x = MX;
+                doc.text(tot, x, y); x += doc.getTextWidth(tot) + 4;
+                o.giudizi.voci.forEach(function (v) { x += pillola(v.et + ': ' + v.n, v.colore, v.testo, x) + 3; });
+                spazio(4);
+            }
             spazio(4);
             doc.setDrawColor('#0f766e'); doc.setLineWidth(0.6); doc.line(MX, y, W - MX, y); spazio(6);
             (o.righe || []).forEach(function (r, i) {
                 var kicker = [(i + 1) + '.', r.ramo, r.angolo ? r.angolo.toUpperCase() : ''].filter(Boolean).join('  ·  ');
                 riga(kicker, 8.5, 'bold', '#0f766e');
                 riga(r.domanda, 11, 'bold', '#1e293b');
-                if (r.perche) riga('Perché: ' + r.perche, 9, 'italic', '#475569');
+                /* niente «Perché: la so» sopra la risposta (Giacomo, 26/10): le prese sono tutte «la so» */
                 spazio(1.5);
                 if (r.risposta) riga(r.risposta, 10.5, 'normal', '#1e293b');
                 else riga('—', 10.5, 'normal', '#94a3b8');
                 spazio(5);
             });
+            /* 0126, allargamento 3 (Giacomo: «anche le eventuali osservazioni dell'allievo e anche le
+               domande scartare»): dopo le risposte le domande lasciate col loro «Perché:», poi le osservazioni */
+            function sezione(titolo) {
+                spazio(3); riga(titolo, 12, 'bold', '#0f766e'); spazio(1.5);
+                doc.setDrawColor('#cbd5e1'); doc.setLineWidth(0.3); doc.line(MX, y, W - MX, y); spazio(5);
+            }
+            var scartate = o.scartate || [], note = String(o.note || '').trim();
+            if (scartate.length) {
+                sezione('Domande scartate');
+                scartate.forEach(function (r) {
+                    var kicker = [r.ramo, r.angolo ? r.angolo.toUpperCase() : ''].filter(Boolean).join('  ·  ');
+                    if (kicker) riga(kicker, 8.5, 'bold', '#475569');
+                    riga(r.domanda, 11, 'bold', '#1e293b');
+                    /* il motivo come chip, coi colori che lo studente ha visto */
+                    spazio(4.5); if (y > FONDO) { doc.addPage(); y = MY; }
+                    pillola(r.perche, r.colore, r.testo, MX);
+                    spazio(10);
+                });
+            }
+            if (note) { sezione('Osservazioni'); riga(note, 10.5, 'normal', '#1e293b'); }
             /* piè: il nome dell'app e la pagina */
             var n = doc.getNumberOfPages();
             for (var p = 1; p <= n; p++) {

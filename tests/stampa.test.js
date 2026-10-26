@@ -91,4 +91,7 @@ test('senzaEstensione: solo l\'ultima estensione, i punti nel nome restano', () 
     assert.strictEqual(S.senzaEstensione('Quiz 2.A - La carta.html'), 'Quiz 2.A - La carta');
     assert.strictEqual(S.senzaEstensione('Scheda.pdf'), 'Scheda');
     assert.strictEqual(S.senzaEstensione(null), '');
+    /* 0126, allargamento 6: un punto seguito da spazi non è un'estensione («Cap. 3» restava «Cap») */
+    assert.strictEqual(S.senzaEstensione('Cap. 3-Domande aperte-meta-26-10-2026'), 'Cap. 3-Domande aperte-meta-26-10-2026');
+    assert.strictEqual(S.senzaEstensione('Sistema Albero-Mappa-26-10-2026.pdf'), 'Sistema Albero-Mappa-26-10-2026');
 });

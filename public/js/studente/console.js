@@ -65,8 +65,10 @@
         return A.leggiProve(fullPath, v.rootNodeLabel || '');
     }
     function scambioOn() { try { return localStorage.getItem('mappai_studente_scambio') !== '0' && !!window.MappAIStudenteScambio; } catch (e) { return false; } }
+    /* «Prove: Semplice / Meta» (0126): di serie semplice; la regola è di studia-core */
+    function modoProve() { var v = null; try { v = localStorage.getItem('mappai_studente_prove_modo'); } catch (e) { } return C().modoProve(v); }
     function schema() {
-        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, prove: st.prove, chiusi: st.chiusi, t: window.t, scambio: scambioOn(),
+        return C().schema({ vaults: st.vaults, sel: st.sel, sessioni: st.sessioni, materiali: st.materiali, prove: st.prove, chiusi: st.chiusi, t: window.t, scambio: scambioOn(), modo: modoProve(),
             ipad: !!(window.MappAIStudenteFS && window.MappAIStudenteFS.provider === 'ipad') });
     }
     function briciole() {
@@ -166,6 +168,13 @@
             if (a === '__gruppo') { st.chiusi[String(ev.voce || '').replace(/^g:/, '')] = !!ev.chiuso; return; }
             if (a === '__nav') { if (/^v:/.test(ev.voce || '')) scegli(String(ev.voce).slice(2), ridisegna); return; }
             if (a === '__esc') return false;                     /* la home non si chiude con ESC */
+            /* l'interruttore delle prove (0126): la preferenza, poi la console ridisegnata (in Meta compare «Su misura») */
+            if (a === '__campo' && /^modo-(semplice|meta)$/.test(ev.campo || '')) {
+                var m = (ev.valori || {})['modo-meta'] ? 'meta' : 'semplice';
+                try { localStorage.setItem('mappai_studente_prove_modo', m); } catch (e) { }
+                ridisegna(schema()); briciole();
+                return;
+            }
             if (a === 'apri-cartella') {
                 window.electronAPI.pickFolder().then(function (r) {
                     if (!r || r.canceled) return;
@@ -198,12 +207,22 @@
             if (a === 'sintesi' && scelto) {
                 var sin = C().trovaSintesi(st.materiali);
                 if (!sin) { toast(t('st_sintesi_manca_toast', 'Questa mappa non porta una sintesi: il docente non l\'ha pubblicata.'), 'info'); setTimeout(apri, 50); return; }
-                return apriMappa(scelto, false).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, sin.relPath, sin.name); });
+                /* stampa col nome «Progetto-Sintesi-data» (0126, allargamento 6) */
+                return apriMappa(scelto, false).then(function (ok) {
+                    if (!ok || !window.MappAIStudenteDocumenti) return;
+                    var prog = (S() && S().rootNodeLabel) || String(scelto).split('/').pop();
+                    window.MappAIStudenteDocumenti.apriFile(scelto, sin.relPath, C().nomeDocumento({ progetto: prog, tipo: 'Sintesi', data: new Date() }));
+                });
             }
             /* un materiale dalla console: la mappa sotto, il documento nel dock accanto */
             if (/^mat:/.test(a) && scelto) {
                 var rel = a.slice(4), nome = rel.split('/').pop();
-                return apriMappa(scelto, false).then(function (ok) { if (ok && window.MappAIStudenteDocumenti) window.MappAIStudenteDocumenti.apriFile(scelto, rel, nome); });
+                /* va in stampa col nome di `nomeDaStampare` (0126, allargamento 6: la sintesi «Progetto-Sintesi-data») */
+                return apriMappa(scelto, false).then(function (ok) {
+                    if (!ok || !window.MappAIStudenteDocumenti) return;
+                    var prog = (S() && S().rootNodeLabel) || String(scelto).split('/').pop();
+                    window.MappAIStudenteDocumenti.apriFile(scelto, rel, C().nomeDaStampare({ name: nome, relPath: rel }, prog, new Date()));
+                });
             }
             /* chiusa dal pallino: se sotto c'è una mappa la si mostra, altrimenti si riapre */
             var ss = S();
