@@ -314,7 +314,7 @@
         var dir = s.activeVaultPath + '/Studio Attivo/Prove';
         return FS.lista(dir).then(function (figli) {
             var esistenti = figli.filter(function (f) { return f.isDir; }).map(function (f) { return f.name; });
-            var nome = PC().nomeSessione({ data: new Date(), tipo: o.tipo === 'quiz' ? 'quiz' : 'domande', mappa: s.rootNodeLabel || 'Mappa', ambito: o.ambito || '' }, esistenti);
+            var nome = PC().nomeSessione({ data: new Date(), tipo: (o.tipo === 'quiz' || o.tipo === 'flashcard') ? o.tipo : 'domande', mappa: s.rootNodeLabel || 'Mappa', ambito: o.ambito || '' }, esistenti);
             return { rel: 'Studio Attivo/Prove/' + nome, nome: nome };
         });
     }
@@ -361,18 +361,47 @@
        `buildStudentsReportHtml`, con `results.json` e `sessione.json` accanto. */
     /* `angolo` (0126): l'etichetta dell'angolo del set, perché «Le tue prove › apri» ridia lo stesso titolo nella barra */
     /* `chiave` (0126, allargamento 6): la chiave dell'angolo, per il nome «Progetto-Scelta multipla-angolo-data» */
-    function scriviReport(rep, titolo, angolo, chiave) {
+    /* `genere` (0128, allargamento 13): { tipo, attivita } del materiale — di serie la scelta multipla; il mazzo di
+       flashcard (studente/flashcard.js, alla fine dell'ultima carta) passa { tipo: 'Flashcard', attivita: 'flashcard' } */
+    /* IL REPORT LEGGIBILE SULL'IPAD (0128, allargamento 22; Giacomo, 27/10, sul report delle flashcard aperto nel pannello:
+       «ingrandisci il font del report»). Il report è quello della classe del docente (MappAILiveReports, copia), fatto per
+       l'A4: corpi da 9 a 12 px. Qui, prima di scriverlo, gli si aggiunge in testa uno stile:
+         · il carattere DENTRO il file (MappAIFont › styleDocumento, coi byte di Space Mono): il report è un file a sé e nel
+           pannello non trovava né Space Mono né le emoji dell'app; le lettere cadevano sul monospazio di sistema, larghe,
+           e le cifre sulle emoji di Apple, storte («2 7/1 0/2 0 2 6», «D₁»);
+         · i corpi del testo a 16 come nell'app (domanda, scelta, risposta), il resto in proporzione.
+       Vale per i report che scrive questa funzione, cioè scelta multipla e flashcard; le domande aperte hanno il loro
+       foglio, già a 18. I valori sono locali: il file viaggia da solo e i token dell'app lì non ci sono. */
+    var STILE_REPORT = 'body{font-size:16px}' +
+        '.lr-title{font-size:26px}.lr-sub{font-size:14px}.lr-chip{font-size:13px}' +
+        '.lr-who{font-size:20px}.lr-who-sub{font-size:14px}.lr-acc{font-size:30px}.lr-acc-sub{font-size:13px}' +
+        '.lr-strip{gap:6px}.lr-pill{width:30px;height:30px;font-size:15px}' +
+        '.lr-di-row{gap:10px;padding:8px 0}.lr-di-mark{width:22px;font-size:16px}' +
+        '.lr-di-q{font-size:16px;line-height:1.5}.lr-di-your,.lr-di-correct{font-size:16px;line-height:1.5;margin-top:3px}' +
+        '.lr-topic-h{font-size:13px}.lr-topic-item{font-size:15px}.lr-footer{font-size:12px}';
+    function reportLeggibile(html) {
+        var F = window.MappAIFont, facce = '';
+        try { facce = (F && F.styleDocumento) ? F.styleDocumento('space-mono') : ''; } catch (e) { facce = ''; }
+        var st = '<style>' + facce + STILE_REPORT + '</style>';
+        return html.indexOf('</head>') >= 0 ? html.replace('</head>', st + '</head>') : st + html;
+    }
+    function scriviReport(rep, titolo, angolo, chiave, genere) {
         var s = S(), R = window.MappAILiveReports;
         if (!s || !s.activeVaultPath || !R) return Promise.resolve({ ok: false, error: 'nessun vault' });
+        var g = genere || { tipo: 'Scelta multipla', attivita: 'quiz' };
         var data = new Date(), cart = null;
-        var nomeFile = window.MappAIStudiaCore.nomeDocumento({ progetto: s.rootNodeLabel || '', tipo: 'Scelta multipla', angolo: chiave || '', data: data });
-        return cartellaSessione({ tipo: 'quiz', ambito: '' }).then(function (c) {
+        var nomeFile = window.MappAIStudiaCore.nomeDocumento({ progetto: s.rootNodeLabel || '', tipo: g.tipo, angolo: chiave || '', data: data });
+        return cartellaSessione({ tipo: g.attivita, ambito: '' }).then(function (c) {
             cart = c;
-            return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: 'Scelta multipla', titolo: titolo, angolo: angolo || '', mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct, nomeFile: nomeFile }, null, 2) });
+            return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: g.tipo, titolo: titolo, angolo: angolo || '', mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct, nomeFile: nomeFile }, null, 2) });
         }).then(function () {
             return scrivi(cart.rel + '/results.json', { text: JSON.stringify(rep.results, null, 2) });
         }).then(function () {
-            return scrivi(cart.rel + '/report.html', { text: R.buildStudentsReportHtml(rep.meta, rep.results) });
+            /* i byte di Space Mono prima di costruire: styleDocumento è sincrona e senza di loro scriverebbe un percorso */
+            var F = window.MappAIFont;
+            return (F && F.precaricaIncorporabile) ? F.precaricaIncorporabile('space-mono').catch(function () { return false; }) : null;
+        }).then(function () {
+            return scrivi(cart.rel + '/report.html', { text: reportLeggibile(R.buildStudentsReportHtml(rep.meta, rep.results)) });
         }).then(function () { return { ok: true, rel: cart.rel, nomeFile: nomeFile }; })
           .catch(function (e) { console.warn('[autotest] report', e); return { ok: false, error: e && e.message }; });
     }
@@ -420,5 +449,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installa); else installa();
     installa();
 
-    window.MappAIStudenteAutotest = { leggiProve: leggiProve, avviaDa: avviaDa, fogli: fogli, prova: prova, avvia: avvia, scriviReportMC: scriviReportMC };
+    window.MappAIStudenteAutotest = { leggiProve: leggiProve, avviaDa: avviaDa, fogli: fogli, prova: prova, avvia: avvia, scriviReportMC: scriviReportMC, scriviReport: scriviReport };
 }());

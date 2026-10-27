@@ -173,6 +173,9 @@
      (Noto/Android). Senza il font il PDF le stamperebbe in stile Apple: per
      questo i byte sono incorporati (EMOJI_STACK, sopra), non chiesti alla rete.
      `html-to-pdf` attende `document.fonts.ready` prima di stampare. */
+  /* `title` = il <title>, che in Electron dà il nome al PDF. 0128, allargamento 23 (Giacomo, 27/10, nella chat ADMIN: «Lo corregga lo
+     0128 come allargamento: allarga il perimetro dello 0128 al titolo dei report LIVE in mappai-live-reports.js.»; il nome «Come la
+     barra»): i report del Live lo prendono da `titoloLive`, come la barra — prima «<mappa> — domande» e il PDF si chiamava così */
   function docShell(title, barra, bodyHtml, opts) {
     var perPdf = !!(opts && opts.perPdf);
     return '<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">' +
@@ -240,7 +243,7 @@
         (q.manual ? ' · A mano ' + q.manual + ' (' + q.pctManual + '%)' : '') +
         '</div></div>';
     });
-    return docShell((meta && meta.mapTitle || 'Report') + ' — domande', titoloLive(meta, 'Report domande'), body);
+    return docShell(titoloLive(meta, 'Report domande'), titoloLive(meta, 'Report domande'), body);
   }
 
   // ── Report B: schede individuali ────────────────────────────────────────
@@ -257,7 +260,9 @@
   ].join('');
   // il carattere della pagina (il docente lo sceglie in MappAI; sul telefono arriva come --live-font), Space Mono se non c'è
   var STUDENT_SHEET_FONT = ".lr-root{font-family:var(--live-font,'Space Mono'),var(--emoji,'MappAI Emoji'),ui-monospace,monospace}";
-  function studentDetailHtml(items, pillMark) {
+  /* `fc` (0128, allargamento 13): un mazzo di flashcard — la «risposta» è la scelta dell'allievo sulla carta, e quella
+     giusta è il retro della carta */
+  function studentDetailHtml(items, pillMark, fc) {
     return items.map(function (it, i) {
       var half = (it.missing && it.missing.length);
       var badge = half ? '<span style="color:#d97706;font-weight:700">½</span> '
@@ -266,9 +271,9 @@
       var showRight = it.outcome !== 'right' && it.correctText;
       return '<div class="lr-di-row">' + badge + '<div class="lr-di-body">' +
         '<div class="lr-sa-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
-        '<div class="lr-sa-t">Tua risposta</div>' +
+        '<div class="lr-sa-t">' + (fc ? 'La tua scelta' : 'Tua risposta') + '</div>' +
         (it.yourText ? '<div class="lr-sa-a">' + esc(it.yourText) + '</div>' : '<div class="lr-sa-a lr-sa-vuoto">— vuoto</div>') +
-        (showRight ? '<div class="lr-sa-t lr-sa-tc">Risposta corretta:</div><div class="lr-sa-c">' + esc(it.correctText) + '</div>' : '') +
+        (showRight ? '<div class="lr-sa-t lr-sa-tc">' + (fc ? 'Risposta:' : 'Risposta corretta:') + '</div><div class="lr-sa-c">' + esc(it.correctText) + '</div>' : '') +
         (half ? '<div class="lr-sa-t lr-sa-tc">Manca:</div><div class="lr-sa-c">' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '') +
         (it.explanation ? '<div class="lr-sa-e">' + esc(it.explanation) + '</div>' : '') +
         '</div></div>';
@@ -292,10 +297,15 @@
        scheda deve stare nei font. */
     var aperte = !!s.soloAperte;
     if (aperte) pillMark = { right: '✓', wrong: '✗', blank: '·', manual: '●' };
+    /* 0128, allargamento 13 (Giacomo, 27/10: «Il report della flashcard indica le scelte dei chip fatte dall'allievo»):
+       `flashcard` = un mazzo. ✓ «Sapevo e ricordavo», ✗ «Non conoscevo», ? «Non ricordavo» (outcome right/wrong/manual);
+       la percentuale è quella delle carte sapute, e la scelta si scrive a parole: niente emoji, che nella stampa
+       dell'iPad non sono garantite (vedi ✎ qui sopra). */
+    var fc = !!s.flashcard;
 
     var outLabel = { right: 'Corretta', wrong: 'Errata', blank: 'In bianco', manual: 'Da correggere' };
     var strip = (s.items || []).map(function (it, i) {
-      return '<div class="lr-pill ' + (pillClass[it.outcome] || 'lr-pill-b') + '" title="Domanda ' + (i + 1) + '">' +
+      return '<div class="lr-pill ' + (pillClass[it.outcome] || 'lr-pill-b') + '" title="' + (fc ? 'Carta ' : 'Domanda ') + (i + 1) + '">' +
         (pillMark[it.outcome] || '·') + '</div>';
     }).join('');
     // Dettaglio per-domanda (issue 3): n°, esito, risposta allievo, risposta giusta
@@ -309,14 +319,14 @@
       var yours = it.yourText ? esc(it.yourText)
         : (vuota ? '<b style="color:var(--mm-testo-3, #64748b)">VUOTO</b>' : '<span style="color:#cbd5e1">— vuoto</span>');
       var right = (it.outcome !== 'right' && !vuota && it.correctText)
-        ? '<div class="lr-di-correct">Corretta: ' + esc(it.correctText) + '</div>' : '';
+        ? '<div class="lr-di-correct">' + (fc ? 'Risposta: ' : 'Corretta: ') + esc(it.correctText) + '</div>' : '';
       var miss = half ? '<div class="lr-di-correct" style="color:#92400e">manca: ' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '';
       var head = it.text ? esc(it.text) : (it.label ? esc(it.label) : (outLabel[it.outcome] || ''));
       return '<div class="lr-di-row">' + badge +
         '<div class="lr-di-body"><div class="lr-di-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
-        '<div class="lr-di-your">Risposta: ' + yours + '</div>' + right + miss + '</div></div>';
+        '<div class="lr-di-your">' + (fc ? 'Scelta: ' : 'Risposta: ') + yours + '</div>' + right + miss + '</div></div>';
     }).join('');
-    if (minimal) detail = studentDetailHtml(s.items || [], pillMark);
+    if (minimal) detail = studentDetailHtml(s.items || [], pillMark, fc);
     var rate = s.medianRate != null ? (s.medianRate.toFixed(1) + '/min') : '—';
     var strengths = (s.strengths || []).length
       ? s.strengths.map(function (t) { return '<div class="lr-topic-item lr-good">▲ ' + esc(t) + '</div>'; }).join('')
@@ -325,13 +335,14 @@
       ? s.weaknesses.map(function (t) { return '<div class="lr-topic-item lr-bad">▼ ' + esc(t) + '</div>'; }).join('')
       : '<div class="lr-topic-item" style="color:#cbd5e1">—</div>';
     /* 0127 (Giacomo, 27/10): «basta un riferimento solo» — l'icona grande, il numero alla stessa
-       altezza (col soprannome, se c'è) e sulla stessa riga risposte, in bianco, percentuale e fluenza */
+       altezza (col soprannome, se c'è) e sulla stessa riga risposte, in bianco, percentuale e fluenza.
+       0128: per un mazzo «carte» al posto di «risposte», «sapevo e ricordavo» al posto di «accuratezza», niente «da correggere» */
     var soprannome = s.displayName && s.displayName !== (String(s.emoji || '') + ' ' + String(s.num || '')).trim() ? s.displayName : '';
-    var dati = ['risposte ' + s.answered + '/' + (r.questionCount || (s.items || []).length)];
+    var dati = [(fc ? 'carte ' : 'risposte ') + s.answered + '/' + (r.questionCount || (s.items || []).length)];
     if (s.blankCount) dati.push(s.blankCount + ' in bianco');
-    if (s.manualCount && !aperte) dati.push(s.manualCount + ' da correggere');
+    if (s.manualCount && !aperte && !fc) dati.push(s.manualCount + ' da correggere');
     if (s.hintsUsed) dati.push('💡 ' + s.hintsUsed + ' indizi');
-    if (!aperte) dati.push('<span class="lr-acc-sub">accuratezza</span> <span class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</span>');
+    if (!aperte) dati.push('<span class="lr-acc-sub">' + (fc ? 'sapevo e ricordavo' : 'accuratezza') + '</span> <span class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</span>');
     if (!aperte && !minimal) dati.push('fluenza ' + rate);
     return '<div class="lr-card"><div class="lr-card-head lr-testa-allievo">' +
       '<div class="lr-avatar">' + (emojiImmagine(s.emoji) || esc(s.emoji)) + '</div>' +
@@ -353,7 +364,7 @@
     });
 
     if (!(r.perStudent || []).length) body += '<div class="lr-q" style="text-align:center;color:var(--mm-testo-3, #64748b)">Nessun allievo ha partecipato.</div>';
-    return docShell((meta && meta.mapTitle || 'Report') + ' — allievi', titoloLive(meta, 'Report allievi'), body);
+    return docShell(titoloLive(meta, 'Report allievi'), titoloLive(meta, 'Report allievi'), body);
   }
 
   // ── Foglio credenziali stampabile ───────────────────────────────────────
@@ -414,7 +425,7 @@
       body += '</div>';
     });
 
-    return docShell((meta && meta.mapTitle || 'Report') + ' — costruzione', titoloLive(meta, 'Report costruzione'), body);
+    return docShell(titoloLive(meta, 'Report costruzione'), titoloLive(meta, 'Report costruzione'), body);
   }
 
 
@@ -537,7 +548,7 @@
     });
 
     // la barra prende il nome del bottone che apre il report nel pannello di gestione (0127, Giacomo 26/10)
-    return docShell((meta && meta.mapTitle || 'Report') + ' — domande a scelta', titoloLive(meta, 'Report domande'), body);
+    return docShell(titoloLive(meta, 'Report domande'), titoloLive(meta, 'Report domande'), body);
   }
 
   // ── La scheda che l'ALLIEVO salva dal telefono (packet 0112) ───────────────

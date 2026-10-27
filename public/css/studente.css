@@ -108,6 +108,48 @@ html.studente #source-modal [onclick*="editCurrentSourceNode"],
 html.studente #sync-vault-btn,
 html.studente [onclick*="openCollabQrProjection"],
 html.studente #total-cost-display, html.studente #total-tokens-display, html.studente #used-model-display { display: none !important; }
+/* 0128: sull'iPad «Salva nel Vault» del riepilogo delle flashcard non salva (studente/adapter.js non ha saveChatTranscript:
+   finiva in «Errore Salvataggio»); la sessione la registra già il bus */
+html.studente #study-summary-view [onclick*="saveStudyReport"] { display: none !important; }
+/* 0128 (Giacomo, 26/10: «Nascondila sui quiz»): la stampante di un set di quiz apre una finestra che sull'iPad non c'è.
+   Allargamento 13 (27/10): «Su iPad le flashcard sono stampabili solo dalla tabella flashcard presente nella home del
+   progetto» — via anche quella dei mazzi: nessuna stampante sulle righe della sidebar «Studio» */
+html.studente #study-sets-container [data-set-azione="stampa"] { display: none !important; }
+
+/* ── 0128: le flashcard nel pannello ───────────────────────────────────────
+   Il player di MappAI (#study-player-modal) si sposta nel corpo del pannello (studente/flashcard.js): niente velo né
+   riquadro fisso, la carta riempie il pannello; il titolo del mazzo e «Carta n di N» stanno nella barra della ×,
+   quindi la testata del player (icona, titolo, «1 / 10») e la sua × si nascondono. */
+#studente-dock #study-player-modal.sd-player { position: static; inset: auto; z-index: auto; height: 100%; padding: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; opacity: 1; transition: none; align-items: stretch; justify-content: stretch; }
+#studente-dock #study-player-modal.sd-player.hidden { display: none; }
+#studente-dock .sd-player > div { width: 100%; max-width: none; height: 100%; overflow-y: auto; padding: 16px 20px; border-radius: 0; box-shadow: none; transform: none; }
+#studente-dock .sd-player > div > button.absolute, #studente-dock .sd-player h3.modal_title, #studente-dock .sd-player > div > div:has(#study-player-progress) { display: none; }
+
+/* la fine delle flashcard nel pannello (0128, allargamento 21; Giacomo, 27/10: «il report delle flashcard deve aver lo
+   stesso layout degli altri materiali»): la schermata di mappai-scelta-view › mostraEsito (`.sc-fine`, con le misure del
+   pannello qui sopra) sta in un contenitore alto quanto il pannello, perché «Hai finito!» e il 🎉 si misurano su di lui.
+   Il riepilogo del player non si vede più nel pannello: le regole dell'allargamento 20, che lo ingrandivano, sono tolte. */
+#studente-dock .sd-fc-fine { height: 100%; }
+
+/* gate del 27/10 nel simulatore (Giacomo): «per i tre bottoni riutilizza i colori dei bottoni 'la so', 'non la so',
+   'non capisco' delle domande 'meta'», «usa la stessa dimensione dei chip delle domande 'meta'». I chip sono quelli del
+   velo della prova su misura: i colori da `CHIP_PERCHE` (studente/prova-core.js), la misura da `.sc-chip` e
+   `.sc-giudizio .sc-chip` (mappai-scelta-view.js). 😎 «Sapevo e ricordavo» = «la so», 😩 «Non conoscevo» = «non la so»,
+   🤔 «Non ricordavo» = «non ho capito». Pillola bianca, cornice del colore pieno, testo nel suo colore leggibile, l'emoji
+   accanto alla parola; il tocco tinge lo sfondo al 14% come il chip scelto. Lo sfondo bianco vince anche il :hover di
+   Tailwind, che sull'iPad resta acceso dopo il tocco. Sull'iPad, nel pannello come a tutto schermo. */
+html.studente #flashcard-back-container button[onclick*="nextStudyItem"] { flex-direction: row; gap: 8px; min-height: 60px; padding: 10px 14px; border-radius: 999px; background: #fff; font-size: 19px; font-weight: 700; }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem"] > span:first-child { margin: 0; }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem('easy')"] { border-color: var(--man-verde, #41e6aa); color: var(--mm-ok, #059669); }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem('easy')"]:active { background: color-mix(in srgb, var(--man-verde, #41e6aa) 14%, white); }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem('hard')"] { border-color: var(--mm-genere-foglio, #f97316); color: var(--mm-genere-foglio-testo, #c2410c); }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem('hard')"]:active { background: color-mix(in srgb, var(--mm-genere-foglio, #f97316) 14%, white); }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem('good')"] { border-color: var(--mm-accent, #4f46e5); color: var(--mm-accent, #4f46e5); }
+html.studente #flashcard-back-container button[onclick*="nextStudyItem('good')"]:active { background: color-mix(in srgb, var(--mm-accent, #4f46e5) 14%, white); }
+/* «il font della risposta deve avere la stessa dimensione e stile della domanda»: le classi sono quelle della domanda
+   (index.html); la grandezza la fissa style.css (copia di re) con !important, quindi qui la stessa espressione della
+   domanda. Con lo zoom del testo (Aa) diverso da 1, mappai-a11y.js (copia) scrive ancora 18 px × zoom sulla risposta. */
+html.studente #flashcard-back-text { font-size: calc(1.5rem * var(--app-zoom, 1)) !important; }
 
 /* l'esito di una prova nel dock */
 #studente-dock .sd-esito { padding: 24px 20px; font-size: 15px; line-height: 1.6; color: #0f172a; }
@@ -221,21 +263,25 @@ html.studente .mm-tabg--testa .mm-opz__t { font-size: var(--mm-fs-label); }
 /* ── «Domande su misura» grande come la prova (allargamento 2, variante E del mockup) ─────
    Le due sezioni dello schema (`dove`, `quali`, launcher-core.js): ogni scelta una riga da toccare
    da 56 px col testo a 19; la tendina solo dopo «Un ramo» o «Un angolo solo»; in orizzontale le
-   due domande affiancate (in colonna la seconda finiva sotto il bordo, misurato sul mockup). */
-.mm-sez[data-sez="dove"] .mm-opz, .mm-sez[data-sez="quali"] .mm-opz { display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 12px 16px; margin: 0 0 10px; border: 2px solid #cbd5e1; border-radius: 14px; background: #fff; }
-.mm-sez[data-sez="dove"] .mm-opz:has(input:checked), .mm-sez[data-sez="quali"] .mm-opz:has(input:checked) { border-color: #4f46e5; background: #eef2ff; }
-.mm-sez[data-sez="dove"] .mm-opz input, .mm-sez[data-sez="quali"] .mm-opz input { width: 24px; height: 24px; accent-color: #4f46e5; flex: 0 0 auto; }
-.mm-sez[data-sez="dove"] .mm-opz__t, .mm-sez[data-sez="quali"] .mm-opz__t { font-size: 19px !important; font-weight: 700; }
-.mm-sez[data-sez="dove"] .mm-opz__d, .mm-sez[data-sez="quali"] .mm-opz__d { display: block; font-size: 16px !important; line-height: 1.4; }
+   due domande affiancate (in colonna la seconda finiva sotto il bordo, misurato sul mockup).
+   Dal gate dello 0128 (27/10, Giacomo: «deve essere adattato al layout ipad degli altri modali») le stesse regole
+   vestono «PDF delle flashcard» (`fc-forma`, `fc-lato`, flashcard-core.js); l'avviso del pieghevole (`fc-avviso`)
+   sta sotto le due domande, largo quanto la finestra. */
+.mm-sez[data-sez="fc-forma"] .mm-opz, .mm-sez[data-sez="fc-lato"] .mm-opz, .mm-sez[data-sez="dove"] .mm-opz, .mm-sez[data-sez="quali"] .mm-opz { display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 12px 16px; margin: 0 0 10px; border: 2px solid #cbd5e1; border-radius: 14px; background: #fff; }
+.mm-sez[data-sez="fc-forma"] .mm-opz:has(input:checked), .mm-sez[data-sez="fc-lato"] .mm-opz:has(input:checked), .mm-sez[data-sez="dove"] .mm-opz:has(input:checked), .mm-sez[data-sez="quali"] .mm-opz:has(input:checked) { border-color: #4f46e5; background: #eef2ff; }
+.mm-sez[data-sez="fc-forma"] .mm-opz input, .mm-sez[data-sez="fc-lato"] .mm-opz input, .mm-sez[data-sez="dove"] .mm-opz input, .mm-sez[data-sez="quali"] .mm-opz input { width: 24px; height: 24px; accent-color: #4f46e5; flex: 0 0 auto; }
+.mm-sez[data-sez="fc-forma"] .mm-opz__t, .mm-sez[data-sez="fc-lato"] .mm-opz__t, .mm-sez[data-sez="dove"] .mm-opz__t, .mm-sez[data-sez="quali"] .mm-opz__t { font-size: 19px !important; font-weight: 700; }
+.mm-sez[data-sez="fc-forma"] .mm-opz__d, .mm-sez[data-sez="fc-lato"] .mm-opz__d, .mm-sez[data-sez="dove"] .mm-opz__d, .mm-sez[data-sez="quali"] .mm-opz__d { display: block; font-size: 16px !important; line-height: 1.4; }
 .mm-sez[data-sez="dove"] .mm-campo-riga, .mm-sez[data-sez="quali"] .mm-campo-riga { width: 100% !important; max-width: none !important; flex: 1 1 100% !important; }
 .mm-sez[data-sez="dove"] select.mm-campo, .mm-sez[data-sez="quali"] select.mm-campo { width: 100% !important; max-width: none !important; min-height: 52px; font-size: 19px !important; border-radius: 12px; }
 .mm-sez[data-sez="dove"] .mm-campo-riga:has(select[data-campo="ramo"]), .mm-sez[data-sez="quali"] .mm-campo-riga:has(select[data-campo="angolo"]) { display: none; }
 .mm-sez[data-sez="dove"]:has(input[data-campo="amb-ramo"]:checked) .mm-campo-riga:has(select[data-campo="ramo"]) { display: block; }
 .mm-sez[data-sez="quali"]:has(input[data-campo="ang-uno"]:checked) .mm-campo-riga:has(select[data-campo="angolo"]) { display: block; }
-.mm-sez[data-sez="dove"] .mm-sez__t, .mm-sez[data-sez="quali"] .mm-sez__t { font-size: 16px !important; }
-.mm-box:has(.mm-sez[data-sez="dove"]) .mm-btn { min-height: 52px !important; font-size: 19px !important; padding: 0 24px !important; border-radius: 14px !important; }
-.mm-box:has(.mm-sez[data-sez="dove"]) .mm-close { width: 44px !important; height: 44px !important; font-size: 22px !important; }
-@media (orientation: landscape) { .mm-body:has(> .mm-sez[data-sez="dove"]) { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; } }
+.mm-sez[data-sez="fc-forma"] .mm-sez__t, .mm-sez[data-sez="fc-lato"] .mm-sez__t, .mm-sez[data-sez="dove"] .mm-sez__t, .mm-sez[data-sez="quali"] .mm-sez__t { font-size: 16px !important; }
+.mm-box:has(.mm-sez[data-sez="fc-forma"]) .mm-btn, .mm-box:has(.mm-sez[data-sez="dove"]) .mm-btn { min-height: 52px !important; font-size: 19px !important; padding: 0 24px !important; border-radius: 14px !important; }
+.mm-box:has(.mm-sez[data-sez="fc-forma"]) .mm-close, .mm-box:has(.mm-sez[data-sez="dove"]) .mm-close { width: 44px !important; height: 44px !important; font-size: 22px !important; }
+@media (orientation: landscape) { .mm-body:has(> .mm-sez[data-sez="fc-forma"]), .mm-body:has(> .mm-sez[data-sez="dove"]) { display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; } }
+.mm-sez[data-sez="fc-avviso"] { grid-column: 1 / -1; }
 
 /* ── «Foglio dei nodi» dello studente (allargamento 2): a tutto schermo, una riga sola di comandi ── */
 #sf-nodi { position: fixed; inset: 0; z-index: 12500; display: flex; flex-direction: column; background: #fafbff; color: #404040; font-family: inherit;
@@ -254,6 +300,9 @@ html.studente .mm-tabg--testa .mm-opz__t { font-size: var(--mm-fs-label); }
 #sf-nodi .sf-ante canvas { background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,.18); border-radius: 4px; }
 #sf-nodi .sf-msg { margin: 0; font-size: 16px; color: #475569; }
 #sf-nodi .sf-msg:empty { display: none; }
+/* 0128: l'avviso del generatore (schede più piccole per non tagliare il testo), sotto l'anteprima */
+#sf-nodi .sf-avviso { margin: 0; font-size: 16px; color: #475569; text-align: center; max-width: 60ch; }
+#sf-nodi .sf-avviso:empty { display: none; }
 /* frecce e «n/N» piccoli (Giacomo: «riduci la dimensione dei bottoni '<' e '>' e del testo 'Pagina n di N'»); si sfoglia anche col dito */
 #sf-nodi .sf-pag { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #334155; }
 #sf-nodi .sf-pag button { width: 36px; height: 36px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #4f46e5; font-size: 18px; line-height: 1; cursor: pointer; }
