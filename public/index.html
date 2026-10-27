@@ -57,7 +57,7 @@
          resta visibile, tetto di larghezza). Dopo la veste: ne usa i token. -->
     <link rel="stylesheet" href="css/mappai-console-manifesto.css?v=sync-20261013">
     <!-- la veste dello studente: bersagli a 44px, il dock, la console STUDIA -->
-    <link rel="stylesheet" href="css/studente.css?v=p0126-1">
+    <link rel="stylesheet" href="css/studente.css?v=p0126-1-0128-6">
 
     <!-- ⚠️ BOOT DELLA VESTE, e perché sta QUI (5/8/26) ─────────────────────────
          Le classi `manifesto` e `mappai-ridotta` le mettevano i due moduli a
@@ -1137,7 +1137,7 @@
                 <div id="flashcard-back-container" class="hidden w-full flex-col items-center">
                     <div
                         class="text-center w-full px-6 py-8 bg-indigo-50 border border-indigo-200 rounded-2xl shadow-inner mb-6">
-                        <p class="text-lg font-medium text-slate-700 leading-relaxed" id="flashcard-back-text">
+                        <p class="text-2xl font-bold text-slate-800" id="flashcard-back-text">
                             Risposta.
                         </p>
                     </div>
@@ -1433,7 +1433,7 @@
 
     <!-- ══ MAPPAI STUDENTE — gli script, nell'ordine di MappAI (l'ordine di caricamento è una dipendenza) ══ -->
     <script src="traduzioni/it_translations.js?v=sync-20261013"></script>
-    <script src="traduzioni/en_translations.js?v=0119-1-0126-1"></script>
+    <script src="traduzioni/en_translations.js?v=0119-1-0126-1-0128-1"></script>
     <script src="traduzioni/i18n-helper.js"></script>
     <!-- la controfigura di electronAPI dello studente: PRIMA di ogni modulo (app.js la legge al caricamento) -->
     <script src="js/studente/adapter.js?v=p0126-1"></script>
@@ -1459,18 +1459,18 @@
     <script src="js/mappai-latex.js?v=sync-20260916"></script>
     <script src="js/mappai-timeline-core.js?v=st1"></script>
     <script src="js/mappai-timeline.js?v=sync-20261013"></script>
-    <script src="js/mappai-print-layout.js?v=st1"></script>
+    <script src="js/mappai-print-layout.js?v=st1-0128-1"></script>
     <script src="js/mappai-doc-bar.js?v=sync-20261009"></script>
     <script src="js/mappai-doc-head.js?v=sync-20260916"></script>
-    <script src="js/mappai-nodesheet-core.js?v=st1"></script>
+    <script src="js/mappai-nodesheet-core.js?v=st1-0128-1"></script>
     <script src="js/mappai-docedit-core.js?v=sync-20261013"></script>
     <script src="js/mappai-visione-core.js?v=sync-20261009"></script>
-    <script src="js/mappai-quiz-print.js?v=sync-20261009"></script>
+    <script src="js/mappai-quiz-print.js?v=sync-20261009-0128-1"></script>
     <script src="js/mappai-study-export-core.js?v=sync-20261008"></script>
     <script src="js/mappai-study-doc.js?v=sync-20261013"></script>
     <script src="js/mappai-causal-core.js?v=sync-20260916"></script>
-    <script src="js/mappai-causal-chains.js?v=sync-20261013"></script>
-    <script src="js/mappai-branch-synthesis.js?v=sync-20261013b"></script>
+    <script src="js/mappai-causal-chains.js?v=sync-20261013-0128-1"></script>
+    <script src="js/mappai-branch-synthesis.js?v=sync-20261013b-0128-1"></script>
     <script src="js/mappai-studio-layouts.js?v=st1"></script>
     <script src="js/mappai-studio-draw.js?v=sync-20261009"></script>
     <script src="js/mappai-studio-view.js?v=sync-20261013"></script>
@@ -1480,7 +1480,7 @@
     <script src="js/mappai-active-study-core.js?v=st1"></script>
     <script src="js/mappai-active-study.js?v=sync-20261013"></script>
     <script src="js/mappai-live-core.js?v=st1"></script>
-    <script src="js/mappai-live-reports.js?v=sync-20261020e"></script>
+    <script src="js/mappai-live-reports.js?v=sync-20261020e-0128-1"></script>
     <script src="js/mappai-console-manifesto.js?v=st1"></script>
     <script src="js/mappai-scelta-core.js?v=sync-20260916b"></script>
     <script src="js/mappai-quiz-mc-view.js?v=sync-20261019"></script>
@@ -1500,7 +1500,7 @@
     <script src="js/mappai-search-finder.js?v=st1"></script>
     <script src="js/mappai-vault-manager.js?v=sync-20261013"></script>
     <script src="js/mappai-vault-io.js?v=sync-20261013b"></script>
-    <script src="js/mappai-print-dossier.js?v=sync-20260928"></script>
+    <script src="js/mappai-print-dossier.js?v=sync-20260928-0128-1"></script>
     <script src="js/mappai-context-menu.js?v=sync-20261007b"></script>
     <script src="js/mappai-flashcards-sr.js?v=sync-20261013"></script>
     <script src="js/mappai-study-session.js?v=sync-20261007b"></script>
@@ -1554,10 +1554,12 @@
     <script src="js/studente/prova-pdf.js?v=p0126-1"></script>
     <script src="js/studente/launcher-core.js?v=p0126-1"></script>
     <script src="js/studente/foglio-nodi-core.js?v=p0126-1"></script>
-    <script src="js/studente/foglio-nodi.js?v=p0126-1"></script>
-    <script src="js/studente/autotest.js?v=p0126-1"></script>
+    <script src="js/studente/foglio-nodi.js?v=p0126-1-0128-1"></script>
+    <script src="js/studente/flashcard-core.js?v=p0128-4"></script>
+    <script src="js/studente/flashcard.js?v=p0128-3"></script>
+    <script src="js/studente/autotest.js?v=p0126-1-0128-2"></script>
     <script src="js/studente/studia-core.js?v=p0126-1"></script>
-    <script src="js/studente/console.js?v=p0126-1"></script>
+    <script src="js/studente/console.js?v=p0126-1-0128-1"></script>
     <script src="js/studente/cabina.js?v=st36"></script>
     <script src="js/studente/scambio-core.js?v=0119-7"></script>
     <script src="js/studente/scambio.js?v=0119-2"></script>

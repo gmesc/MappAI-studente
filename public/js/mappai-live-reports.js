@@ -215,7 +215,9 @@
   ].join('');
   // il carattere della pagina (il docente lo sceglie in MappAI; sul telefono arriva come --live-font), Space Mono se non c'è
   var STUDENT_SHEET_FONT = ".lr-root{font-family:var(--live-font,'Space Mono'),var(--emoji,'MappAI Emoji'),ui-monospace,monospace}";
-  function studentDetailHtml(items, pillMark) {
+  /* `fc` (0128, allargamento 13): un mazzo di flashcard — la «risposta» è la scelta dell'allievo sulla carta, e quella
+     giusta è il retro della carta */
+  function studentDetailHtml(items, pillMark, fc) {
     return items.map(function (it, i) {
       var half = (it.missing && it.missing.length);
       var badge = half ? '<span style="color:#d97706;font-weight:700">½</span> '
@@ -224,9 +226,9 @@
       var showRight = it.outcome !== 'right' && it.correctText;
       return '<div class="lr-di-row">' + badge + '<div class="lr-di-body">' +
         '<div class="lr-sa-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
-        '<div class="lr-sa-t">Tua risposta</div>' +
+        '<div class="lr-sa-t">' + (fc ? 'La tua scelta' : 'Tua risposta') + '</div>' +
         (it.yourText ? '<div class="lr-sa-a">' + esc(it.yourText) + '</div>' : '<div class="lr-sa-a lr-sa-vuoto">— vuoto</div>') +
-        (showRight ? '<div class="lr-sa-t lr-sa-tc">Risposta corretta:</div><div class="lr-sa-c">' + esc(it.correctText) + '</div>' : '') +
+        (showRight ? '<div class="lr-sa-t lr-sa-tc">' + (fc ? 'Risposta:' : 'Risposta corretta:') + '</div><div class="lr-sa-c">' + esc(it.correctText) + '</div>' : '') +
         (half ? '<div class="lr-sa-t lr-sa-tc">Manca:</div><div class="lr-sa-c">' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '') +
         (it.explanation ? '<div class="lr-sa-e">' + esc(it.explanation) + '</div>' : '') +
         '</div></div>';
@@ -250,10 +252,15 @@
        scheda deve stare nei font. */
     var aperte = !!s.soloAperte;
     if (aperte) pillMark = { right: '✓', wrong: '✗', blank: '·', manual: '●' };
+    /* 0128, allargamento 13 (Giacomo, 27/10: «Il report della flashcard indica le scelte dei chip fatte dall'allievo»):
+       `flashcard` = un mazzo. ✓ «Sapevo e ricordavo», ✗ «Non conoscevo», ? «Non ricordavo» (outcome right/wrong/manual);
+       la percentuale è quella delle carte sapute, e la scelta si scrive a parole: niente emoji, che nella stampa
+       dell'iPad non sono garantite (vedi ✎ qui sopra). */
+    var fc = !!s.flashcard;
 
     var outLabel = { right: 'Corretta', wrong: 'Errata', blank: 'In bianco', manual: 'Da correggere' };
     var strip = (s.items || []).map(function (it, i) {
-      return '<div class="lr-pill ' + (pillClass[it.outcome] || 'lr-pill-b') + '" title="Domanda ' + (i + 1) + '">' +
+      return '<div class="lr-pill ' + (pillClass[it.outcome] || 'lr-pill-b') + '" title="' + (fc ? 'Carta ' : 'Domanda ') + (i + 1) + '">' +
         (pillMark[it.outcome] || '·') + '</div>';
     }).join('');
     // Dettaglio per-domanda (issue 3): n°, esito, risposta allievo, risposta giusta
@@ -264,14 +271,14 @@
         : '<span class="lr-di-mark lr-di-' + (it.outcome || 'blank') + '">' + (pillMark[it.outcome] || '·') + '</span> ';
       var yours = it.yourText ? esc(it.yourText) : '<span style="color:#cbd5e1">— vuoto</span>';
       var right = (it.outcome !== 'right' && it.correctText)
-        ? '<div class="lr-di-correct">Corretta: ' + esc(it.correctText) + '</div>' : '';
+        ? '<div class="lr-di-correct">' + (fc ? 'Risposta: ' : 'Corretta: ') + esc(it.correctText) + '</div>' : '';
       var miss = half ? '<div class="lr-di-correct" style="color:#92400e">manca: ' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '';
       var head = it.text ? esc(it.text) : (it.label ? esc(it.label) : (outLabel[it.outcome] || ''));
       return '<div class="lr-di-row">' + badge +
         '<div class="lr-di-body"><div class="lr-di-q"><b>D' + (i + 1) + '.</b> ' + head + '</div>' +
-        '<div class="lr-di-your">Risposta: ' + yours + '</div>' + right + miss + '</div></div>';
+        '<div class="lr-di-your">' + (fc ? 'Scelta: ' : 'Risposta: ') + yours + '</div>' + right + miss + '</div></div>';
     }).join('');
-    if (minimal) detail = studentDetailHtml(s.items || [], pillMark);
+    if (minimal) detail = studentDetailHtml(s.items || [], pillMark, fc);
     var rate = s.medianRate != null ? (s.medianRate.toFixed(1) + '/min') : '—';
     var strengths = (s.strengths || []).length
       ? s.strengths.map(function (t) { return '<div class="lr-topic-item lr-good">▲ ' + esc(t) + '</div>'; }).join('')
@@ -283,12 +290,12 @@
       '<div class="lr-avatar">' + esc(s.emoji) + '</div>' +
       '<div><div class="lr-who">' + esc(s.displayName) + '</div>' +
       '<div class="lr-who-sub">' + esc(s.emoji) + ' ' + esc(s.num) +
-      ' · risposte ' + s.answered + '/' + (r.questionCount || (s.items || []).length) +
+      (fc ? ' · carte ' : ' · risposte ') + s.answered + '/' + (r.questionCount || (s.items || []).length) +
       (s.blankCount ? ' · ' + s.blankCount + ' in bianco' : '') +
-      (s.manualCount && !aperte ? ' · ' + s.manualCount + ' da correggere' : '') +
+      (s.manualCount && !aperte && !fc ? ' · ' + s.manualCount + ' da correggere' : '') +
       (s.hintsUsed ? ' · 💡 ' + s.hintsUsed + ' indizi' : '') + '</div></div>' +
       (aperte ? '' : '<div class="lr-metrics"><div class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</div>' +
-      '<div class="lr-acc-sub">accuratezza' + (minimal ? '' : ' · fluenza ' + rate) + '</div></div>') + '</div>' +
+      '<div class="lr-acc-sub">' + (fc ? 'sapevo e ricordavo' : 'accuratezza') + (minimal ? '' : ' · fluenza ' + rate) + '</div></div>') + '</div>' +
       '<div class="lr-strip">' + strip + '</div>' +
       '<div class="lr-detail">' + detail + '</div>' +
       (minimal ? '' : '<div class="lr-topics"><div class="lr-topic-col"><div class="lr-topic-h">Punti di forza</div>' + strengths + '</div>' +

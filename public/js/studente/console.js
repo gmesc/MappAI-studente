@@ -126,9 +126,11 @@
         });
     }
 
-    /* ── le flashcard: un mazzo solo parte diretto, più mazzi si scelgono ── */
+    /* ── le flashcard: un mazzo solo parte diretto, più mazzi si scelgono ──
+       Dal 0128 il mazzo si apre nel pannello accanto alla mappa (studente/flashcard.js avvolge
+       `loadStudySet`): di un dossier non si disegna la scheda, che il mazzo coprirebbe subito. */
     function apriFlashcard(fullPath) {
-        return apriMappa(fullPath).then(function (ok) {
+        return apriMappa(fullPath, false).then(function (ok) {
             if (!ok) return;
             var sets = ((S().db || {}).studySets || []).filter(function (x) { return x && x.mode === 'flashcard' && x.items && x.items.length; });
             if (!sets.length) { toast(t('st_no_flash', 'Questa mappa non porta mazzi di flashcard.'), 'warning'); return; }

@@ -443,7 +443,8 @@ test('documenti: il foglio delle risposte con titolo nella barra e «Stampa / PD
 test('autotest: il report del quiz col nome «Progetto-Scelta multipla-angolo-data», anche in sessione.json', () => {
     const s = senzaCommenti(leggi('public/js/studente/autotest.js'));
     const w = corpo(s, 'function scriviReport', 'function scriviReportMC');
-    assert.ok(/nomeDocumento\(\{ progetto: s\.rootNodeLabel \|\| '', tipo: 'Scelta multipla', angolo: chiave/.test(w));
+    /* 0128, allargamento 13: il genere arriva come argomento, e di serie è la scelta multipla */
+    assert.ok(/var g = genere \|\| \{ tipo: 'Scelta multipla', attivita: 'quiz' \}/.test(w) && /nomeDocumento\(\{ progetto: s\.rootNodeLabel \|\| '', tipo: g\.tipo, angolo: chiave/.test(w));
     assert.ok(/nomeFile: nomeFile/.test(w) && /return \{ ok: true, rel: cart\.rel, nomeFile: nomeFile \}/.test(w));
     assert.ok(/scriviReport\([^;]*o\.angoliEt, o\.angolo\)/.test(s), 'la chiave dell\'angolo arriva dalla prova');
     assert.ok(/tipo: 'quiz', mc: true[^}]*angolo: set\.angle \|\| ''/.test(s));

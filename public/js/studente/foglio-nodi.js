@@ -35,7 +35,7 @@
         if (typeof window.printAllNodeLabels !== 'function' || !F()) { toast(t('sf_manca', 'Il foglio dei nodi non è disponibile.'), 'error'); return; }
         chiudi();
         var L = F().livelli(s.db.nodes);
-        st = { k: 'titoli', L: L, liv: L[L.length - 1] || null, doc: null, pag: 0, n: 0, gen: 0, cache: {}, compito: null };
+        st = { k: 'titoli', L: L, liv: L[L.length - 1] || null, doc: null, pag: 0, n: 0, gen: 0, cache: {}, avvisi: {}, compito: null };
         w = document.createElement('div');
         w.id = 'sf-nodi'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true');
         w.setAttribute('aria-label', t('st_foglio_nodi', 'Foglio dei nodi'));
@@ -51,7 +51,7 @@
             '<button type="button" class="sf-pdf">' + esc(t('sf_pdf', 'PDF')) + '</button>' +
             '<button type="button" class="sf-x" aria-label="' + esc(t('mm_chiudi', 'Chiudi')) + '">&times;</button>' +
             '</div>' +
-            '<div class="sf-ante"><canvas aria-label="' + esc(t('sf_anteprima', 'Anteprima del foglio')) + '"></canvas><p class="sf-msg"></p>' +
+            '<div class="sf-ante"><canvas aria-label="' + esc(t('sf_anteprima', 'Anteprima del foglio')) + '"></canvas><p class="sf-msg"></p><p class="sf-avviso" role="status"></p>' +
             '<div class="sf-pag"><button type="button" class="sf-prec" aria-label="' + esc(t('sf_prec', 'Pagina precedente')) + '">‹</button>' +
             '<span class="sf-n"></span>' +
             '<button type="button" class="sf-succ" aria-label="' + esc(t('sf_succ', 'Pagina successiva')) + '">›</button></div></div>';
@@ -84,6 +84,14 @@
         [].forEach.call(w.querySelectorAll('.sf-seg [data-k]'), function (b) { b.setAttribute('aria-checked', String(b.getAttribute('data-k') === st.k)); });
     }
     function msg(testo) { if (w) w.querySelector('.sf-msg').textContent = testo || ''; }
+    /* 0128, allargamento 2 (Giacomo, 27/10: «non troncare il testo»): il generatore non taglia più, rimpicciolisce le
+       schede che non entrano e lo dice; qui la frase sotto l'anteprima, per lo studente (accorciare non tocca a lui) */
+    function avviso(testo) { if (w) w.querySelector('.sf-avviso').textContent = testo || ''; }
+    function avvisoDi(av) {
+        var n = av.sotto.length;
+        return n === 1 ? t('sf_avv_una', '1 scheda è stampata più piccola, per non tagliare il testo.')
+            : t('sf_avv_piu', '{n} schede sono stampate più piccole, per non tagliare il testo.').replace('{n}', n);
+    }
 
     /* l'anteprima: il PDF vero, tenuto per contenuto e livello (tornare indietro non rigenera) */
     function genera() {
@@ -93,11 +101,13 @@
         var pronto = st.cache[chiave] ? Promise.resolve(st.cache[chiave]) :
             Promise.resolve(window.printAllNodeLabels(Object.assign({}, opz, { toDisk: { vaultPath: (S() || {}).activeVaultPath || '' } }))).then(function (r) {
                 if (!r || !r.ok || !r.base64) throw new Error((r && r.error) || t('sf_vuoto', 'nessun foglio'));
+                st.avvisi[chiave] = (r.avvisi && r.avvisi.sotto && r.avvisi.sotto.length) ? avvisoDi(r.avvisi) : '';
                 return window.MappAIStudentePdfVista.libreria().then(function (pdfjs) { return pdfjs.getDocument({ data: byte(r.base64) }).promise; });
             }).then(function (doc) { st.cache[chiave] = doc; return doc; });
         pronto.then(function (doc) {
             if (!w || gen !== st.gen) return;
             st.doc = doc; st.n = doc.numPages; st.pag = 0;
+            avviso(st.avvisi[chiave] || '');
             return pagina();
         }).catch(function (e) { if (w && gen === st.gen) msg(t('sf_ko', 'Anteprima non riuscita: ') + ((e && e.message) || '')); });
     }
