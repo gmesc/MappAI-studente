@@ -68,6 +68,16 @@
     }
 
     function prossimoZ() { Z_TOP += 100; return Z_TOP; }
+    /* il piano più alto fra le finestre a mano ancora a schermo che l'hanno chiesto (stanno fra Z_BASE e Z_TOP), o Z_BASE */
+    function pianoAMano() {
+        var z = Z_BASE;
+        if (!document.body || !document.body.children) return z;
+        Array.prototype.forEach.call(document.body.children, function (el) {
+            var n = Number(el.style && el.style.zIndex) || 0;
+            if (n > z && n <= Z_TOP) z = n;
+        });
+        return z;
+    }
 
     /* «Alza questa finestra sopra la mia pila» (17/8). I modali non ancora
        migrati dichiarano un piano SUO, scritto quando il motore non esisteva:
@@ -988,8 +998,11 @@
                 velo.remove();
                 pila = pila.filter(function (x) { return x !== velo; });
                 /* a schermo sgombro si torna al piano terra: senza, una sessione
-                   lunga farebbe salire il contatore all'infinito */
-                if (!pila.length) Z_TOP = Z_BASE;
+                   lunga farebbe salire il contatore all'infinito.
+                   0127, gate del 27/10: «sgombro» vuol dire anche senza finestre a
+                   mano che hanno chiesto un piano e sono ancora lì (il pannello live):
+                   ripartendo da 12000 la conferma dopo finiva sotto */
+                if (!pila.length) Z_TOP = pianoAMano();
                 if (apriva && apriva.focus) { try { apriva.focus({ preventScroll: true }); } catch (e) { apriva.focus(); } }
                 risolvi(risultato);
             }
