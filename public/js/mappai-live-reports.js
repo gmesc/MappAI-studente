@@ -44,6 +44,31 @@
     try { return api ? api.facce('MappAI Emoji') : ''; } catch (e) { return ''; }
   }
 
+  /* 0127, gate del 27/10: aperto dal Finder, il report scritto su disco va in Safari, che il COLR v1
+     lo disegna a quadratini (lo stesso guasto dell'iPhone, packet 0099). In Node, cioè quando il server
+     scrive il file, l'emoji dell'allievo diventa l'immagine SVG estratta dallo stesso font
+     (public/fonts/emoji/, tools/font/emoji-in-svg.py). Nel browser, o senza immagine, resta testo. */
+  var immaginiEmoji = {};
+  function emojiImmagine(e, classe) {
+    if (typeof window !== 'undefined' || typeof require !== 'function' || typeof __dirname === 'undefined') return '';
+    var cp = String(e || '').replace(/️/g, '');
+    if (!cp || cp.codePointAt(0) < 0x2000 || String.fromCodePoint(cp.codePointAt(0)) !== cp) return '';
+    var nome = cp.codePointAt(0).toString(16);
+    if (!(nome in immaginiEmoji)) {
+      try {
+        var svg = require('fs').readFileSync(require('path').join(__dirname, '..', 'fonts', 'emoji', nome + '.svg'));
+        immaginiEmoji[nome] = 'data:image/svg+xml;base64,' + svg.toString('base64');
+      } catch (err) { immaginiEmoji[nome] = ''; }
+    }
+    return immaginiEmoji[nome] ? '<img class="' + (classe || 'lr-avatar-img') + '" alt="' + esc(e) + '" src="' + immaginiEmoji[nome] + '">' : '';
+  }
+  // il nome di un allievo nei report delle domande aperte e della timeline («🦉 03»): l'emoji in testa come immagine, il resto testo
+  function nomeConImmagine(nome) {
+    var m = /^(\S+?)(\uFE0F?)(\s.*)$/.exec(String(nome || ''));
+    var img = m ? emojiImmagine(m[1], 'lr-emoji-img') : '';
+    return img ? img + esc(m[3]) : esc(nome);
+  }
+
   /* Nel browser (anteprima del docente, PDF delle tessere) il file si carica da
      solo accanto a questo modulo: index.html non va toccato per un report. */
   if (typeof window !== 'undefined' && typeof document !== 'undefined' && !window.MappAIInc_emoji) {
@@ -83,6 +108,12 @@
     ".lr-metrics{margin-left:auto;text-align:right}",
     ".lr-acc{font-size:22px;font-weight:900}",
     ".lr-acc-sub{font-size:9px;color:var(--mm-testo-3, #64748b)}",
+    // 0127 (Giacomo, 27/10): la testata dell'allievo — un'icona sola, il numero alla stessa altezza, i dati sulla stessa riga un po' più piccoli
+    ".lr-avatar-img{display:block;width:1em;height:1em}",
+    ".lr-emoji-img{display:inline-block;width:1em;height:1em;vertical-align:-0.15em}",
+    ".lr-testa-allievo .lr-who{font-size:34px;line-height:1}",
+    ".lr-testa-allievo .lr-who-sub{font-size:16px;margin:0 0 0 6px}",
+    ".lr-testa-allievo .lr-acc,.lr-testa-allievo .lr-acc-sub{font-size:inherit}",
     ".lr-strip{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}",
     ".lr-pill{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#fff}",
     ".lr-pill-r{background:#16a34a}.lr-pill-w{background:#dc2626}.lr-pill-b{background:#cbd5e1;color:#475569}.lr-pill-m{background:#7c3aed}",
@@ -115,9 +146,20 @@
     "@media print{.no-print{display:none !important}body{background:#fff;padding:8px}.cred-grid{grid-template-columns:repeat(3,1fr)}}"
   ].join('');
 
-  function printBar(label) {
+  /* Il titolo dei report del LIVE (0127, Giacomo 25/10): «[Progetto] · [Materiale] · Report allievi» al docente,
+     «… · Report allievo» nella scheda del 💾. Il materiale (genere e angolo) lo compone l'app quando la sessione
+     nasce; una sessione nata prima non ce l'ha e porta l'attività. */
+  function titoloLive(meta, coda) {
+    var m = meta || {};
+    return [m.mapTitle, m.materiale || m.activity, coda]
+      .map(function (x) { return String(x == null ? '' : x).trim(); }).filter(Boolean).join(' · ');
+  }
+
+  /* ⚠️ Sull'iPad `vestiReport` (reader, 0126) nasconde questa barra trovandoci il bottone di stampa e mette il
+     suo titolo nella barra della ×: il bottone resta dentro `.no-print`, o il titolo esce due volte. */
+  function printBar(testo) {
     return '<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#fff;border-bottom:1px solid var(--mm-bordo, #cbd5e1);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;z-index:100;font-family:monospace;font-size:12px">' +
-      '<span style="font-weight:bold;color:#4f46e5">MappAI Live · ' + esc(label) + '</span>' +
+      '<span style="font-weight:bold;color:#4f46e5">' + esc(testo) + '</span>' +
       '<div style="display:flex;gap:8px">' +
       '<button onclick="window.print()" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:11px;font-weight:bold">Stampa / PDF</button>' +
       '<button onclick="window.close()" style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:11px">Chiudi</button>' +
@@ -131,13 +173,16 @@
      (Noto/Android). Senza il font il PDF le stamperebbe in stile Apple: per
      questo i byte sono incorporati (EMOJI_STACK, sopra), non chiesti alla rete.
      `html-to-pdf` attende `document.fonts.ready` prima di stampare. */
-  function docShell(title, label, bodyHtml, opts) {
+  /* `title` = il <title>, che in Electron dà il nome al PDF. 0128, allargamento 23 (Giacomo, 27/10, nella chat ADMIN: «Lo corregga lo
+     0128 come allargamento: allarga il perimetro dello 0128 al titolo dei report LIVE in mappai-live-reports.js.»; il nome «Come la
+     barra»): i report del Live lo prendono da `titoloLive`, come la barra — prima «<mappa> — domande» e il PDF si chiamava così */
+  function docShell(title, barra, bodyHtml, opts) {
     var perPdf = !!(opts && opts.perPdf);
     return '<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>' + esc(title) + '</title>' +
       '<style>' + emojiIncorporate() + BASE_STYLES + '</style></head><body>' +
-      (perPdf ? '' : printBar(label)) + bodyHtml +
+      (perPdf ? '' : printBar(barra)) + bodyHtml +
       '<div class="lr-footer">MappAI Live · generato il ' + esc(nowStr()) + '</div>' +
       '</body></html>';
   }
@@ -198,7 +243,7 @@
         (q.manual ? ' · A mano ' + q.manual + ' (' + q.pctManual + '%)' : '') +
         '</div></div>';
     });
-    return docShell((meta && meta.mapTitle || 'Report') + ' — domande', 'Report domande', body);
+    return docShell(titoloLive(meta, 'Report domande'), titoloLive(meta, 'Report domande'), body);
   }
 
   // ── Report B: schede individuali ────────────────────────────────────────
@@ -269,8 +314,11 @@
       var half = (it.missing && it.missing.length);
       var badge = half ? '<span style="color:#d97706;font-weight:700">½</span> '
         : '<span class="lr-di-mark lr-di-' + (it.outcome || 'blank') + '">' + (pillMark[it.outcome] || '·') + '</span> ';
-      var yours = it.yourText ? esc(it.yourText) : '<span style="color:#cbd5e1">— vuoto</span>';
-      var right = (it.outcome !== 'right' && it.correctText)
+      // 0127, gate del 27/10 (Giacomo): una domanda senza risposta dice solo «VUOTO», senza la correzione
+      var vuota = it.outcome === 'blank';
+      var yours = it.yourText ? esc(it.yourText)
+        : (vuota ? '<b style="color:var(--mm-testo-3, #64748b)">VUOTO</b>' : '<span style="color:#cbd5e1">— vuoto</span>');
+      var right = (it.outcome !== 'right' && !vuota && it.correctText)
         ? '<div class="lr-di-correct">' + (fc ? 'Risposta: ' : 'Corretta: ') + esc(it.correctText) + '</div>' : '';
       var miss = half ? '<div class="lr-di-correct" style="color:#92400e">manca: ' + esc(it.missing.join(', ')) + ' (½ punto)</div>' : '';
       var head = it.text ? esc(it.text) : (it.label ? esc(it.label) : (outLabel[it.outcome] || ''));
@@ -286,16 +334,20 @@
     var weaks = (s.weaknesses || []).length
       ? s.weaknesses.map(function (t) { return '<div class="lr-topic-item lr-bad">▼ ' + esc(t) + '</div>'; }).join('')
       : '<div class="lr-topic-item" style="color:#cbd5e1">—</div>';
-    return '<div class="lr-card"><div class="lr-card-head">' +
-      '<div class="lr-avatar">' + esc(s.emoji) + '</div>' +
-      '<div><div class="lr-who">' + esc(s.displayName) + '</div>' +
-      '<div class="lr-who-sub">' + esc(s.emoji) + ' ' + esc(s.num) +
-      (fc ? ' · carte ' : ' · risposte ') + s.answered + '/' + (r.questionCount || (s.items || []).length) +
-      (s.blankCount ? ' · ' + s.blankCount + ' in bianco' : '') +
-      (s.manualCount && !aperte && !fc ? ' · ' + s.manualCount + ' da correggere' : '') +
-      (s.hintsUsed ? ' · 💡 ' + s.hintsUsed + ' indizi' : '') + '</div></div>' +
-      (aperte ? '' : '<div class="lr-metrics"><div class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</div>' +
-      '<div class="lr-acc-sub">' + (fc ? 'sapevo e ricordavo' : 'accuratezza') + (minimal ? '' : ' · fluenza ' + rate) + '</div></div>') + '</div>' +
+    /* 0127 (Giacomo, 27/10): «basta un riferimento solo» — l'icona grande, il numero alla stessa
+       altezza (col soprannome, se c'è) e sulla stessa riga risposte, in bianco, percentuale e fluenza.
+       0128: per un mazzo «carte» al posto di «risposte», «sapevo e ricordavo» al posto di «accuratezza», niente «da correggere» */
+    var soprannome = s.displayName && s.displayName !== (String(s.emoji || '') + ' ' + String(s.num || '')).trim() ? s.displayName : '';
+    var dati = [(fc ? 'carte ' : 'risposte ') + s.answered + '/' + (r.questionCount || (s.items || []).length)];
+    if (s.blankCount) dati.push(s.blankCount + ' in bianco');
+    if (s.manualCount && !aperte && !fc) dati.push(s.manualCount + ' da correggere');
+    if (s.hintsUsed) dati.push('💡 ' + s.hintsUsed + ' indizi');
+    if (!aperte) dati.push('<span class="lr-acc-sub">' + (fc ? 'sapevo e ricordavo' : 'accuratezza') + '</span> <span class="lr-acc" style="color:' + accColor(s.accuracyPct) + '">' + s.accuracyPct + '%</span>');
+    if (!aperte && !minimal) dati.push('fluenza ' + rate);
+    return '<div class="lr-card"><div class="lr-card-head lr-testa-allievo">' +
+      '<div class="lr-avatar">' + (emojiImmagine(s.emoji) || esc(s.emoji)) + '</div>' +
+      '<div class="lr-who">' + ([esc(s.num), esc(soprannome)].filter(Boolean).join(' · ') || esc(s.displayName)) + '</div>' +
+      '<div class="lr-who-sub">' + dati.join(' · ') + '</div></div>' +
       '<div class="lr-strip">' + strip + '</div>' +
       '<div class="lr-detail">' + detail + '</div>' +
       (minimal ? '' : '<div class="lr-topics"><div class="lr-topic-col"><div class="lr-topic-h">Punti di forza</div>' + strengths + '</div>' +
@@ -312,7 +364,7 @@
     });
 
     if (!(r.perStudent || []).length) body += '<div class="lr-q" style="text-align:center;color:var(--mm-testo-3, #64748b)">Nessun allievo ha partecipato.</div>';
-    return docShell((meta && meta.mapTitle || 'Report') + ' — allievi', 'Report allievi', body);
+    return docShell(titoloLive(meta, 'Report allievi'), titoloLive(meta, 'Report allievi'), body);
   }
 
   // ── Foglio credenziali stampabile ───────────────────────────────────────
@@ -329,7 +381,7 @@
         '<div class="cred-name">' + (s.name ? esc(s.name) : 'Nome: ____________') + '</div></div>';
     });
     body += '</div>';
-    return docShell('Credenziali — ' + (k.name || 'classe'), 'Credenziali', body, opts);
+    return docShell('Credenziali — ' + (k.name || 'classe'), 'MappAI Live · Credenziali', body, opts);
   }
 
   // ── Timeline Costruisci (008): report proposte + timeline finale di classe ──
@@ -357,7 +409,7 @@
     var status = { approved: ['#16a34a', '✓ approvata'], rejected: ['#dc2626', '✗ bocciata'], pending: ['#d97706', '· in attesa'] };
     Object.keys(r.byAuthor || {}).forEach(function (id) {
       var a = r.byAuthor[id];
-      body += '<div class="lr-card"><div class="lr-card-head"><div class="lr-who">' + esc(a.displayName || id) + '</div>' +
+      body += '<div class="lr-card"><div class="lr-card-head"><div class="lr-who">' + nomeConImmagine(a.displayName || id) + '</div>' +
         '<div class="lr-metrics"><div class="lr-acc-sub">' + (a.proposals || []).length + ' proposte</div></div></div>';
       if (!(a.proposals || []).length) body += '<div style="color:#cbd5e1;font-size:11px">—</div>';
       (a.proposals || []).forEach(function (p) {
@@ -373,7 +425,7 @@
       body += '</div>';
     });
 
-    return docShell((meta && meta.mapTitle || 'Report') + ' — costruzione', 'Report costruzione', body);
+    return docShell(titoloLive(meta, 'Report costruzione'), titoloLive(meta, 'Report costruzione'), body);
   }
 
 
@@ -445,7 +497,7 @@
       var giuste = mc.filter(function (q) { return q.corretta === true; }).length;
       var scritte = (a.risposte || []).length - mc.length;
       body += '<div class="lr-card"><div class="lr-card-head">' +
-        '<div><div class="lr-who">' + esc(a.displayName || a.id) + '</div>' +
+        '<div><div class="lr-who">' + nomeConImmagine(a.displayName || a.id) + '</div>' +
         '<div class="lr-who-sub">' + (a.consegnato ? 'consegnato' : 'non consegnato') +
         (a.aree && a.aree.length ? ' · aree: ' + esc(a.aree.join(', ')) : '') + '</div></div>' +
         '<div class="lr-metrics">' +
@@ -495,7 +547,8 @@
       body += '</div>';
     });
 
-    return docShell((meta && meta.mapTitle || 'Report') + ' — domande a scelta', 'Report domande a scelta', body);
+    // la barra prende il nome del bottone che apre il report nel pannello di gestione (0127, Giacomo 26/10)
+    return docShell(titoloLive(meta, 'Report domande'), titoloLive(meta, 'Report domande'), body);
   }
 
   // ── La scheda che l'ALLIEVO salva dal telefono (packet 0112) ───────────────
@@ -518,7 +571,9 @@
     var m = meta || {};
     var items = (student && student.items) || [];
     var title = studentSheetName({ className: m.className, emojiLabel: student && student.emojiLabel, num: student && student.num, activity: m.activity, title: m.mapTitle });
-    var body = headerBlock({ mapTitle: m.mapTitle, activity: m.activity, className: m.className, dateStr: m.dateStr }) +
+    // 0127 (Giacomo, 26/10: «Al posto del titolo»): il titolo grande è «[progetto] · [materiale] · Report allievo»,
+    // sotto classe e data — l'attività sta già nel titolo
+    var body = headerBlock({ mapTitle: titoloLive(m, 'Report allievo'), className: m.className, dateStr: m.dateStr }) +
       studentCardHtml(student || {}, { questionCount: items.length }, { minimal: true }) +
       '<div class="lr-footer">MappAI Live · generato il ' + esc(nowStr()) + '</div>';
     return { title: title, css: BASE_STYLES.replace(/body\{/g, '.lr-root{') + STUDENT_SHEET_CSS + STUDENT_SHEET_FONT, body: body };
@@ -545,6 +600,7 @@
 
   var REPORTS = {
     escapeHtml: esc,
+    titoloLive: titoloLive,
     buildQuestionsReportHtml: buildQuestionsReportHtml,
     buildStudentsReportHtml: buildStudentsReportHtml,
     buildCredentialCardsHtml: buildCredentialCardsHtml,
