@@ -2800,6 +2800,8 @@ const en_translations = {
     tl_close_report: "Close & open report",
     tl_review_err: "Review failed.",
     tl_closed: "Session closed — report opened.",
+    tl_rep_build: "Construction report",
+    tl_x: "Close",
     tl_no_session: "No active session.",
     tl_scan: "Scan to propose",
     tl_exit: "to exit",
