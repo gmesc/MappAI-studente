@@ -1360,7 +1360,9 @@
     analisi_fonte: { pre: 'Analisi-fonte', est: '.pdf' },
     quiz_mc: { pre: 'Quiz-MC', est: '.pdf' },
     quiz_tf: { pre: 'Quiz-VF', est: '.pdf' },
-    flashcards: { pre: 'Flashcard', est: '.pdf' },
+    /* `dettaglioEsplicito` (0133, D2: «il nome del file dice la forma»): il dettaglio entra nel nome solo se il chiamante
+       lo passa (oggi «A6 piegata», `DETTAGLIO_A6`); un `label` senza `opts.mappa` resta il nome della mappa, come prima */
+    flashcards: { pre: 'Flashcard', est: '.pdf', dettaglioEsplicito: true },
     nodesheet: { pre: 'Foglio-nodi', est: '.pdf', dettaglio: true },
     synthesis: { pre: 'Sintesi', est: '.html', dettaglio: true },
     /* La sintesi con la VOCE dentro (10/8/26). Sono due file distinti, non due
@@ -1443,7 +1445,7 @@
     }
     var pezzi = [g.pre];
     if (mappa) pezzi.push(mappa);
-    if (dettaglio && g.dettaglio) pezzi.push(dettaglio);
+    if (dettaglio && (g.dettaglio || g.dettaglioEsplicito)) pezzi.push(dettaglio);
     var nome = _safeName(opts.nome, '');
     if (nome) pezzi.push(nome);
     /* Il carattere in coda, separato da uno spazio-trattino-spazio: si legge
@@ -1627,6 +1629,8 @@
     nomeLibero: nomeLibero,
     GENERI: GENERI,
     SUFFISSO_TARATO: SUFFISSO_TARATO,
+    /* la forma «A6 piegata» delle flashcard nel nome del file (0133, D2): la scrive il foglio, la cerca ELABORA */
+    DETTAGLIO_A6: 'A6 piegata',
     hasOutput: hasOutput
   };
 

@@ -408,6 +408,29 @@
         return out;
     }
 
+    /* «A6 PIEGATA» (0133; Giacomo, 27/10: «è sempre un formato pieghevole ma ha le dimensioni della card della modalità
+       fronte retro […] pressapoco un formato A5 che si piega per avere delle cards in A6»). Le caselle sono quelle della
+       griglia: in ogni riga la colonna di sinistra è la domanda, quella accanto la risposta, ognuna grande come la carta del
+       «2 facce» (stesse soglie, stessi corpi). La piega è verticale, a metà fra le due caselle, e sporge di `A6_PIEGA.fuori`
+       sopra e sotto per prenderla a occhio; il taglio è un contorno solo attorno alla coppia. */
+    var FORMA_A6 = 'piega-a6';
+    var A6_PIEGA = { color: '#64748b', width: 0.3, dash: [2, 1.5], fuori: 4 };
+    function coppieA6(g) {
+        var b = cardBoxes(g), out = [];
+        for (var r = 0; r < g.rows; r++) {
+            for (var c = 0; c + 1 < g.cols; c += 2) {
+                var q = b[r * g.cols + c], a = b[r * g.cols + c + 1];
+                var px = r2((q.x + q.w + a.x) / 2);
+                out.push({
+                    q: q, a: a, row: r,
+                    piega: { x1: px, y1: r2(q.y - A6_PIEGA.fuori), x2: px, y2: r2(q.y + q.h + A6_PIEGA.fuori) },
+                    taglio: { x: q.x, y: q.y, w: r2(a.x + a.w - q.x), h: q.h }
+                });
+            }
+        }
+        return out;
+    }
+
     // Linee di taglio a GRIGLIA: segmenti continui da bordo a bordo del blocco
     // (una passata di taglierina taglia tutta la colonna/riga) più, se richiesti,
     // i crocini nel margine di pagina.
@@ -1008,6 +1031,7 @@
         tipografia: tipografia, setTipografia: setTipografia, TIPO_DEF: TIPO_DEF,
         flashFormats: formats,
         cardBoxes: cardBoxes,
+        FORMA_A6: FORMA_A6, A6_PIEGA: A6_PIEGA, coppieA6: coppieA6,
         backOrder: backOrder,
         croce: croce,
         cutLines: cutLines,

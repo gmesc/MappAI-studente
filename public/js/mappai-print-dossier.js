@@ -811,9 +811,14 @@ window.printFlashcardSheet = async function (opts) {
 
     const G = PL.flashGeom(opts.fmt);
     const fmt = G.key;
-    const duplex = !!opts.backside;
+    /* «A6 PIEGATA» (0133): domanda e risposta affiancate (PL.coppieA6), a una faccia. Per i corpi e le soglie è un fronte e
+       retro rifinito — la domanda ha tutta la metà sinistra, la risposta la destra col margine `safe` — senza la pagina del
+       retro: la risposta sta accanto. Non ha un «retro di prima», quindi l'interruttore del rifinito non la riguarda. */
+    const piegaA6 = !!(PL.coppieA6 && opts.forma === PL.FORMA_A6);
+    const duplex = !!opts.backside || piegaA6;
     let rifinito = false;
-    if (duplex) { try { rifinito = localStorage.getItem('mappai_fronte_retro_rifinito') !== '0'; } catch (e) { rifinito = true; } }
+    if (piegaA6) rifinito = true;
+    else if (duplex) { try { rifinito = localStorage.getItem('mappai_fronte_retro_rifinito') !== '0'; } catch (e) { rifinito = true; } }
     const lato = opts.lato === 'corto' ? 'corto' : 'lungo';
     const SAFE = rifinito ? (G.safe || 0) : 0;
     const withExpl = opts.explanation !== false;
@@ -1006,6 +1011,7 @@ window.printFlashcardSheet = async function (opts) {
     }
     function drawCardBorder(b) {
         if (G.cut.style === 'grid') return;   // già disegnate come griglia continua
+        if (piegaA6) return;                  // il taglio è attorno alla coppia, mai sulla piega
         stroke(G.cut.color, G.cut.width, G.cut.dash);
         doc.roundedRect(b.x, b.y, b.w, b.h, G.card.radius, G.card.radius, 'D');
         dash([]);
@@ -1106,7 +1112,38 @@ window.printFlashcardSheet = async function (opts) {
     // ── impaginazione ────────────────────────────────────────────────────────
     const boxes = PL.cardBoxes(G);
     const perPage = G.perPage;
-    const pages = Math.ceil(finali.length / perPage);
+    // «A6 piegata» ha la sua impaginazione, qui sotto: questo giro resta quello delle due forme di sempre
+    const pages = piegaA6 ? 0 : Math.ceil(finali.length / perPage);
+    const A6_NOME = (window.MappAIPipelineCore && window.MappAIPipelineCore.DETTAGLIO_A6) || 'A6 piegata';
+    if (piegaA6) {
+        /* Una coppia per riga: in testa la nota (scala 100%, dove si taglia e dove si piega), poi per ogni carta il fondo
+           della risposta dalla piega al bordo, la domanda a sinistra, la risposta a destra con la sua testata, il contorno
+           di taglio della coppia e la piega tratteggiata. */
+        const coppie = PL.coppieA6(G), perA6 = coppie.length;
+        const notaA6 = window.t('fc_a6_nota', 'A6 piegata · stampa a una faccia, scala 100% · taglia sul bordo arancione · piega sulla linea grigia, con la stampa fuori');
+        const drawNotaA6 = function () {
+            const pt = 7, lh = 1.3;
+            const ls = lines(notaA6, pt, 'normal', G.pageW - 2 * G.marginX);
+            const step = pt * PL.PT2MM * lh;
+            draw(ls, G.marginX, G.marginY - PL.A6_PIEGA.fuori - 2 - pt * PL.PT2MM - (ls.length - 1) * step, pt, 'normal', G.colors.muted, lh);
+        };
+        for (let p = 0; p < Math.ceil(finali.length / perA6); p++) {
+            if (p > 0) doc.addPage();
+            drawBg(); drawNotaA6();
+            finali.slice(p * perA6, (p + 1) * perA6).forEach(function (it, r) {
+                const c = coppie[r], idx = p * perA6 + r;
+                fill(G.colors.back);
+                doc.rect(c.piega.x1, c.a.y, (c.a.x + c.a.w) - c.piega.x1, c.a.h, 'F');
+                drawCard(it, c.q, idx, 'front');
+                drawRetro(it, c.a, idx);
+                stroke(G.cut.color, G.cut.width, G.cut.dash);
+                doc.roundedRect(c.taglio.x, c.taglio.y, c.taglio.w, c.taglio.h, G.card.radius, G.card.radius, 'D');
+                stroke(PL.A6_PIEGA.color, PL.A6_PIEGA.width, PL.A6_PIEGA.dash);
+                doc.line(c.piega.x1, c.piega.y1, c.piega.x2, c.piega.y2);
+                dash([]);
+            });
+        }
+    }
     for (let p = 0; p < pages; p++) {
         const pageItems = finali.slice(p * perPage, (p + 1) * perPage);
         if (p > 0) doc.addPage();
@@ -1151,7 +1188,7 @@ window.printFlashcardSheet = async function (opts) {
        `Materiale Studio/`. Senza, il dialogo di salvataggio del sistema
        proponeva un nome inventato qui e la parte aggiunta a mano spariva: due
        nomi per lo stesso foglio, e quello che si vede è il peggiore. */
-    const fileName = String(opts.fileName || ('Flashcard-' + title + '-' + fmt + '.pdf'));
+    const fileName = String(opts.fileName || ('Flashcard-' + title + '-' + fmt + (piegaA6 ? '-' + A6_NOME : '') + '.pdf'));
     /* L'AVVISO (0128, allargamento 2): quali carte sono uscite sotto il minimo uguale (11 pt) per non
        tagliarle, e che cosa fare. Nel pieghevole si consiglia il fronte e retro (la domanda ha tutta la
        carta); in fronte e retro resta solo accorciare. */
@@ -1172,7 +1209,7 @@ window.printFlashcardSheet = async function (opts) {
         if (window.MappAIStudyDocs) {
             window.MappAIStudyDocs.save({
                 kind: 'flashsheet',
-                title: (opts.title || 'Flashcard') + ' — ' + fmt,
+                title: (opts.title || 'Flashcard') + ' — ' + fmt + (piegaA6 ? ' ' + A6_NOME : ''),
                 mapName: opts.mapName || (appState.rootNodeLabel || 'MappAI'),
                 pdf: doc.output('datauristring')
             });

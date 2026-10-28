@@ -888,7 +888,6 @@ const it_translations = {
     ui_output_materials: "Output materiali di studio",
     ui_knowledge_garden: "Knowledge Garden",
     ui_materials_hub: "Materiali di studio",
-    ui_elabora_hub: "Elabora (co-docente)",
     tt_elabora_hub: "Elabora: analizza la scheda e arricchisci la mappa con citazioni dalla fonte",
     tt_materials_hub: "Stampati e documenti salvati dalla mappa",
     tt_knowledge_garden: "Knowledge Garden: crea, condividi ed esplora i giardini della classe",
