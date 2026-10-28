@@ -194,8 +194,10 @@
                 '<h3 style="font-size:13pt; font-weight:bold; margin:0 0 8px; color:#1e293b; line-height:1.55;">' + _esc(r.domanda) + '</h3>' +
                 chipHtml(r.perche, r.colore, r.testo) + '</section>';
         }).join('');
+        /* l'interlinea è quella delle risposte dei report (0132, D1: MappAIDocHead.REPORT.rispostaInterlinea; una prova
+           controlla che dicano lo stesso numero) */
         if (note) out += '<h2 class="oq-section-title" style="margin-top:28px">Osservazioni</h2>' +
-            '<div class="oq-osservazioni" style="white-space:pre-wrap; background:white; border-radius:12px; padding:14px 22px; border-left:4px solid #0f766e; font-size:13px; line-height:1.6; color:#1e293b;">' + _esc(note) + '</div>';
+            '<div class="oq-osservazioni" style="white-space:pre-wrap; background:white; border-radius:12px; padding:14px 22px; border-left:4px solid #0f766e; font-size:13px; line-height:2; color:#1e293b;">' + _esc(note) + '</div>';
         return out;
     }
     /* in cima al foglio, sotto la testata: le domande disponibili e i chip coi loro conteggi */
