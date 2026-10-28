@@ -75,6 +75,8 @@ const it_translations = {
     // ── 0090 · ELABORA: i materiali che aspettano la G2 e la taratura della classe nel modale ─────────
     ea_chip: "Completa validazione",
     mp_g2_attesa: "I materiali chiesti l'ultima volta aspettano la tua validazione: completala prima di generarne altri.",
+    ea_chip_g1: "Completa revisione",
+    mp_g1_attesa: "La revisione dei contenuti di questa mappa aspetta: completala prima di generare materiali.",
     mp_adapt_on_cls: "La classe {nome} ha una taratura (note o registro): i materiali la seguono. Spegnila per questo giro, se non serve.",
     mp_adapt_off_cls: "La classe {nome} non ha una taratura. Accendila per questo giro.",
     // ── fine 0090 ──

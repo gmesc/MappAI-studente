@@ -2941,6 +2941,8 @@ const en_translations = {
     // ── 0090 · ELABORA: i materiali che aspettano la G2 e la taratura della classe nel modale ─────────
     ea_chip: "Complete validation",
     mp_g2_attesa: "The materials you asked for last time are waiting for your validation: complete it before generating more.",
+    ea_chip_g1: "Complete review",
+    mp_g1_attesa: "The content review of this map is waiting: complete it before generating materials.",
     mp_adapt_on_cls: "Class {nome} has a tuning (notes or register): the materials follow it. Turn it off for this run if you don't need it.",
     mp_adapt_off_cls: "Class {nome} has no tuning. Turn it on for this run.",
     // ── fine 0090 ──
