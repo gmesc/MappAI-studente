@@ -346,8 +346,9 @@
                 angolo: etAng, nomeFile: nomeFile, giudizi: giudizi }, meta);
             return scrivi(c.rel + '/sessione.json', { text: JSON.stringify(sessione, null, 2) });
         }).then(function () {
+            /* `report: true` (0132): il foglio compilato è un report — titolo a 24 px, risposte con l'interlinea dei report */
             var html = QP.buildOpenQuestionsHtml({ id: 'prova', title: o.titolo, type: 'Domande aperte', items: PC().itemsHtml(righe) },
-                { mapName: s.rootNodeLabel || '', includeBar: false, includeAnswers: false, now: PC().fmtData(data) });
+                { mapName: s.rootNodeLabel || '', includeBar: false, includeAnswers: false, now: PC().fmtData(data), report: true });
             html = PC().conTesta(html, PC().testaHtml(giudizi));
             return scrivi(cart.rel + '/risposte.html', { text: PC().conCoda(html, PC().codaHtml({ scartate: scartate, note: note })) });
         }).then(function () {
@@ -357,32 +358,24 @@
           .catch(function (e) { console.warn('[autotest] sessione', e); return { ok: false, error: e && e.message }; });
     }
     /* Il set a scelta multipla gira nel player di MappAI: alla fine (`showStudySummary`)
-       si archivia il REPORT come dopo l'attività QR — l'HTML `lr-*` di
-       `buildStudentsReportHtml`, con `results.json` e `sessione.json` accanto. */
+       si archivia il REPORT come dopo l'attività QR — l'HTML di `buildStudentsReportHtml`,
+       con `results.json` e `sessione.json` accanto. Dal 0132 (D3) è la scheda di UN allievo,
+       come il 💾 del telefono (`{ unAllievo: true }`), non più il report di classe con un allievo solo. */
     /* `angolo` (0126): l'etichetta dell'angolo del set, perché «Le tue prove › apri» ridia lo stesso titolo nella barra */
     /* `chiave` (0126, allargamento 6): la chiave dell'angolo, per il nome «Progetto-Scelta multipla-angolo-data» */
     /* `genere` (0128, allargamento 13): { tipo, attivita } del materiale — di serie la scelta multipla; il mazzo di
        flashcard (studente/flashcard.js, alla fine dell'ultima carta) passa { tipo: 'Flashcard', attivita: 'flashcard' } */
     /* IL REPORT LEGGIBILE SULL'IPAD (0128, allargamento 22; Giacomo, 27/10, sul report delle flashcard aperto nel pannello:
-       «ingrandisci il font del report»). Il report è quello della classe del docente (MappAILiveReports, copia), fatto per
-       l'A4: corpi da 9 a 12 px. Qui, prima di scriverlo, gli si aggiunge in testa uno stile:
-         · il carattere DENTRO il file (MappAIFont › styleDocumento, coi byte di Space Mono): il report è un file a sé e nel
-           pannello non trovava né Space Mono né le emoji dell'app; le lettere cadevano sul monospazio di sistema, larghe,
-           e le cifre sulle emoji di Apple, storte («2 7/1 0/2 0 2 6», «D₁»);
-         · i corpi del testo a 16 come nell'app (domanda, scelta, risposta), il resto in proporzione.
-       Vale per i report che scrive questa funzione, cioè scelta multipla e flashcard; le domande aperte hanno il loro
-       foglio, già a 18. I valori sono locali: il file viaggia da solo e i token dell'app lì non ci sono. */
-    var STILE_REPORT = 'body{font-size:16px}' +
-        '.lr-title{font-size:26px}.lr-sub{font-size:14px}.lr-chip{font-size:13px}' +
-        '.lr-who{font-size:20px}.lr-who-sub{font-size:14px}.lr-acc{font-size:30px}.lr-acc-sub{font-size:13px}' +
-        '.lr-strip{gap:6px}.lr-pill{width:30px;height:30px;font-size:15px}' +
-        '.lr-di-row{gap:10px;padding:8px 0}.lr-di-mark{width:22px;font-size:16px}' +
-        '.lr-di-q{font-size:16px;line-height:1.5}.lr-di-your,.lr-di-correct{font-size:16px;line-height:1.5;margin-top:3px}' +
-        '.lr-topic-h{font-size:13px}.lr-topic-item{font-size:15px}.lr-footer{font-size:12px}';
+       «ingrandisci il font del report»). Il carattere va DENTRO il file (MappAIFont › styleDocumento, coi byte di Space
+       Mono): il report è un file a sé e nel pannello non trovava né Space Mono né le emoji dell'app; le lettere cadevano sul
+       monospazio di sistema, larghe, e le cifre sulle emoji di Apple, storte («2 7/1 0/2 0 2 6», «D₁»).
+       I corpi a 16 che si aggiungevano qui sono usciti col packet 0132: il report ha la veste comune di tutti i report
+       (MappAIDocHead.stileReport, nella copia), con le risposte a 13 px e l'interlinea 2,0 (Giacomo, 27/10: «13px ma aumenta
+       l'interlinea»; «Interlinea delle risposte: 2,0»). */
     function reportLeggibile(html) {
         var F = window.MappAIFont, facce = '';
         try { facce = (F && F.styleDocumento) ? F.styleDocumento('space-mono') : ''; } catch (e) { facce = ''; }
-        var st = '<style>' + facce + STILE_REPORT + '</style>';
+        var st = '<style>' + facce + '</style>';
         return html.indexOf('</head>') >= 0 ? html.replace('</head>', st + '</head>') : st + html;
     }
     function scriviReport(rep, titolo, angolo, chiave, genere) {
@@ -391,6 +384,10 @@
         var g = genere || { tipo: 'Scelta multipla', attivita: 'quiz' };
         var data = new Date(), cart = null;
         var nomeFile = window.MappAIStudiaCore.nomeDocumento({ progetto: s.rootNodeLabel || '', tipo: g.tipo, angolo: chiave || '', data: data });
+        /* il titolo grande come la barra del pannello: «[progetto] · [tipo] · [angolo] · Report allievo» (0132, gate del 28/10:
+           con il solo `activity` — il nome lungo del set, «Quiz — Sistema Albero — Scelta Multipla · definizione» — il titolo
+           ripeteva la mappa) */
+        var meta = Object.assign({}, rep.meta, { materiale: [g.tipo, angolo].filter(Boolean).join(' · ') });
         return cartellaSessione({ tipo: g.attivita, ambito: '' }).then(function (c) {
             cart = c;
             return scrivi(c.rel + '/sessione.json', { text: JSON.stringify({ nome: c.nome, tipo: g.tipo, titolo: titolo, angolo: angolo || '', mappa: s.rootNodeLabel || '', data: data.toISOString(), html: 'report.html', giuste: rep.giuste, totale: rep.totale, pct: rep.pct, nomeFile: nomeFile }, null, 2) });
@@ -401,7 +398,7 @@
             var F = window.MappAIFont;
             return (F && F.precaricaIncorporabile) ? F.precaricaIncorporabile('space-mono').catch(function () { return false; }) : null;
         }).then(function () {
-            return scrivi(cart.rel + '/report.html', { text: reportLeggibile(R.buildStudentsReportHtml(rep.meta, rep.results)) });
+            return scrivi(cart.rel + '/report.html', { text: reportLeggibile(R.buildStudentsReportHtml(meta, rep.results, { unAllievo: true })) });
         }).then(function () { return { ok: true, rel: cart.rel, nomeFile: nomeFile }; })
           .catch(function (e) { console.warn('[autotest] report', e); return { ok: false, error: e && e.message }; });
     }

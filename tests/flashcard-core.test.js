@@ -119,7 +119,8 @@ test('reportScelte nel report vero: la scheda dice le scelte, e il titolo della 
     const LR = require('../public/js/mappai-live-reports.js');
     const r = F.reportScelte([{ front: 'Chi scriveva?', back: 'Gli scribi' }], { mistakes: [{ q: 'Chi scriveva?', feedback: 'hard' }] }, { mappa: 'Scrittura' }, t);
     const h = LR.buildStudentsReportHtml(r.meta, r.results);
-    assert.ok(h.includes('Scelta: Non conoscevo') && h.includes('Risposta: Gli scribi') && h.includes('sapevo e ricordavo'));
+    /* dal packet 0132 (MappAI re) la scelta e il retro della carta stanno nei riquadri, con le loro etichette */
+    assert.ok(h.includes('<span class="mm-rp-et">La tua scelta</span>Non conoscevo') && h.includes('<span class="mm-rp-et">Risposta</span>Gli scribi') && h.includes('sapevo e ricordavo'));
     assert.strictEqual(F.titoloReport({ mappa: 'Scrittura', t }), 'Scrittura · Flashcard · Report allievo');
     assert.strictEqual(F.fmtData(new Date(2026, 9, 7)), '07/10/2026');
 });

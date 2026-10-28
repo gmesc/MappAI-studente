@@ -202,15 +202,16 @@ test('flashcard.js: alla fine il report si scrive da solo e il pannello mostra l
 });
 
 /* ── allargamento 22 (Giacomo, 27/10, sul report delle flashcard nel pannello): «ingrandisci il font del report».
-   Misurato nel browser su un report nuovo: Space Mono 400 e 700 caricati dentro il file, testo 16, titolo 26. ── */
-test('autotest.js: il report che scrive l\'iPad porta dentro il suo carattere e il testo a 16', () => {
+   Misurato nel browser su un report nuovo: Space Mono 400 e 700 caricati dentro il file, testo 16, titolo 26.
+   Dal packet 0132 (MappAI re; al «vai» del 28/10: «riallinea le prove vecchie che controllano i valori di prima») i corpi
+   sono quelli della veste comune dei report, nella copia di mappai-doc-head.js: qui resta il carattere dentro il file. ── */
+test('autotest.js: il report che scrive l\'iPad porta dentro il suo carattere, e i corpi sono quelli della veste comune (0132)', () => {
     const at = senzaCommenti(leggi('public/js/studente/autotest.js'));
-    assert.ok(/\.lr-di-q\{font-size:16px;line-height:1\.5\}\.lr-di-your,\.lr-di-correct\{font-size:16px;/.test(at), 'domanda, scelta e risposta a 16');
-    assert.ok(/'body\{font-size:16px\}'/.test(at) && /\.lr-title\{font-size:26px\}/.test(at), 'il corpo e il titolo');
+    assert.ok(!/STILE_REPORT/.test(at) && !/\.lr-di-q\{font-size/.test(at), 'nessun corpo sovrascritto sopra il report');
     assert.ok(/F\.styleDocumento\('space-mono'\)/.test(at), 'le @font-face di Space Mono dentro il file');
     assert.ok(/html\.replace\('<\/head>', st \+ '<\/head>'\)/.test(at), 'in testa, dopo lo stile del report: vince');
     const w = corpo(at, 'function scriviReport(', '\n    function ');
     assert.ok(/F\.precaricaIncorporabile\('space-mono'\)/.test(w) && w.indexOf("precaricaIncorporabile('space-mono')") < w.indexOf('reportLeggibile('), 'i byte prima di costruire');
-    assert.ok(/scrivi\(cart\.rel \+ '\/report\.html', \{ text: reportLeggibile\(R\.buildStudentsReportHtml\(rep\.meta, rep\.results\)\) \}\)/.test(w), 'il report scritto è quello leggibile');
+    assert.ok(/scrivi\(cart\.rel \+ '\/report\.html', \{ text: reportLeggibile\(R\.buildStudentsReportHtml\(meta, rep\.results, \{ unAllievo: true \}\)\) \}\)/.test(w), 'il report scritto è quello leggibile (0132: la scheda di un allievo, col titolo della barra)');
     assert.ok(/studente\/autotest\.js\?v=p0126-1-0128-2/.test(leggi('public/index.html')), 'il ?v=');
 });

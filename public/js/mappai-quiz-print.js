@@ -142,7 +142,7 @@ function _qpStileCornice(accento, o) {
     o = o || {};
     return DH.stile({
         accento: accento, mappa: o.mappa || '', logo: o.logo || '',
-        pagina: o.pagina
+        pagina: o.pagina, report: !!o.report   // 0132: il foglio compilato dell'iPad è un report → titolo a 24 px
     });
 }
 
@@ -423,7 +423,9 @@ window.buildQuizSetHtml = function (set, opts) {
 //    portarsela dietro nemmeno nel sorgente HTML.
 //
 // Forma degli item: { question, guide?, lines?, l1? }.
-// opts: { mapName?, now?, includeBar? (default true), includeAnswers? (default true) }.
+// opts: { mapName?, now?, includeBar? (default true), includeAnswers? (default true), report? }.
+// `report` (0132): il foglio COMPILATO che l'allievo salva sull'iPad è un report — titolo a 24 px e risposte con
+// l'interlinea dei report (MappAIDocHead.REPORT, D1: 2,0). Senza, il foglio esce identico a prima.
 //
 // ── LA FONTE ICONOGRAFICA IN TESTA AL FOGLIO (20/8) ─────────────────────────
 // `set.intro = { fotoB64, mime, titolo, contesto, descrizione }` — quando il
@@ -444,6 +446,10 @@ window.buildOpenQuestionsHtml = function (set, opts) {
     const includeAnswers = opts.includeAnswers !== false;
     const items = (set && set.items) || [];
     const T = _qpTipo('openq');
+    const _rep = opts.report && _DH() && _DH().REPORT;
+    const lhRisposta = _rep ? _rep.rispostaInterlinea : 1.6;
+    /* nel report (0132, gate del 28/10) il filo della risposta ha il verde dei report, come nei report del LIVE */
+    const filoRisposta = (_rep && _rep.verde) || accentColor, fondoRisposta = _rep ? '#f0fdf4' : '#f0fdfa';
 
     // Le righe su cui scrivere: 3 minimo (una risposta di una frase), 12 massimo
     // (oltre, la domanda non sta più in una pagina insieme alle altre).
@@ -522,8 +528,8 @@ window.buildOpenQuestionsHtml = function (set, opts) {
                        lo studente rimanda al docente da MappAI studente. Con
                        `includeAnswers:false` non porta né tracce né `qp-set`:
                        «senza soluzioni» è già la forma di questo builder. */
-                    ? `<div class="oq-risposta" style="white-space:pre-wrap; border-left:3px solid ${accentColor};
-                        background:#f0fdfa; padding:8px 12px; font-size:${T.fs(13, 'px')}; line-height:${T.lh(1.6)}; color:#1e293b;">${escHtmlQP(item.risposta)}</div>`
+                    ? `<div class="oq-risposta" style="white-space:pre-wrap; border-left:3px solid ${filoRisposta};
+                        background:${fondoRisposta}; padding:8px 12px; font-size:${T.fs(13, 'px')}; line-height:${T.lh(lhRisposta)}; color:#1e293b;">${escHtmlQP(item.risposta)}</div>`
                     : new Array(_righe(item.lines)).fill(rigaVuota).join('')}
             </div>
         </section>`;
@@ -585,7 +591,7 @@ window.buildOpenQuestionsHtml = function (set, opts) {
     <style>
         ${_fontDoc(opts.font)}
         ${QP_PAGE_STYLES}
-        ${_qpStileCornice(accentColor, { mappa: mapName, logo: opts.logo })}
+        ${_qpStileCornice(accentColor, { mappa: mapName, logo: opts.logo, report: opts.report })}
         body { font-size: ${T.fs(12, 'pt')}; }
         /* Il badge di QUESTO foglio è teal come il resto. La testata prende
            l'accento da sola (è un parametro della cornice): la deroga che c'era
