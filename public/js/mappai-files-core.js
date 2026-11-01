@@ -522,6 +522,7 @@
       map: safeName(s.name, '') || '',
       scope: s.scope ? safeName(s.scope, '') : '',   // '' = tutta la mappa
       className: s.className || '',
+      projectId: idProgettoValido(s.projectId) ? s.projectId : '',   // 0139: di quale progetto è la sessione
       date: s.closedAt || s.startedAt || s.runningAt || null,
       closed: !!s.closedAt,
       participants: participants,

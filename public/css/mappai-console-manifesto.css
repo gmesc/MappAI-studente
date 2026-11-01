@@ -418,14 +418,19 @@ html.manifesto .mm-box--console .mm-tela > #elab-doc-host {
    variante V2 scelta da Giacomo sul banco): fuori dal tetto di 1240 delle altre
    righe dell'area, e senza il filetto in testa. Il foglio cresce col suo gradino
    (×1,6 a 1880px, `--de-lad` in mappai-doc-editor.js): testo più grande, righe
-   uguali alla stampa. Il fondo bianco e il bordo delle card sono dell'editor. */
-html.manifesto .mm-box--console .mm-console__area > .mm-tela:has(> #elab-doc-host) {
+   uguali alla stampa. Il fondo bianco e il bordo delle card sono dell'editor.
+   Lo stesso per l'ANTEPRIMA DI UN FILE (`#ec-file`: PDF e HTML di ogni materiale), che
+   restava nel tetto con la linea della barra corta e il fondo grigio della tela attorno
+   (29/10/26, packet 0137, Giacomo al gate: la linea «deve estendersi su tutta la
+   larghezza della finestra», «rimuovi lo sfondo grigio»). */
+html.manifesto .mm-box--console .mm-console__area > .mm-tela:has(> #elab-doc-host, > #ec-file) {
     max-width: none;
     border-top-width: 0;
 }
+html.manifesto .mm-box--console .mm-tela > #ec-file { background: var(--mm-fondo); }
 /* la tela che ospita l'editor non è un riquadro vuoto da centrare: è un
    contenitore verticale che gli lascia tutto lo spazio */
-html.manifesto .mm-box--console .mm-tela:has(> #elab-doc-host) {
+html.manifesto .mm-box--console .mm-tela:has(> #elab-doc-host, > #ec-file) {
     display: flex;
     flex-direction: column;
     align-items: stretch;
