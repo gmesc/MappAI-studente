@@ -159,6 +159,7 @@ const en_translations = {
     pl_generate_path: "Generate reading path",
     pl_generation_invalid: "The model returned an invalid activity. No activities from this attempt were added. You can retry or change your choices.",
     pl_generation_key: "Preparing activities needs an AI key: add it in the AI settings.",
+    pl_generate_path_tip: "Prepares the reading path and opens «Check the text»: the activities are generated later, from there.",
     pl_generating: "Preparing activities and checking references to the text…",
     pl_wb_student: "Student name",
     pl_wb_session: "Session",
@@ -1173,6 +1174,9 @@ const en_translations = {
     lav_generico: "MappAI is working",
     cls_gen_title2: "Who is this map for?",
     cls_gen_hint2: "This choice tunes the AI's language and decides which folder the map goes into. It stays fixed for the whole generation.",
+    // 0137 C: con Analisi iconografica e Metacomprensione la finestra parla del progetto
+    cls_gen_title_progetto: "Who is this project for?",
+    cls_gen_hint_progetto: "This choice tunes the AI's language and decides which folder the project goes into. It stays fixed for the whole generation.",
     cls_gen_dest: "Recipient",
     cls_gen_mat: "Subject",
     cls_gen_generico: "Generic (no class)",
